@@ -1,231 +1,124 @@
-# Introduction
+# SportsFest Dashboard
+
+The official management platform for SportsFest Tampa Bay - an annual corporate team-building beach event held on St. Pete Beach featuring volleyball, tug-of-war, corn toss, surf & turf relay, and beach dodgeball competitions.
+
+## 🏖️ About SportsFest Tampa Bay
+
+SportsFest is Tampa Bay's premier corporate team-building event, bringing together local companies for a day of friendly competition on the beautiful St. Pete Beach. Teams compete across five exciting beach events while enjoying networking opportunities and showcasing their company culture to the Tampa Bay business community.
+
+**Website**: [sportsfest.com](https://sportsfest.com)
+
+### Event Activities
+- **Beach Volleyball** - Classic 6v6 sand volleyball competition
+- **Tug-of-War** - Team strength and strategy challenge
+- **Corn Toss** - Precision and coordination competition
+- **Surf & Turf Relay** - Multi-stage beach obstacle course
+- **Beach Dodgeball** - Fast-paced elimination tournament
 
-Next 15 starter kit based on Next.js, Auth.js and Drizzle designed to accelerate the development of web-based (SaaS) applications.
+## 🎯 Dashboard Purpose
 
-# Quickstart
+The SportsFest Dashboard serves three primary user groups:
 
-Get started in about 30 minutes by following these steps.
+### For Organizations & Team Captains
+- **Event Promotion**: Share SportsFest with colleagues, friends, and family
+- **Team Building**: Register teams and assign players to specific events
+- **Payment Management**: Handle event registration fees and tent reservations
+- **Communication**: Coordinate with team members and track participation
 
-## Preparation
+### For Event Administrators
+- **Organization Oversight**: View all registered companies and their teams
+- **Financial Reporting**: Track payments, registrations, and tent purchases
+- **Marketing Analytics**: Access participant data for promotional efforts
+- **Event Coordination**: Manage overall event logistics and communications
 
-1. Unpack the Archive
+### Future Capabilities (Roadmap)
+- **Tournament Brackets**: Automated bracket generation for each competition
+- **Live Scoring**: Real-time score tracking and leaderboard updates during the event
+- **Push Notifications**: Instant alerts to teams about start times and schedule changes
+- **Results History**: Archive past event results and team achievements
 
-2. Switch to the project's root directory
+## 🏢 Why Companies Participate
 
-```bash
-cd monorepo-next-drizzle-authjs
-```
+### Brand Visibility
+- Promote your company to the Tampa Bay business community
+- Showcase company culture and team spirit
+- Gain exposure among potential clients and partners
 
-2. Install PNPM if not already installed
+### Team Building Benefits
+- Strengthen employee relationships outside the office
+- Boost morale through friendly competition
+- Create lasting memories and shared experiences
 
-```bash
-npm i -g pnpm
-```
+### Networking Opportunities
+- Connect with other Tampa Bay professionals
+- Build relationships with local business leaders
+- Expand your professional network in a fun, relaxed environment
 
-3. Install the package dependencies of the whole monorepo
+## 🎪 Event Features
 
-```bash
-pnpm i
-```
+### Team Management
+- Register corporate teams with company branding
+- Assign employees to specific beach competitions
+- Track team rosters and participant information
+- Coordinate logistics and communication
 
-4. Copy the sample configurations
+### Payment Processing
+- Secure online registration and payment system
+- Team entry fees and equipment rentals
+- Tent reservations for company areas
+- Comprehensive billing and receipt management
 
-```bash
-cp apps/dashboard/.env.example apps/dashboard/.env
-cp apps/marketing/.env.example apps/marketing/.env
-cp apps/public-api/.env.example apps/public-api/.env
-cp packages/database/.env.example packages/database/.env
-```
+### Marketing & Promotion
+- Company promotion tools and materials
+- Event marketing to encourage participation
+- Social sharing capabilities for teams
+- Participant recruitment and engagement
 
-## Services
+## 📊 Administrative Dashboard
 
-### Database
+Comprehensive management tools for SportsFest organizers:
 
-#### Install PostgreSQL
+### Registration Management
+- View all participating organizations
+- Track team registrations and roster changes
+- Monitor payment status and outstanding balances
+- Generate participant lists and contact information
 
-1.  Install PostgreSQL via Homebrew, Chocolatey or download it from the [website](https://www.postgresql.org/download/).
+### Financial Reporting
+- Total revenue tracking across all organizations
+- Team registration revenue breakdown
+- Tent and equipment rental income
+- Payment processing and reconciliation reports
 
-```bash
-brew install postgresql
-```
+### Marketing Analytics
+- Participant demographic data
+- Company participation trends
+- Registration timeline analysis
+- Engagement metrics for promotional campaigns
 
-2. Add an initial user.
+## 🏖️ Event Day Features (Future)
 
-```bash
-sudo -u postgres psql
-CREATE USER postgres WITH PASSWORD 'password';
-ALTER USER postgres WITH SUPERUSER;
-\q
-```
+### Live Event Management
+- Real-time bracket updates and scoring
+- Push notifications for team start times
+- Live leaderboards and competition results
+- Event logistics and schedule management
 
-3.  Update database `packages/database/.env` with your credentials.
+### Communication System
+- Instant notifications to all participants
+- Team-specific announcements and updates
+- Emergency communications and weather alerts
+- Post-event results and celebration updates
 
-```bash
-DATABASE_URL=postgresql://postgres:password@localhost:5432/database?schema=public
-```
+## 🌟 Tampa Bay Business Community
 
-4. Create the database
+SportsFest brings together Tampa Bay's vibrant business community for a unique blend of competition, networking, and fun. Whether you're a startup looking to build team cohesion or an established company wanting to engage with the local business scene, SportsFest provides the perfect platform for meaningful connections and memorable experiences.
 
-```bash
-psql -U postgres -c "CREATE DATABASE database;"
-```
+---
 
-5. Apply the database migrations.
+### *Tampa Bay's Team Building Blast on the Beach*
+#### *No athletic skill necessary, just team spirit and company pride!*
 
-```bash
-pnpm --filter database push
-```
-
-6. Update also the dashboard `apps/dashboard/.env` with your credentials.
-
-```bash
-DATABASE_URL=postgresql://postgres:password@localhost:5432/database?schema=public
-```
-
-### Google Login (Optional)
-
-1. Visit the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create an account if you don't have one already.
-3. Navigate to APIs or [click here](https://console.cloud.google.com/apis)
-4. Configure the `OAuth consent screen` and add yourself as test user.
-5. Click on `Credentials`, create new OAuth credentials and save those credentials.
-6. Add the Authorized JavaScript origin to the credential settings.
-
-```bash
-http://localhost:3000
-```
-
-7. Add the Authorized redirect URI to the credential settings.
-
-```bash
-http://localhost:3000/api/auth/callback/google
-```
-
-8. Update dashboard `apps/dashboard/.env` with the created credentials.
-
-```bash
-AUTH_GOOGLE_CLIENT_ID=
-AUTH_GOOGLE_CLIENT_SECRET=
-```
-
-### Microsoft Login (Optional)
-
-1. Visit the [Azure Portal](https://portal.azure.com/).
-2. Create an account if you don't have one already.
-3. Navigate to your Entra ID (Active Directory).
-4. Register a new application with platform web.
-5. Click on `Authentication` in the menu and add the redirect URIs
-
-```bash
-http://localhost:3000
-http://localhost:3000/api/auth/callback/microsoft-entra-id
-```
-
-6. Under `Certificates & Secrets`, create a new client secret.
-7. Update dashboard `apps/dashboard/.env` with the created secret.
-
-```bash
-AUTH_MICROSOFT_ENTRA_ID_CLIENT_ID=
-AUTH_MICROSOFT_ENTRA_ID_CLIENT_SECRET=
-```
-
-### Stripe
-
-1. Visit the [Stripe Dashboard](https://dashboard.stripe.com/).
-2. Create an account if you don't have one already.
-3. Activate test mode.
-4. Activate the customer billing portal.
-5. Create a product.
-6. Create a price for the product.
-7. Navigate to developer section and copy the API credentials.
-8. Update dashboard `apps/dashboard/.env` with the IDs and credentials.
-
-```bash
-NEXT_PUBLIC_BILLING_PRICE_PRO_MONTH_ID=
-NEXT_PUBLIC_BILLING_PRICE_PRO_YEAR_ID=
-NEXT_PUBLIC_BILLING_PRICE_LIFETIME_ID=
-NEXT_PUBLIC_BILLING_PRICE_ENTERPRISE_MONTH_ID=
-NEXT_PUBLIC_BILLING_PRICE_ENTERPRISE_YEAR_ID=
-BILLING_STRIPE_SECRET_KEY=
-BILLING_STRIPE_WEBHOOK_SECRET=
-```
-
-### SMTP Provider
-
-The starter kit supports Nodemailer (SMTP) and Resend.
-
-1. Choose an SMTP provider in `packages/email/provider/index.ts`.
-2. Update dashboard `apps/dashboard/.env` with SMTP credentials.
-
-```bash
-EMAIL_FROM=
-
-# Provider: NodeMailer
-
-EMAIL_NODEMAILER_URL=
-
-# Provider: Postmark
-EMAIL_POSTMARK_SERVER_TOKEN=
-
-# Provider: Resend
-EMAIL_RESEND_API_KEY=
-
-# Provider: SendGrid
-EMAIL_SENDGRID_API_KEY=
-```
-
-For Gmail you need an **app-specific password** and set it up like this
-
-```bash
-EMAIL_NODEMAILER_URL=smtp://myemail@gmail.com:suyz yeba qtgv xrnp@smtp.gmail.com:465
-```
-
-We recommend Resend for the ease of use.
-
-<Callout>SMTP provider is mandatory for credentials login.</Callout>
-
-## Dashboard Application
-
-1. Start the dashboard application
-
-```bash
-pnpm --filter dashboard dev
-```
-
-2. Navigate to http://localhost:3000
-
-You’re all set to start!
-
-## Marketing Application
-
-1. Start the marketing application
-
-```bash
-pnpm --filter marketing dev
-```
-
-2. Navigate to http://localhost:3001
-
-You’re all set to start!
-
-## Public API Application
-
-1. Start the public API application
-
-```bash
-pnpm --filter public-api dev
-```
-
-2. Navigate to http://localhost:3002
-
-You’re all set to start!
-
-## Troubleshoot
-
-### It seems that I can't login
-
-The database is probably not set up.
-
-### NPM throws an error
-
-In the monorepo version npm is no longer supported. It's all pnpm now. The problem is that npm, yarn and pnpm have different workspace syntax and package hoisting patterns. Supporting all package managers is not possible in a monorepo setup and pnpm is the most popular one.
+**Event Location**: St. Pete Beach, Florida  
+**Frequency**: Annual  
+**Focus**: Corporate team building & Tampa Bay business networking

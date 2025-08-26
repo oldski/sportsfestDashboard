@@ -33,17 +33,27 @@ export default async function AuthLayout({
     return redirect(routes.dashboard.organizations.Index);
   }
   return (
-    <main className="h-screen dark:bg-background bg-gray-50 px-4">
-      <div className="mx-auto w-full min-w-[320px] space-y-6 py-12 max-w-sm">
-        <Link
-          href={routes.marketing.Index}
-          className="block w-fit mx-auto"
-        >
-          <Logo />
-        </Link>
+    <main className="grid min-h-svh lg:grid-cols-2">
+      <div className="flex flex-col gap-4 p-6 items-center justify-between md:p-10">
+        <div className="flex justify-center gap-2">
+          <Link
+            href={routes.marketing.Index}
+            className="flex items-center gap-2 font-medium"
+          >
+            <Logo />
+          </Link>
+        </div>
         {children}
       </div>
-      <ThemeToggle className="fixed bottom-2 right-2 rounded-full" />
+      <div className="bg-muted relative hidden lg:block">
+        <img
+          src="https://unsplash.com/illustrations/beach-scene-framed-within-an-arched-structure-0Zhn6UiW7zc"
+          alt="Image"
+          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+        />
+
+        <ThemeToggle className="fixed bottom-2 right-2 rounded-full" />
+      </div>
     </main>
   );
 }

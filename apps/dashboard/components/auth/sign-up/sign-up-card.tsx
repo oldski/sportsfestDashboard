@@ -66,22 +66,22 @@ export function SignUpCard({
       }
     }
   };
-  const handleSignInWithGoogle = async (): Promise<void> => {
-    const result = await continueWithGoogle();
-    if (result?.serverError || result?.validationErrors) {
-      setErrorMessage('An error occured during Google sign up.');
-    }
-  };
-  const handleSignInWithMicrosoft = async (): Promise<void> => {
-    const result = await continueWithMicrosoft();
-    if (result?.serverError || result?.validationErrors) {
-      setErrorMessage('An error occured during Microsoft sign up.');
-    }
-  };
+  // const handleSignInWithGoogle = async (): Promise<void> => {
+  //   const result = await continueWithGoogle();
+  //   if (result?.serverError || result?.validationErrors) {
+  //     setErrorMessage('An error occured during Google sign up.');
+  //   }
+  // };
+  // const handleSignInWithMicrosoft = async (): Promise<void> => {
+  //   const result = await continueWithMicrosoft();
+  //   if (result?.serverError || result?.validationErrors) {
+  //     setErrorMessage('An error occured during Microsoft sign up.');
+  //   }
+  // };
   return (
     <Card
       className={cn(
-        'w-full px-4 py-8 border-transparent dark:border-border',
+        'w-full lg:w-3/4 px-4 py-8 border-transparent dark:border-border',
         className
       )}
       {...other}
@@ -182,35 +182,35 @@ export function SignUpCard({
             </Button>
           </form>
         </FormProvider>
-        <OrContinueWith />
-        <div className="flex gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="flex flex-1 items-center gap-2"
-            disabled={methods.formState.isSubmitting}
-            onClick={handleSignInWithGoogle}
-          >
-            <GoogleIcon
-              width="20"
-              height="20"
-            />
-            Google
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="flex flex-1 items-center gap-2"
-            disabled={methods.formState.isSubmitting}
-            onClick={handleSignInWithMicrosoft}
-          >
-            <MicrosoftIcon
-              width="20"
-              height="20"
-            />
-            Microsoft
-          </Button>
-        </div>
+        {/*<OrContinueWith />*/}
+        {/*<div className="flex gap-4">*/}
+        {/*  <Button*/}
+        {/*    type="button"*/}
+        {/*    variant="outline"*/}
+        {/*    className="flex flex-1 items-center gap-2"*/}
+        {/*    disabled={methods.formState.isSubmitting}*/}
+        {/*    onClick={handleSignInWithGoogle}*/}
+        {/*  >*/}
+        {/*    <GoogleIcon*/}
+        {/*      width="20"*/}
+        {/*      height="20"*/}
+        {/*    />*/}
+        {/*    Google*/}
+        {/*  </Button>*/}
+        {/*  <Button*/}
+        {/*    type="button"*/}
+        {/*    variant="outline"*/}
+        {/*    className="flex flex-1 items-center gap-2"*/}
+        {/*    disabled={methods.formState.isSubmitting}*/}
+        {/*    onClick={handleSignInWithMicrosoft}*/}
+        {/*  >*/}
+        {/*    <MicrosoftIcon*/}
+        {/*      width="20"*/}
+        {/*      height="20"*/}
+        {/*    />*/}
+        {/*    Microsoft*/}
+        {/*  </Button>*/}
+        {/*</div>*/}
       </CardContent>
       <CardFooter className="flex justify-center gap-1 text-sm text-muted-foreground">
         <span>Already have an account?</span>
