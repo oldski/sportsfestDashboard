@@ -44,7 +44,7 @@ import { cn } from '@workspace/ui/lib/utils';
 import { changeRole } from '~/actions/members/change-role';
 import { useEnhancedModal } from '~/hooks/use-enhanced-modal';
 import { useZodForm } from '~/hooks/use-zod-form';
-import { roleLabels } from '~/lib/labels';
+import { sportsFestRoleLabels } from '~/lib/labels';
 import {
   changeRoleSchema,
   type ChangeRoleSchema
@@ -122,7 +122,7 @@ export const ChangeRoleModal = NiceModal.create<ChangeRoleModalProps>(
                         key={value}
                         value={value}
                       >
-                        {roleLabels[value as Role]}
+                        {sportsFestRoleLabels[value as Role]}
                       </SelectItem>
                     ))}
                   </SelectContent>

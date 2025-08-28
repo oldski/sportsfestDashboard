@@ -22,8 +22,6 @@ export type OrganizationGeneralLayoutProps = {
   organizationLogo: React.ReactNode;
   organizationSlug: React.ReactNode;
   organizationDetails: React.ReactNode;
-  businessHours: React.ReactNode;
-  socialMedia: React.ReactNode;
   dangerZone: React.ReactNode;
 };
 
@@ -31,8 +29,6 @@ export default function OrganizationGeneralLayout({
   organizationLogo,
   organizationSlug,
   organizationDetails,
-  businessHours,
-  socialMedia,
   dangerZone
 }: OrganizationGeneralLayoutProps): React.JSX.Element {
   return (
@@ -56,10 +52,6 @@ export default function OrganizationGeneralLayout({
           {organizationSlug}
           <Separator />
           {organizationDetails}
-          <Separator />
-          {businessHours}
-          <Separator />
-          {socialMedia}
           <Separator />
           {dangerZone}
         </AnnotatedLayout>

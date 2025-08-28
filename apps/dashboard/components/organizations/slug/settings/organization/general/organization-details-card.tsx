@@ -19,11 +19,21 @@ import {
   FormProvider
 } from '@workspace/ui/components/form';
 import { Input } from '@workspace/ui/components/input';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@workspace/ui/components/select";
 import { Separator } from '@workspace/ui/components/separator';
 import { toast } from '@workspace/ui/components/sonner';
 
 import { updateOrganizationDetails } from '~/actions/organization/update-organization-details';
 import { useZodForm } from '~/hooks/use-zod-form';
+import { US_STATES } from '~/lib/constants';
 import {
   updateOrganizationDetailsSchema,
   type UpdateOrganizationDetailsSchema
@@ -44,6 +54,10 @@ export function OrganizationDetailsCard({
     defaultValues: {
       name: details.name ?? '',
       address: details.address ?? '',
+      address2: details.address2 ?? '',
+      city: details.city ?? '',
+      state: details.state ?? '',
+      zip: details.zip ?? '',
       phone: details.phone ?? '',
       email: details.email ?? '',
       website: details.website ?? ''
@@ -110,6 +124,98 @@ export function OrganizationDetailsCard({
                 </FormItem>
               )}
             />
+            <FormField
+              control={methods.control}
+              name="address2"
+              render={({ field }) => (
+                <FormItem className="flex w-full flex-col">
+                  <FormLabel>Address 2</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      maxLength={255}
+                      placeholder="Apt, suite, etc. (optional)"
+                      autoComplete="address-line2"
+                      disabled={methods.formState.isSubmitting}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex w-full gap-4">
+              <FormField
+                control={methods.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem className="flex w-full flex-col">
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        maxLength={100}
+                        autoComplete="address-level2"
+                        disabled={methods.formState.isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={methods.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>State</FormLabel>
+                    <FormControl>
+                      <Select
+                        disabled={methods.formState.isSubmitting}
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        name={field.name}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>States</SelectLabel>
+                            {US_STATES.map((abbr) => (
+                              <SelectItem key={abbr} value={abbr}>
+                                {abbr}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={methods.control}
+                name="zip"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Zip Code</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        maxLength={10}
+                        autoComplete="postal-code"
+                        disabled={methods.formState.isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <FormField
               control={methods.control}
               name="phone"

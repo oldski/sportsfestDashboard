@@ -46,7 +46,7 @@ import { checkIfCanBeInvited } from '~/actions/invitations/check-if-can-be-invit
 import { sendInvitation } from '~/actions/invitations/send-invitation';
 import { useEnhancedModal } from '~/hooks/use-enhanced-modal';
 import { useZodForm } from '~/hooks/use-zod-form';
-import { roleLabels } from '~/lib/labels';
+import { sportsFestRoleLabels } from '~/lib/labels';
 import {
   sendInvitationSchema,
   type SendInvitationSchema
@@ -153,7 +153,7 @@ export const InviteMemberModal = NiceModal.create<InviteMemberModalProps>(
                         key={value}
                         value={value}
                       >
-                        {roleLabels[value]}
+                        {sportsFestRoleLabels[value]}
                       </SelectItem>
                     ))}
                   </SelectContent>

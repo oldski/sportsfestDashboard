@@ -45,7 +45,7 @@ import { cn } from '@workspace/ui/lib/utils';
 import { updateInvitation } from '~/actions/invitations/update-invitation';
 import { useEnhancedModal } from '~/hooks/use-enhanced-modal';
 import { useZodForm } from '~/hooks/use-zod-form';
-import { roleLabels } from '~/lib/labels';
+import { sportsFestRoleLabels } from '~/lib/labels';
 import {
   updateInvitationSchema,
   type UpdateInvitationSchema
@@ -133,7 +133,7 @@ export const EditInvitationModal = NiceModal.create<EditInvitationModalProps>(
                         key={value}
                         value={value}
                       >
-                        {roleLabels[value as Role]}
+                        {sportsFestRoleLabels[value as Role]}
                       </SelectItem>
                     ))}
                   </SelectContent>

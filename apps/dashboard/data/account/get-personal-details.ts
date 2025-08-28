@@ -25,7 +25,8 @@ export async function getPersonalDetails(): Promise<PersonalDetailsDto> {
           image: userTable.image,
           name: userTable.name,
           phone: userTable.phone,
-          email: userTable.email
+          email: userTable.email,
+          isSportsFestAdmin: userTable.isSportsFestAdmin
         })
         .from(userTable)
         .where(eq(userTable.id, ctx.session.user.id))
@@ -40,7 +41,8 @@ export async function getPersonalDetails(): Promise<PersonalDetailsDto> {
         image: userFromDb.image ?? undefined,
         name: userFromDb.name,
         phone: userFromDb.phone ?? undefined,
-        email: userFromDb.email ?? undefined
+        email: userFromDb.email ?? undefined,
+        isSportsFestAdmin: userFromDb.isSportsFestAdmin
       };
 
       return response;

@@ -66,7 +66,58 @@ export const organizationOnboardingSchema = z.object({
       message:
         'Slug must start and end with a letter or number and can contain underscores and hyphens in between.'
     }),
-  addExampleData: z.coerce.boolean()
+  address: z
+    .string({
+      required_error: 'Address is required.',
+      invalid_type_error: 'Address must be a string.'
+    })
+    .trim()
+    .min(1, 'Address is required.')
+    .max(255, 'Maximum 255 characters allowed.'),
+  address2: z
+    .string({
+      invalid_type_error: 'Address 2 must be a string.'
+    })
+    .trim()
+    .max(255, 'Maximum 255 characters allowed.')
+    .optional()
+    .or(z.literal('')),
+  city: z
+    .string({
+      required_error: 'City is required.',
+      invalid_type_error: 'City must be a string.'
+    })
+    .trim()
+    .min(1, 'City is required.')
+    .max(100, 'Maximum 100 characters allowed.'),
+  state: z
+    .string({
+      required_error: 'State is required.',
+      invalid_type_error: 'State must be a string.'
+    })
+    .trim()
+    .max(50, 'Maximum 50 characters allowed.')
+    .or(z.literal('')),
+  zip: z
+    .string({
+      required_error: 'Zip code is required.',
+      invalid_type_error: 'Zip code must be a string.'
+    })
+    .trim()
+    .min(1, 'Zip code is required.')
+    .max(10, 'Maximum 5 characters allowed.')
+    .regex(/^\d{5}(?:-\d{4})?$/, {
+      message:
+        'Invalid zip code.'
+    }),
+  phone: z
+    .string({
+      required_error: 'Phone is required.',
+      invalid_type_error: 'Phone must be a string.'
+    })
+    .trim()
+    .max(32, 'Maximum 32 characters allowed.')
+    .or(z.literal(''))
 });
 
 export const inviteTeamOnboardingSchema = z.object({

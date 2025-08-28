@@ -59,8 +59,11 @@ export const routes = {
       Index: `${baseUrl.Dashboard}/organizations`,
       slug: {
         ChoosePlan: `${baseUrl.Dashboard}/organizations/[slug]/choose-plan`,
-        Contacts: `${baseUrl.Dashboard}/organizations/[slug]/contacts`,
+        // Contacts: `${baseUrl.Dashboard}/organizations/[slug]/contacts`,
         Home: `${baseUrl.Dashboard}/organizations/[slug]/home`,
+        Teams: `${baseUrl.Dashboard}/organizations/[slug]/teams`,
+        Players: `${baseUrl.Dashboard}/organizations/[slug]/players`,
+        Reports: `${baseUrl.Dashboard}/organizations/[slug]/reports`,
         Index: `${baseUrl.Dashboard}/organizations/[slug]`,
         settings: {
           account: {
@@ -72,7 +75,7 @@ export const routes = {
           Index: `${baseUrl.Dashboard}/organizations/[slug]/settings`,
           organization: {
             Billing: `${baseUrl.Dashboard}/organizations/[slug]/settings/organization/billing`,
-            Developers: `${baseUrl.Dashboard}/organizations/[slug]/settings/organization/developers`,
+            // Developers: `${baseUrl.Dashboard}/organizations/[slug]/settings/organization/developers`,
             General: `${baseUrl.Dashboard}/organizations/[slug]/settings/organization/general`,
             Index: `${baseUrl.Dashboard}/organizations/[slug]/settings/organization`,
             Members: `${baseUrl.Dashboard}/organizations/[slug]/settings/organization/members`

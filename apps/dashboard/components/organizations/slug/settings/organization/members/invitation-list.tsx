@@ -4,7 +4,7 @@ import * as React from 'react';
 import NiceModal from '@ebay/nice-modal-react';
 import { MoreHorizontalIcon } from 'lucide-react';
 
-import { InvitationStatus } from '@workspace/database/schema';
+import { InvitationStatus, Role } from '@workspace/database/schema';
 import { Badge } from '@workspace/ui/components/badge';
 import { Button } from '@workspace/ui/components/button';
 import {
@@ -22,6 +22,7 @@ import { resendInvitation } from '~/actions/invitations/resend-invitation';
 import { EditInvitationModal } from '~/components/organizations/slug/settings/organization/members/edit-invitation-modal';
 import { RevokeInvitationModal } from '~/components/organizations/slug/settings/organization/members/revoke-invitation-modal';
 import { capitalize } from '~/lib/formatters';
+import { sportsFestRoleLabels } from '~/lib/labels';
 import type { InvitationDto } from '~/types/dtos/invitation-dto';
 import type { ProfileDto } from '~/types/dtos/profile-dto';
 
@@ -107,7 +108,7 @@ function InvitationListItem({
           variant="secondary"
           className="hidden rounded-3xl sm:inline-block"
         >
-          {capitalize(invitation.role.toLowerCase())}
+          {sportsFestRoleLabels[invitation.role as Role]}
         </Badge>
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>

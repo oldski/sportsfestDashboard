@@ -149,9 +149,12 @@ export const completeOnboarding = authActionClient
       );
     }
 
-    let redirect: string = routes.dashboard.organizations.Index;
+    // Default redirect - use first organization if available
+    let redirect: string = memberships.length > 0 
+      ? replaceOrgSlug(routes.dashboard.organizations.slug.Home, memberships[0].organization.slug)
+      : routes.dashboard.organizations.Index;
 
-    // Newly created organization
+    // Newly created organization takes priority
     if (
       parsedInput.activeSteps.includes(OnboardingStep.Organization) &&
       parsedInput.organizationStep?.slug
@@ -161,7 +164,7 @@ export const completeOnboarding = authActionClient
         parsedInput.organizationStep.slug
       );
     }
-    // Has only one organization
+    // Has only one organization (this check is now redundant but kept for clarity)
     else if (memberships.length === 1) {
       redirect = replaceOrgSlug(
         routes.dashboard.organizations.slug.Home,
@@ -241,8 +244,12 @@ async function handleOrganizationStep(
     billingCustomerId,
     billingEmail: billingCustomerId ? userEmail : undefined,
     slug: step.slug,
-    phone: null,
-    address: null,
+    phone: step.phone || null,
+    address: step.address || null,
+    address2: step.address2 || null,
+    city: step.city || null,
+    state: step.state || null,
+    zip: step.zip || null,
     email: null,
     website: null,
     facebookPage: null,

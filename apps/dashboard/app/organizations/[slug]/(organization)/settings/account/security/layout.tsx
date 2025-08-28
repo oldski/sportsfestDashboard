@@ -49,8 +49,6 @@ export default function SecurityLayout({
         <AnnotatedLayout>
           {changePassword}
           <Separator />
-          {connectedAccounts}
-          <Separator />
           {multiFactorAuthentication}
           {session.strategy === 'database' && (
             <>

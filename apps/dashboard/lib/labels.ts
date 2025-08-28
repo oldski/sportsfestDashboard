@@ -28,6 +28,18 @@ export const roleLabels: Record<Role, string> = {
   [Role.ADMIN]: 'Admin'
 };
 
+export const sportsFestRoleLabels: Record<Role, string> = {
+  [Role.MEMBER]: 'Captain',
+  [Role.ADMIN]: 'Organizer'
+};
+
+export function getRoleDisplayName(role: string): string {
+  return {
+    'admin': 'Organizer',
+    'member': 'Captain'
+  }[role] || role;
+}
+
 export const feedbackCategoryLabels: Record<FeedbackCategory, string> = {
   [FeedbackCategory.SUGGESTION]: 'Suggestion',
   [FeedbackCategory.PROBLEM]: 'Problem',

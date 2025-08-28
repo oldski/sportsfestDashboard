@@ -19,7 +19,15 @@ import {
 import { ImageDropzone } from '@workspace/ui/components/image-dropzone';
 import { Input } from '@workspace/ui/components/input';
 import { toast } from '@workspace/ui/components/sonner';
-import { Switch } from '@workspace/ui/components/switch';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@workspace/ui/components/select";
 import {
   Tooltip,
   TooltipContent,
@@ -31,6 +39,7 @@ import { checkIfSlugIsAvailable } from '~/actions/organization/check-if-slug-is-
 import { NextButton } from '~/components/onboarding/next-button';
 import type { OnboardingStepProps } from '~/components/onboarding/onboarding-step-props';
 import { CropPhotoModal } from '~/components/organizations/slug/settings/account/profile/crop-photo-modal';
+import { US_STATES } from '~/lib/constants';
 import { MAX_IMAGE_SIZE } from '~/lib/file-upload';
 import { type CompleteOnboardingSchema } from '~/schemas/onboarding/complete-onboarding-schema';
 
@@ -77,6 +86,7 @@ export function OnboardingOrganizationStep({
       shouldDirty: true
     });
   };
+
   return (
     <div
       className={cn('flex w-full flex-col gap-4', className)}
@@ -160,6 +170,7 @@ export function OnboardingOrganizationStep({
           </FormItem>
         )}
       />
+
       <FormField
         control={methods.control}
         name="organizationStep.slug"
@@ -187,27 +198,151 @@ export function OnboardingOrganizationStep({
           </FormItem>
         )}
       />
+
       <FormField
         control={methods.control}
-        name="organizationStep.addExampleData"
+        name="organizationStep.address"
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center justify-between">
-            <div className="space-y-0.5">
-              <FormLabel>Example data</FormLabel>
-              <FormDescription>
-                Recommended to explore the platform
-              </FormDescription>
-            </div>
+          <FormItem className="flex w-full flex-col">
+            <FormLabel required>Address</FormLabel>
             <FormControl>
-              <Switch
-                checked={field.value}
-                onCheckedChange={field.onChange}
+              <Input
+                type="text"
+                maxLength={255}
+                required
+                placeholder="123 Main Street"
                 disabled={methods.formState.isSubmitting}
+                {...field}
               />
             </FormControl>
+            {(methods.formState.touchedFields.organizationStep?.address ||
+              methods.formState.submitCount > 0) && <FormMessage />}
           </FormItem>
         )}
       />
+
+      <FormField
+        control={methods.control}
+        name="organizationStep.address2"
+        render={({ field }) => (
+          <FormItem className="flex w-full flex-col">
+            <FormLabel>Address 2</FormLabel>
+            <FormControl>
+              <Input
+                type="text"
+                maxLength={255}
+                placeholder="Apt, suite, etc. (optional)"
+                disabled={methods.formState.isSubmitting}
+                {...field}
+              />
+            </FormControl>
+            {(methods.formState.touchedFields.organizationStep?.address2 ||
+              methods.formState.submitCount > 0) && <FormMessage />}
+          </FormItem>
+        )}
+      />
+
+      <div className="flex w-full  gap-4">
+        <FormField
+          control={methods.control}
+          name="organizationStep.city"
+          render={({ field }) => (
+            <FormItem className="flex w-full flex-col">
+              <FormLabel required>City</FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  maxLength={100}
+                  required
+                  placeholder="St. Petersburg"
+                  disabled={methods.formState.isSubmitting}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={methods.control}
+          name="organizationStep.state"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel required>State</FormLabel>
+              <FormControl>
+                <Select
+                  disabled={methods.formState.isSubmitting}
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  name={field.name}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="FL" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>States</SelectLabel>
+                      {US_STATES.map((abbr) => (
+                        <SelectItem key={abbr} value={abbr}>
+                          {abbr}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              {(methods.formState.touchedFields.organizationStep?.state ||
+                methods.formState.submitCount > 0) && <FormMessage />}
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={methods.control}
+          name="organizationStep.zip"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel required>Zip Code</FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  maxLength={10}
+                  required
+                  placeholder="33701"
+                  disabled={methods.formState.isSubmitting}
+                  {...field}
+                />
+              </FormControl>
+              {(methods.formState.touchedFields.organizationStep?.zip ||
+                methods.formState.submitCount > 0) && <FormMessage />}
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <FormField
+        control={methods.control}
+        name="organizationStep.phone"
+        render={({ field }) => (
+          <FormItem className="flex w-full flex-col">
+            <FormLabel required>Phone</FormLabel>
+            <FormControl>
+              <Input
+                type="tel"
+                maxLength={32}
+                required
+                placeholder="(727) 555-0123"
+                disabled={methods.formState.isSubmitting}
+                {...field}
+              />
+            </FormControl>
+            {(methods.formState.touchedFields.organizationStep?.phone ||
+              methods.formState.submitCount > 0) && <FormMessage />}
+          </FormItem>
+        )}
+      />
+
       <NextButton
         loading={loading}
         disabled={!canNext}

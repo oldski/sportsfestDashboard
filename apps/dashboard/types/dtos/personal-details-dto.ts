@@ -4,4 +4,5 @@ export type PersonalDetailsDto = {
   name: string;
   phone?: string;
   email?: string;
+  isSportsFestAdmin?: boolean | null;
 };

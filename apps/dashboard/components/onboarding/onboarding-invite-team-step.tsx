@@ -24,7 +24,7 @@ import { cn } from '@workspace/ui/lib/utils';
 
 import { NextButton } from '~/components/onboarding/next-button';
 import type { OnboardingStepProps } from '~/components/onboarding/onboarding-step-props';
-import { roleLabels } from '~/lib/labels';
+import { sportsFestRoleLabels } from '~/lib/labels';
 import { type CompleteOnboardingSchema } from '~/schemas/onboarding/complete-onboarding-schema';
 
 export type OnboardingInvitationStepProps =
@@ -111,7 +111,7 @@ export function OnboardingInviteTeamStep({
                             key={value}
                             value={value}
                           >
-                            {roleLabels[value as Role]}
+                            {sportsFestRoleLabels[value as Role]}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -19,6 +19,10 @@ export const updateOrganizationDetails = authOrganizationActionClient
       .set({
         name: parsedInput.name,
         address: parsedInput.address ? parsedInput.address : null,
+        address2: parsedInput.address2 ? parsedInput.address2 : null,
+        city: parsedInput.city ? parsedInput.city : null,
+        state: parsedInput.state ? parsedInput.state : null,
+        zip: parsedInput.zip ? parsedInput.zip : null,
         phone: parsedInput.phone ? parsedInput.phone : null,
         email: parsedInput.email ? parsedInput.email : null,
         website: parsedInput.website ? parsedInput.website : null

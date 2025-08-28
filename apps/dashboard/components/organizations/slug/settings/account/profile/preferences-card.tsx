@@ -82,50 +82,6 @@ export function PreferencesCard({
           >
             <FormField
               control={methods.control}
-              name="locale"
-              render={({ field }) => (
-                <FormItem className="flex w-full flex-col">
-                  <FormLabel>Language</FormLabel>
-                  <FormDescription>
-                    This is the language that will be used in the application.
-                  </FormDescription>
-                  <FormControl>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      disabled={methods.formState.isSubmitting}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="en-US">
-                          <div className="flex flex-row items-center gap-2">
-                            <UsFlag className="h-3 w-4" />
-                            <span>English (United States)</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="en-GB">
-                          <div className="flex flex-row items-center gap-2">
-                            <GbFlag className="h-3 w-4" />
-                            <span>English (United Kingdom)</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="de-DE">
-                          <div className="flex flex-row items-center gap-2">
-                            <DeFlg className="h-3 w-4" />
-                            <span>German (Germany)</span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={methods.control}
               name="theme"
               render={({ field }) => (
                 <FormItem className="flex flex-col">

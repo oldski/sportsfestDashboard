@@ -23,6 +23,10 @@ export async function getOrganizationDetails(): Promise<OrganizationDetailsDto> 
         .select({
           name: organizationTable.name,
           address: organizationTable.address,
+          address2: organizationTable.address2,
+          city: organizationTable.city,
+          state: organizationTable.state,
+          zip: organizationTable.zip,
           phone: organizationTable.phone,
           email: organizationTable.email,
           website: organizationTable.website
@@ -38,6 +42,10 @@ export async function getOrganizationDetails(): Promise<OrganizationDetailsDto> 
       const response: OrganizationDetailsDto = {
         name: organization.name,
         address: organization.address ? organization.address : undefined,
+        address2: organization.address2 ? organization.address2 : undefined,
+        city: organization.city ? organization.city : undefined,
+        state: organization.state ? organization.state : undefined,
+        zip: organization.zip ? organization.zip : undefined,
         phone: organization.phone ? organization.phone : undefined,
         email: organization.email ? organization.email : undefined,
         website: organization.website ? organization.website : undefined

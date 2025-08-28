@@ -24,7 +24,8 @@ import { cn } from '@workspace/ui/lib/utils';
 import { ChangeRoleModal } from '~/components/organizations/slug/settings/organization/members/change-role-modal';
 import { RemoveMemberModal } from '~/components/organizations/slug/settings/organization/members/remove-member-modal';
 import { TransferOwnershipModal } from '~/components/organizations/slug/settings/organization/members/transfer-ownership-modal';
-import { capitalize, getInitials } from '~/lib/formatters';
+import { getInitials } from '~/lib/formatters';
+import { sportsFestRoleLabels } from '~/lib/labels';
 import type { MemberDto } from '~/types/dtos/member-dto';
 import type { ProfileDto } from '~/types/dtos/profile-dto';
 
@@ -112,7 +113,7 @@ function MemberListItem({
           variant="secondary"
           className="hidden rounded-3xl sm:inline-block"
         >
-          {capitalize(member.role.toLowerCase())}
+          {sportsFestRoleLabels[member.role]}
         </Badge>
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>

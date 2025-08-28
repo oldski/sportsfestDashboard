@@ -31,7 +31,8 @@ export async function getProfile(): Promise<ProfileDto> {
           image: userTable.image,
           name: userTable.name,
           email: userTable.email,
-          locale: userTable.locale
+          locale: userTable.locale,
+          isSportsFestAdmin: userTable.isSportsFestAdmin
         })
         .from(userTable)
         .where(eq(userTable.id, ctx.session.user.id))
@@ -46,7 +47,8 @@ export async function getProfile(): Promise<ProfileDto> {
         image: userFromDb.image ?? undefined,
         name: userFromDb.name,
         email: userFromDb.email ?? undefined,
-        locale: userFromDb.locale
+        locale: userFromDb.locale,
+        isSportsFestAdmin: userFromDb.isSportsFestAdmin
       };
 
       return response;

@@ -1,5 +1,7 @@
 import {
   BellIcon,
+  BuildingIcon,
+  ChartBarBigIcon,
   CodeIcon,
   CreditCardIcon,
   HomeIcon,
@@ -8,7 +10,8 @@ import {
   StoreIcon,
   UserIcon,
   UserPlus2Icon,
-  UsersIcon
+  UsersIcon,
+  VolleyballIcon
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -30,8 +33,13 @@ export function createMainNavItems(slug: string): NavItem[] {
       icon: HomeIcon
     },
     {
-      title: 'Contacts',
-      href: replaceOrgSlug(routes.dashboard.organizations.slug.Contacts, slug),
+      title: 'Teams',
+      href: replaceOrgSlug(routes.dashboard.organizations.slug.Teams, slug),
+      icon: VolleyballIcon
+    },
+    {
+      title: 'Players',
+      href: replaceOrgSlug(routes.dashboard.organizations.slug.Players, slug),
       icon: UsersIcon
     },
     {
@@ -74,6 +82,29 @@ export function createAccountNavItems(slug: string): NavItem[] {
   ];
 }
 
+export function createSuperAdminNavItems(slug: string): NavItem[] {
+  return [
+    {
+      title: 'Organizations',
+      href: routes.dashboard.organizations.Index,
+      icon: BuildingIcon
+    },
+    {
+      title: 'Reports',
+      href: replaceOrgSlug(routes.dashboard.organizations.slug.Reports, slug),
+      icon: ChartBarBigIcon
+    },
+    {
+      title: 'Settings',
+      href: replaceOrgSlug(
+        routes.dashboard.organizations.slug.settings.Index,
+        slug
+      ),
+      icon: SettingsIcon
+    }
+  ];
+}
+
 export function createOrganizationNavItems(slug: string): NavItem[] {
   return [
     {
@@ -100,13 +131,5 @@ export function createOrganizationNavItems(slug: string): NavItem[] {
       ),
       icon: CreditCardIcon
     },
-    {
-      title: 'Developers',
-      href: replaceOrgSlug(
-        routes.dashboard.organizations.slug.settings.organization.Developers,
-        slug
-      ),
-      icon: CodeIcon
-    }
   ];
 }

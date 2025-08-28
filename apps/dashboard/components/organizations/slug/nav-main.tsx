@@ -14,16 +14,28 @@ import {
 } from '@workspace/ui/components/sidebar';
 import { cn } from '@workspace/ui/lib/utils';
 
-import { createMainNavItems } from '~/components/organizations/slug/nav-items';
+import { createMainNavItems, createSuperAdminNavItems } from '~/components/organizations/slug/nav-items';
 import { useActiveOrganization } from '~/hooks/use-active-organization';
+import { isSuperAdmin } from '~/lib/admin-utils';
+import type { ProfileDto } from '~/types/dtos/profile-dto';
 
-export function NavMain(props: SidebarGroupProps): React.JSX.Element {
+export type NavMainProps = SidebarGroupProps & {
+  profile?: ProfileDto;
+};
+
+export function NavMain({ profile, ...props }: NavMainProps): React.JSX.Element {
   const pathname = usePathname();
   const activeOrganization = useActiveOrganization();
+  
+  // Choose navigation items based on user role
+  const navItems = profile && isSuperAdmin(profile)
+    ? createSuperAdminNavItems(activeOrganization.slug)
+    : createMainNavItems(activeOrganization.slug);
+  
   return (
     <SidebarGroup {...props}>
       <SidebarMenu>
-        {createMainNavItems(activeOrganization.slug).map((item, index) => {
+        {navItems.map((item, index) => {
           const isActive = pathname.startsWith(
             getPathname(item.href, baseUrl.Dashboard)
           );

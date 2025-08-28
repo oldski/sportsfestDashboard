@@ -17,6 +17,38 @@ export const updateOrganizationDetailsSchema = z.object({
     .max(255, 'Maximum 255 characters allowed.')
     .optional()
     .or(z.literal('')),
+  address2: z
+    .string({
+      invalid_type_error: 'Address 2 must be a string.'
+    })
+    .trim()
+    .max(255, 'Maximum 255 characters allowed.')
+    .optional()
+    .or(z.literal('')),
+  city: z
+    .string({
+      invalid_type_error: 'City must be a string.'
+    })
+    .trim()
+    .max(100, 'Maximum 100 characters allowed.')
+    .optional()
+    .or(z.literal('')),
+  state: z
+    .string({
+      invalid_type_error: 'State must be a string.'
+    })
+    .trim()
+    .max(50, 'Maximum 50 characters allowed.')
+    .optional()
+    .or(z.literal('')),
+  zip: z
+    .string({
+      invalid_type_error: 'Zip code must be a string.'
+    })
+    .trim()
+    .max(10, 'Maximum 10 characters allowed.')
+    .optional()
+    .or(z.literal('')),
   phone: z
     .string({
       invalid_type_error: 'Phone must be a string.'
