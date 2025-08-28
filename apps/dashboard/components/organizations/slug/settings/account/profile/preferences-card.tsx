@@ -20,13 +20,6 @@ import {
   FormProvider
 } from '@workspace/ui/components/form';
 import { RadioCardItem, RadioCards } from '@workspace/ui/components/radio-card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@workspace/ui/components/select';
 import { Separator } from '@workspace/ui/components/separator';
 import { toast } from '@workspace/ui/components/sonner';
 import { useMounted } from '@workspace/ui/hooks/use-mounted';
@@ -129,98 +122,5 @@ export function PreferencesCard({
         </CardFooter>
       </Card>
     </FormProvider>
-  );
-}
-
-function UsFlag(props: React.SVGAttributes<SVGSVGElement>): React.JSX.Element {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 640 480"
-      {...props}
-    >
-      <path
-        fill="#bd3d44"
-        d="M0 0h640v480H0"
-      />
-      <path
-        stroke="#fff"
-        strokeWidth="37"
-        d="M0 55.3h640M0 129h640M0 203h640M0 277h640M0 351h640M0 425h640"
-      />
-      <path
-        fill="#192f5d"
-        d="M0 0h364.8v258.5H0"
-      />
-      <marker
-        id="us-a"
-        markerHeight="30"
-        markerWidth="30"
-      >
-        <path
-          fill="#fff"
-          d="M14 0l9 27L0 10h28L5 27z"
-        />
-      </marker>
-      <path
-        fill="none"
-        markerMid="url(#us-a)"
-        d="M0 0l16 11h61 61 61 61 60L47 37h61 61 60 61L16 63h61 61 61 61 60L47 89h61 61 60 61L16 115h61 61 61 61 60L47 141h61 61 60 61L16 166h61 61 61 61 60L47 192h61 61 60 61L16 218h61 61 61 61 60z"
-      />
-    </svg>
-  );
-}
-
-function GbFlag(props: React.SVGAttributes<SVGSVGElement>): React.JSX.Element {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 640 480"
-      {...props}
-    >
-      <path
-        fill="#012169"
-        d="M0 0h640v480H0z"
-      />
-      <path
-        fill="#FFF"
-        d="M75 0l244 181L562 0h78v62L400 241l240 178v61h-80L320 301 81 480H0v-60l239-178L0 64V0z"
-      />
-      <path
-        fill="#C8102E"
-        d="M424 281l216 159v40L369 281zm-184 20l6 35L54 480H0zM640 0v3L391 191l2-44L590 0zM0 0l239 176h-60L0 42z"
-      />
-      <path
-        fill="#FFF"
-        d="M241 0v480h160V0zM0 160v160h640V160z"
-      />
-      <path
-        fill="#C8102E"
-        d="M0 193v96h640v-96zM273 0v480h96V0z"
-      />
-    </svg>
-  );
-}
-
-function DeFlg(props: React.SVGAttributes<SVGSVGElement>): React.JSX.Element {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 640 480"
-      {...props}
-    >
-      <path
-        fill="#fc0"
-        d="M0 320h640v160H0z"
-      />
-      <path
-        fill="#000001"
-        d="M0 0h640v160H0z"
-      />
-      <path
-        fill="red"
-        d="M0 160h640v160H0z"
-      />
-    </svg>
   );
 }

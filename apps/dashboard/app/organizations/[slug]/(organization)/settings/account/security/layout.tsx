@@ -28,7 +28,6 @@ export type SecurityLayoutProps = {
 
 export default function SecurityLayout({
   changePassword,
-  connectedAccounts,
   multiFactorAuthentication,
   manageSessions
 }: SecurityLayoutProps): React.JSX.Element {

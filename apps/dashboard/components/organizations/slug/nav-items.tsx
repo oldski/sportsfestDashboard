@@ -2,7 +2,6 @@ import {
   BellIcon,
   BuildingIcon,
   ChartBarBigIcon,
-  CodeIcon,
   CreditCardIcon,
   HomeIcon,
   LockKeyholeIcon,
