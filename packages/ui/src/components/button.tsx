@@ -52,14 +52,26 @@ function Button({
   ...props
 }: ButtonProps): React.JSX.Element {
   const Comp = asChild ? SlotPrimitive.Slot : 'button';
+  const componentProps = asChild 
+    ? { 
+        className: cn(
+          buttonVariants({ variant, size, className }),
+          loading && 'relative'
+        ),
+        ...props 
+      }
+    : { 
+        'data-slot': 'button',
+        className: cn(
+          buttonVariants({ variant, size, className }),
+          loading && 'relative'
+        ),
+        ...props 
+      };
+  
   return (
     <Comp
-      data-slot="button"
-      className={cn(
-        buttonVariants({ variant, size, className }),
-        loading && 'relative'
-      )}
-      {...props}
+      {...componentProps}
     >
       {loading ? (
         <>
@@ -69,7 +81,7 @@ function Button({
           </span>
         </>
       ) : (
-        <>{children}</>
+        children
       )}
     </Comp>
   );

@@ -7,8 +7,6 @@ import { checkSession } from '@workspace/auth/session';
 import { db, eq, jsonAggBuildObject } from '@workspace/database/client';
 import {
   membershipTable,
-  orderItemTable,
-  orderTable,
   organizationTable,
   subscriptionItemTable,
   subscriptionTable,
@@ -89,26 +87,28 @@ const dedupedGetActiveOrganization = cache(async function () {
     .where(eq(subscriptionTable.organizationId, organization.id))
     .groupBy(subscriptionTable.id);
 
-  const orders = await db
-    .select({
-      id: orderTable.id,
-      status: orderTable.status,
-      currency: orderTable.currency,
-      provider: orderTable.provider,
-      items: jsonAggBuildObject({
-        id: orderItemTable.id,
-        quantity: orderItemTable.quantity,
-        productId: orderItemTable.productId,
-        variantId: orderItemTable.variantId,
-        priceAmount: orderItemTable.priceAmount,
-        type: orderItemTable.type,
-        model: orderItemTable.model
-      })
-    })
-    .from(orderTable)
-    .leftJoin(orderItemTable, eq(orderItemTable.orderId, orderTable.id))
-    .where(eq(orderTable.organizationId, organization.id))
-    .groupBy(orderTable.id);
+  // TODO: Re-enable once orderTable and orderItemTable are added back to schema
+  // const orders = await db
+  //   .select({
+  //     id: orderTable.id,
+  //     status: orderTable.status,
+  //     currency: orderTable.currency,
+  //     provider: orderTable.provider,
+  //     items: jsonAggBuildObject({
+  //       id: orderItemTable.id,
+  //       quantity: orderItemTable.quantity,
+  //       productId: orderItemTable.productId,
+  //       variantId: orderItemTable.variantId,
+  //       priceAmount: orderItemTable.priceAmount,
+  //       type: orderItemTable.type,
+  //       model: orderItemTable.model
+  //     })
+  //   })
+  //   .from(orderTable)
+  //   .leftJoin(orderItemTable, eq(orderItemTable.orderId, orderTable.id))
+  //   .where(eq(orderTable.organizationId, organization.id))
+  //   .groupBy(orderTable.id);
+  const orders = []; // Temporary empty array
 
   return {
     ...organization,
@@ -122,6 +122,7 @@ const dedupedGetUserInfo = cache(async function (userId: string) {
   const [userInfo] = await db
     .select({
       completedOnboarding: userTable.completedOnboarding,
+      isSportsFestAdmin: userTable.isSportsFestAdmin,
       memberships: jsonAggBuildObject({
         organizationId: membershipTable.organizationId,
         userId: membershipTable.userId,

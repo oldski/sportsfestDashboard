@@ -19,9 +19,23 @@ import {
 import { NavAccount } from '~/components/organizations/slug/settings/nav-account';
 import { NavOrganization } from '~/components/organizations/slug/settings/nav-organization';
 import { useActiveOrganization } from '~/hooks/use-active-organization';
+import { getSettingsAccess } from '~/lib/super-admin-settings';
+import type { ProfileDto } from '~/types/dtos/profile-dto';
 
-export function SettingsSidebar(): React.JSX.Element {
+export interface SettingsSidebarProps {
+  profile?: ProfileDto;
+}
+
+export function SettingsSidebar({ profile }: SettingsSidebarProps): React.JSX.Element {
   const activeOrganization = useActiveOrganization();
+  const access = profile ? getSettingsAccess(profile) : {
+    canViewAccountSettings: true,
+    canViewGeneral: true,
+    canViewMembers: true,
+    canViewBilling: true,
+    canViewDevelopers: true,
+    isImpersonating: false
+  };
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex h-14 flex-row items-center py-0">
@@ -50,8 +64,8 @@ export function SettingsSidebar(): React.JSX.Element {
           verticalScrollBar
           className="h-full"
         >
-          <NavAccount />
-          <NavOrganization />
+          {access.canViewAccountSettings && <NavAccount />}
+          <NavOrganization profile={profile} />
         </ScrollArea>
       </SidebarContent>
       <SidebarRail />

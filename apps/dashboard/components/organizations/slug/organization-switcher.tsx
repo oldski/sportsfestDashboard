@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   CheckIcon,
   ChevronsUpDownIcon,
+  HomeIcon,
   MoreHorizontalIcon,
   PlusIcon,
   SearchIcon,
@@ -37,13 +38,17 @@ import {
 
 import { useActiveOrganization } from '~/hooks/use-active-organization';
 import type { OrganizationDto } from '~/types/dtos/organization-dto';
+import { isSuperAdmin } from '~/lib/admin-utils';
+import { ProfileDto } from '~/types/dtos/profile-dto';
 
 export type OrganizationSwitcherProps = {
   organizations: OrganizationDto[];
+  profile: ProfileDto;
 };
 
 export function OrganizationSwitcher({
-  organizations
+  organizations,
+  profile
 }: OrganizationSwitcherProps): React.JSX.Element {
   const sidebar = useSidebar();
   const activeOrganization = useActiveOrganization();
@@ -158,6 +163,20 @@ export function OrganizationSwitcher({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            {isSuperAdmin(profile) && (
+              <DropdownMenuItem
+                asChild
+                className="cursor-pointer gap-2 p-2"
+              >
+                <Link
+                  href="/admin"
+                  onClick={handleCloseSidebar}
+                >
+                  <HomeIcon className="size-4 shrink-0 text-muted-foreground" />
+                  Admin Dashboard
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               asChild
               className="cursor-pointer gap-2 p-2"

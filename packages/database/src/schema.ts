@@ -128,17 +128,7 @@ export enum PlayerStatus {
   NO_SHOW = 'no_show'
 }
 
-export enum PaymentType {
-  TEAM_REGISTRATION = 'team_registration',
-  TENT_RENTAL = 'tent_rental'
-}
-
-export enum PaymentStatus {
-  PENDING = 'pending',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  REFUNDED = 'refunded'
-}
+// TEMPORARILY REMOVED - PaymentType, PaymentStatus, ProductType, ProductStatus, OrderStatus enums
 
 export enum Gender {
   MALE = 'male',
@@ -157,6 +147,45 @@ export enum TShirtSize {
   XXXL = 'xxxl'
 }
 
+// SportsFest Payment/Order System Enums
+export enum PaymentType {
+  TEAM_REGISTRATION = 'team_registration',
+  TENT_RENTAL = 'tent_rental',
+  PRODUCT_PURCHASE = 'product_purchase',
+  DEPOSIT_PAYMENT = 'deposit_payment',
+  BALANCE_PAYMENT = 'balance_payment'
+}
+
+export enum PaymentStatus {
+  PENDING = 'pending',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  REFUNDED = 'refunded'
+}
+
+export enum ProductType {
+  TENT_RENTAL = 'tent_rental',
+  TEAM_REGISTRATION = 'team_registration', 
+  MERCHANDISE = 'merchandise',
+  EQUIPMENT = 'equipment',
+  SERVICES = 'services'
+}
+
+export enum ProductStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  ARCHIVED = 'archived'
+}
+
+export enum OrderStatus {
+  PENDING = 'pending',
+  CONFIRMED = 'confirmed',
+  DEPOSIT_PAID = 'deposit_paid',
+  FULLY_PAID = 'fully_paid',
+  CANCELLED = 'cancelled',
+  REFUNDED = 'refunded'
+}
+
 function enumToPgEnum<T extends Record<string, string>>(myEnum: T) {
   return Object.values(myEnum).map((value) => `${value}`) as [
     T[keyof T],
@@ -168,8 +197,13 @@ export const eventTypeEnum = pgEnum('eventtype', enumToPgEnum(EventType));
 export const genderEnum = pgEnum('gender', enumToPgEnum(Gender));
 export const tshirtSizeEnum = pgEnum('tshirtsize', enumToPgEnum(TShirtSize));
 export const playerStatusEnum = pgEnum('playerstatus', enumToPgEnum(PlayerStatus));
+
+// SportsFest Payment/Order System pgEnums
 export const paymentTypeEnum = pgEnum('paymenttype', enumToPgEnum(PaymentType));
 export const paymentStatusEnum = pgEnum('paymentstatus', enumToPgEnum(PaymentStatus));
+export const productTypeEnum = pgEnum('producttype', enumToPgEnum(ProductType));
+export const productStatusEnum = pgEnum('productstatus', enumToPgEnum(ProductStatus));
+export const orderStatusEnum = pgEnum('orderstatus', enumToPgEnum(OrderStatus));
 
 // use lowercase: https://github.com/drizzle-team/drizzle-orm/issues/1564#issuecomment-2320605690
 
@@ -1053,39 +1087,6 @@ export const subscriptionItemTable = pgTable('subscriptionItem', {
     )
   ]);
 
-export const orderTable = pgTable('order', {
-  id: text('id').primaryKey(),
-  organizationId: uuid('organizationId').notNull(),
-  status: varchar('status', { length: 64 }).notNull(),
-  provider: varchar('provider', { length: 32 }).notNull(),
-  totalAmount: doublePrecision('totalAmount').notNull(),
-  currency: varchar('currency', { length: 3 }).notNull(),
-  createdAt: timestamp('createdAt', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt', { withTimezone: true }).notNull().defaultNow(),
-},
-(table) => [
-    index('IX_order_organizationId').using(
-      'btree',
-      table.organizationId.asc().nullsLast().op('uuid_ops')
-    )
-  ]);
-
-export const orderItemTable = pgTable('orderItem', {
-  id: text('id').primaryKey(),
-  orderId: text('orderId').notNull(),
-  quantity: integer('quantity').notNull(),
-  productId: text('productId').notNull(),
-  variantId: text('variantId').notNull(),
-  priceAmount: doublePrecision('priceAmount'),
-  type: text('type'),
-  model: text('model'),
-},
-(table) => [
-    index('IX_orderItem_orderId').using(
-      'btree',
-      table.orderId.asc().nullsLast()
-    )
-  ]);
 
 export const contactToContactTagTable = pgTable(
   'contactToContactTag',
@@ -1153,19 +1154,26 @@ export const superAdminActionTable = pgTable(
   ]
 );
 
+// SportsFest Tables
 export const eventYearTable = pgTable(
   'eventYear',
   {
     id: uuid('id').primaryKey().notNull().defaultRandom(),
     year: integer('year').notNull(),
-    eventDate: timestamp('eventDate', { precision: 3, mode: 'date' }).notNull(),
+    name: varchar('name', { length: 100 }).notNull(),
+    eventStartDate: timestamp('eventStartDate', { precision: 3, mode: 'date' }).notNull(),
+    eventEndDate: timestamp('eventEndDate', { precision: 3, mode: 'date' }).notNull(),
     registrationOpen: timestamp('registrationOpen', { precision: 3, mode: 'date' }).notNull(),
     registrationClose: timestamp('registrationClose', { precision: 3, mode: 'date' }).notNull(),
-    location: varchar('location', { length: 255 }).default('St. Pete Beach, Florida').notNull(),
-    maxTeamsPerOrg: integer('maxTeamsPerOrg').default(1).notNull(),
-    teamRegistrationFee: doublePrecision('teamRegistrationFee').notNull(),
-    tentRentalFee: doublePrecision('tentRentalFee').notNull(),
-    active: boolean('active').default(true).notNull(),
+    locationName: varchar('locationName', { length: 255 }).notNull(),
+    address: varchar('address', { length: 255 }).notNull(),
+    city: varchar('city', { length: 100 }).notNull(),
+    state: varchar('state', { length: 50 }).notNull(),
+    zipCode: varchar('zipCode', { length: 20 }).notNull(),
+    latitude: doublePrecision('latitude'),
+    longitude: doublePrecision('longitude'),
+    isActive: boolean('isActive').default(false).notNull(),
+    isDeleted: boolean('isDeleted').default(false).notNull(),
     createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
     .defaultNow()
     .notNull()
@@ -1228,18 +1236,27 @@ export const playerTable = pgTable(
   ]
 );
 
-export const playerEventInterestTable = pgTable(
-  'playerEventInterest',
+export const paymentTable = pgTable(
+  'payment',
   {
     id: uuid('id').primaryKey().notNull().defaultRandom(),
-    playerId: uuid('playerId')
+    organizationId: uuid('organizationId')
     .notNull()
-    .references(() => playerTable.id, {
+    .references(() => organizationTable.id, {
       onDelete: 'cascade',
       onUpdate: 'cascade'
     }),
-    eventType: eventTypeEnum('eventType').notNull(),
-    interestRating: integer('interestRating').notNull(),
+    eventYearId: uuid('eventYearId')
+    .notNull()
+    .references(() => eventYearTable.id, {
+      onDelete: 'cascade',
+      onUpdate: 'cascade'
+    }),
+    paymentType: paymentTypeEnum('paymentType').notNull(),
+    amount: doublePrecision('amount').notNull(),
+    status: paymentStatusEnum('status').default(PaymentStatus.PENDING).notNull(),
+    stripePaymentIntentId: varchar('stripePaymentIntentId', { length: 255 }),
+    paidAt: timestamp('paidAt', { precision: 3, mode: 'date' }),
     createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
     .defaultNow()
     .notNull(),
@@ -1249,13 +1266,18 @@ export const playerEventInterestTable = pgTable(
     .$onUpdate(() => new Date())
   },
   (table) => [
-    uniqueIndex('IX_playerEventInterest_playerId_eventType_unique').using(
+    index('IX_payment_organizationId').using(
       'btree',
-      table.playerId.asc().nullsLast().op('uuid_ops'),
-      table.eventType.asc().nullsLast()
+      table.organizationId.asc().nullsLast().op('uuid_ops')
     ),
-    // Constraint: ratings must be 1-5
-    sql`CHECK (interestRating >= 1 AND interestRating <= 5)`
+    index('IX_payment_eventYearId').using(
+      'btree',
+      table.eventYearId.asc().nullsLast().op('uuid_ops')
+    ),
+    uniqueIndex('IX_payment_stripe_unique').using(
+      'btree',
+      table.stripePaymentIntentId.asc().nullsLast().op('text_ops')
+    )
   ]
 );
 
@@ -1301,25 +1323,18 @@ export const companyTeamTable = pgTable(
   ]
 );
 
-export const tentRentalTable = pgTable(
-  'tentRental',
+export const playerEventInterestTable = pgTable(
+  'playerEventInterest',
   {
     id: uuid('id').primaryKey().notNull().defaultRandom(),
-    organizationId: uuid('organizationId')
+    playerId: uuid('playerId')
     .notNull()
-    .references(() => organizationTable.id, {
+    .references(() => playerTable.id, {
       onDelete: 'cascade',
       onUpdate: 'cascade'
     }),
-    eventYearId: uuid('eventYearId')
-    .notNull()
-    .references(() => eventYearTable.id, {
-      onDelete: 'cascade',
-      onUpdate: 'cascade'
-    }),
-    tentNumber: integer('tentNumber').notNull(), // 1 or 2
-    isPaid: boolean('isPaid').default(false).notNull(),
-    location: varchar('location', { length: 255 }), // Beach location assignment
+    eventType: eventTypeEnum('eventType').notNull(),
+    interestRating: integer('interestRating').notNull(),
     createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
     .defaultNow()
     .notNull(),
@@ -1329,19 +1344,13 @@ export const tentRentalTable = pgTable(
     .$onUpdate(() => new Date())
   },
   (table) => [
-    // Max 2 tents per organization per year, unique tent numbers
-    uniqueIndex('IX_tentRental_org_eventYear_number_unique').using(
+    uniqueIndex('IX_playerEventInterest_playerId_eventType_unique').using(
       'btree',
-      table.organizationId.asc().nullsLast().op('uuid_ops'),
-      table.eventYearId.asc().nullsLast().op('uuid_ops'),
-      table.tentNumber.asc().nullsLast()
+      table.playerId.asc().nullsLast().op('uuid_ops'),
+      table.eventType.asc().nullsLast()
     ),
-    // Constraint: tent numbers can only be 1 or 2
-    sql`CHECK (tentNumber >= 1 AND tentNumber <= 2)`,
-    index('IX_tentRental_organizationId').using(
-      'btree',
-      table.organizationId.asc().nullsLast().op('uuid_ops')
-    )
+    // Constraint: ratings must be 1-5
+    sql`CHECK (interestRating >= 1 AND interestRating <= 5)`
   ]
 );
 
@@ -1416,51 +1425,6 @@ export const eventRosterTable = pgTable(
   ]
 );
 
-export const paymentTable = pgTable(
-  'payment',
-  {
-    id: uuid('id').primaryKey().notNull().defaultRandom(),
-    organizationId: uuid('organizationId')
-    .notNull()
-    .references(() => organizationTable.id, {
-      onDelete: 'cascade',
-      onUpdate: 'cascade'
-    }),
-    eventYearId: uuid('eventYearId')
-    .notNull()
-    .references(() => eventYearTable.id, {
-      onDelete: 'cascade',
-      onUpdate: 'cascade'
-    }),
-    paymentType: paymentTypeEnum('paymentType').notNull(),
-    amount: doublePrecision('amount').notNull(),
-    status: paymentStatusEnum('status').default(PaymentStatus.PENDING).notNull(),
-    stripePaymentIntentId: varchar('stripePaymentIntentId', { length: 255 }),
-    paidAt: timestamp('paidAt', { precision: 3, mode: 'date' }),
-    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
-    .defaultNow()
-    .notNull(),
-    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date())
-  },
-  (table) => [
-    index('IX_payment_organizationId').using(
-      'btree',
-      table.organizationId.asc().nullsLast().op('uuid_ops')
-    ),
-    index('IX_payment_eventYearId').using(
-      'btree',
-      table.eventYearId.asc().nullsLast().op('uuid_ops')
-    ),
-    uniqueIndex('IX_payment_stripe_unique').using(
-      'btree',
-      table.stripePaymentIntentId.asc().nullsLast().op('text_ops')
-    )
-  ]
-);
-
 // Relations
 export const apiKeyRelations = relations(apiKeyTable, ({ one }) => ({
   organization: one(organizationTable, {
@@ -1469,21 +1433,6 @@ export const apiKeyRelations = relations(apiKeyTable, ({ one }) => ({
   }),
 }));
 
-
-// export const organizationRelations = relations(
-//   organizationTable,
-//   ({ many }) => ({
-//     apiKeys: many(apiKeyTable),
-//     contacts: many(contactTable),
-//     invitations: many(invitationTable),
-//     feedbacks: many(feedbackTable),
-//     workHours: many(workHoursTable),
-//     webhooks: many(webhookTable),
-//     memberships: many(membershipTable)
-//   })
-// );
-
-// updated organizationRelations with SportsFest includes
 export const organizationRelations = relations(
   organizationTable,
   ({ many }) => ({
@@ -1494,11 +1443,10 @@ export const organizationRelations = relations(
     workHours: many(workHoursTable),
     webhooks: many(webhookTable),
     memberships: many(membershipTable),
-    // Add SportsFest relations
+    // SportsFest relations
     players: many(playerTable),
     companyTeams: many(companyTeamTable),
-    payments: many(paymentTable),
-    tentRentals: many(tentRentalTable)
+    payments: many(paymentTable)
   })
 );
 
@@ -1722,20 +1670,6 @@ export const subscriptionItemRelations = relations(subscriptionItemTable, ({ one
   })
 }));
 
-export const orderRelations = relations(orderTable, ({ one }) => ({
-  organization: one(organizationTable, {
-    fields: [orderTable.organizationId],
-    references: [organizationTable.id]
-  })
-}));
-
-export const orderItemRelations = relations(orderItemTable, ({ one }) => ({
-  organization: one(orderTable, {
-    fields: [orderItemTable.orderId],
-    references: [orderTable.id]
-  })
-}));
-
 export const contactTagRelations = relations(contactTagTable, ({ many }) => ({
   contactToContactTags: many(contactToContactTagTable)
 }));
@@ -1758,8 +1692,7 @@ export const contactToContactTagRelations = relations(
 export const eventYearRelations = relations(eventYearTable, ({ many }) => ({
   players: many(playerTable),
   companyTeams: many(companyTeamTable),
-  payments: many(paymentTable),
-  tentRentals: many(tentRentalTable)
+  payments: many(paymentTable)
 }));
 
 export const playerRelations = relations(playerTable, ({ one, many }) => ({
@@ -1790,17 +1723,6 @@ export const paymentRelations = relations(paymentTable, ({ one }) => ({
   }),
   eventYear: one(eventYearTable, {
     fields: [paymentTable.eventYearId],
-    references: [eventYearTable.id]
-  })
-}));
-
-export const tentRentalRelations = relations(tentRentalTable, ({ one }) => ({
-  organization: one(organizationTable, {
-    fields: [tentRentalTable.organizationId],
-    references: [organizationTable.id]
-  }),
-  eventYear: one(eventYearTable, {
-    fields: [tentRentalTable.eventYearId],
     references: [eventYearTable.id]
   })
 }));
@@ -1840,13 +1762,3 @@ export const eventRosterRelations = relations(eventRosterTable, ({ one }) => ({
   })
 }));
 
-export const superAdminActionRelations = relations(superAdminActionTable, ({ one }) => ({
-  performedBy: one(userTable, {
-    fields: [superAdminActionTable.performedBy],
-    references: [userTable.id]
-  }),
-  targetUser: one(userTable, {
-    fields: [superAdminActionTable.targetUserId],
-    references: [userTable.id]
-  })
-}));

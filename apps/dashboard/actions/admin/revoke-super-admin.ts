@@ -18,12 +18,12 @@ export const revokeSuperAdmin = authActionClient
   .inputSchema(revokeSuperAdminSchema)
   .action(async ({ parsedInput, ctx }) => {
     // Check if current user is super admin
-    if (!ctx.user.isSportsFestAdmin) {
+    if (!ctx.session.user.isSportsFestAdmin) {
       throw new ForbiddenError('Unauthorized: Only super admins can revoke super admin access');
     }
 
     // Prevent users from revoking their own access
-    if (ctx.user.id === parsedInput.targetUserId) {
+    if (ctx.session.user.id === parsedInput.targetUserId) {
       throw new PreConditionError('Cannot revoke your own super admin access');
     }
 
@@ -35,7 +35,7 @@ export const revokeSuperAdmin = authActionClient
 
     // Log the action
     await db.insert(superAdminActionTable).values({
-      performedBy: ctx.user.id,
+      performedBy: ctx.session.user.id,
       targetUserId: parsedInput.targetUserId,
       action: 'revoked',
       reason: parsedInput.reason || null

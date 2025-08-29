@@ -11,6 +11,7 @@ import { ThemeToggle } from '@workspace/ui/components/theme-toggle';
 
 import { getOrganizations } from '~/data/organization/get-organizations';
 import { createTitle } from '~/lib/formatters';
+import { isSuperAdmin } from '~/lib/admin-utils';
 
 export const metadata: Metadata = {
   title: createTitle('Auth')
@@ -30,7 +31,13 @@ export default async function AuthLayout({
   children
 }: React.PropsWithChildren): Promise<React.JSX.Element> {
   const session = await dedupedAuth();
+  
   if (!isChangeEmailRoute() && session) {
+    // Check if user is a super admin
+    if (isSuperAdmin(session.user)) {
+      // Redirect super admins to the admin area
+      return redirect('/admin');
+    }
     // Get user's organizations and redirect to their primary organization
     const organizations = await getOrganizations();
     if (organizations.length > 0) {

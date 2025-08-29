@@ -10,9 +10,11 @@ import { replaceOrgSlug, routes } from '@workspace/routes';
 import { SidebarInset } from '@workspace/ui/components/sidebar';
 
 import { SidebarRenderer } from '~/components/organizations/slug/sidebar-renderer';
+import { SuperAdminBanner } from '~/components/admin/super-admin-banner';
 import { getProfile } from '~/data/account/get-profile';
 import { getOrganizations } from '~/data/organization/get-organizations';
 import { createTitle } from '~/lib/formatters';
+import { isSuperAdmin } from '~/lib/admin-utils';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
@@ -37,6 +39,7 @@ export default async function OrganizationLayout(
       )
     );
   }
+
   const [cookieStore, organizations, profile] = await Promise.all([
     cookies(),
     getOrganizations(),
@@ -58,8 +61,9 @@ export default async function OrganizationLayout(
         {/* Set max-width so full-width tables can overflow horizontally correctly */}
         <SidebarInset
           id="skip"
-          className="size-full lg:[transition:max-width_0.2s_linear] lg:peer-data-[state=collapsed]:max-w-[calc(100svw-var(--sidebar-width-icon))] lg:peer-data-[state=expanded]:max-w-[calc(100svw-var(--sidebar-width))]"
+          className="bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2"
         >
+          {isSuperAdmin(profile) && <SuperAdminBanner className="mb-4" organizationName={ctx.organization.name} />}
           {props.children}
         </SidebarInset>
       </Providers>

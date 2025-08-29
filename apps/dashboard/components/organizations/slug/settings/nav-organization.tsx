@@ -17,8 +17,13 @@ import { cn } from '@workspace/ui/lib/utils';
 
 import { createOrganizationNavItems } from '~/components/organizations/slug/nav-items';
 import { useActiveOrganization } from '~/hooks/use-active-organization';
+import type { ProfileDto } from '~/types/dtos/profile-dto';
 
-export function NavOrganization(props: SidebarGroupProps): React.JSX.Element {
+export type NavOrganizationProps = SidebarGroupProps & {
+  profile?: ProfileDto;
+};
+
+export function NavOrganization({ profile, ...props }: NavOrganizationProps): React.JSX.Element {
   const pathname = usePathname();
   const activeOrganization = useActiveOrganization();
   return (
@@ -27,7 +32,7 @@ export function NavOrganization(props: SidebarGroupProps): React.JSX.Element {
         Organization
       </SidebarGroupLabel>
       <SidebarMenu>
-        {createOrganizationNavItems(activeOrganization.slug).map(
+        {createOrganizationNavItems(activeOrganization.slug, profile).map(
           (item, index) => {
             const isActive = pathname.startsWith(
               getPathname(item.href, baseUrl.Dashboard)

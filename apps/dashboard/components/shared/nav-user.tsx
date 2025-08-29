@@ -33,9 +33,11 @@ import { ThemeSwitcher } from '@workspace/ui/components/theme-switcher';
 
 import { signOut } from '~/actions/auth/sign-out';
 import { CommandMenu } from '~/components/organizations/slug/command-menu';
-import { useActiveOrganization } from '~/hooks/use-active-organization';
+import { AdminCommandMenu } from '~/components/admin/admin-command-menu';
 import { getInitials } from '~/lib/formatters';
+import { isSuperAdmin } from '~/lib/admin-utils';
 import type { ProfileDto } from '~/types/dtos/profile-dto';
+import type { AdminProfileDto } from '~/data/admin/get-admin-profile';
 
 function isDialogOpen(): boolean {
   return !!document.querySelector('[role="dialog"]');
@@ -82,36 +84,73 @@ function isMac(): boolean {
   return /mac/.test(getPlatform());
 }
 
+type BaseProfile = {
+  name: string;
+  email?: string | null;
+  image?: string | null;
+  isSportsFestAdmin?: boolean | null;
+};
+
+export type NavUserMode = 'admin' | 'organization' | 'auto';
+
 export type NavUserProps = SidebarGroupProps & {
-  profile: ProfileDto;
+  profile: BaseProfile;
+  mode?: NavUserMode;
+  organizationSlug?: string; // For organization mode
 };
 
 export function NavUser({
   profile,
+  mode = 'auto',
+  organizationSlug,
   ...other
 }: NavUserProps): React.JSX.Element {
   const router = useRouter();
-  const activeOrganization = useActiveOrganization();
+  
+  // Auto-detect mode based on current path and admin status
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+  const isAdminContext = mode === 'admin' || 
+    (mode === 'auto' && currentPath.startsWith('/admin'));
+  const isAdmin = isSuperAdmin(profile);
+  
+  // When in organization context but user is super admin, show admin options
+  const shouldShowAdminOptions = isAdminContext || 
+    (mode === 'auto' && !isAdminContext && isAdmin);
 
-  const handleNavigateToProfilePage = (): void => {
-    router.push(
-      replaceOrgSlug(
-        routes.dashboard.organizations.slug.settings.account.Profile,
-        activeOrganization.slug
-      )
-    );
+  const handleNavigateToFirstOption = (): void => {
+    if (shouldShowAdminOptions) {
+      router.push('/admin/settings');
+    } else {
+      router.push(
+        replaceOrgSlug(
+          routes.dashboard.organizations.slug.settings.account.Profile,
+          organizationSlug || ''
+        )
+      );
+    }
   };
-  const handleNavigateToBillingPage = (): void => {
-    router.push(
-      replaceOrgSlug(
-        routes.dashboard.organizations.slug.settings.organization.Billing,
-        activeOrganization.slug
-      )
-    );
+  
+  const handleNavigateToSecondOption = (): void => {
+    if (shouldShowAdminOptions) {
+      router.push('/admin');
+    } else {
+      router.push(
+        replaceOrgSlug(
+          routes.dashboard.organizations.slug.settings.organization.Billing,
+          organizationSlug || ''
+        )
+      );
+    }
   };
+  
   const handleShowCommandMenu = (): void => {
-    NiceModal.show(CommandMenu);
+    if (shouldShowAdminOptions) {
+      void NiceModal.show(AdminCommandMenu);
+    } else {
+      void NiceModal.show(CommandMenu);
+    }
   };
+  
   const handleSignOut = async (): Promise<void> => {
     const result = await signOut({ redirect: true });
     if (result?.serverError || result?.validationErrors) {
@@ -122,8 +161,8 @@ export function NavUser({
   React.useEffect(() => {
     const mac = isMac();
     const hotkeys: Record<string, { action: () => void; shift: boolean }> = {
-      p: { action: handleNavigateToProfilePage, shift: true },
-      b: { action: handleNavigateToBillingPage, shift: true },
+      p: { action: handleNavigateToFirstOption, shift: true },
+      [shouldShowAdminOptions ? 'o' : 'b']: { action: handleNavigateToSecondOption, shift: true },
       k: { action: handleShowCommandMenu, shift: false },
       s: { action: handleSignOut, shift: true }
     };
@@ -145,7 +184,8 @@ export function NavUser({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [shouldShowAdminOptions]);
+  
   return (
     <SidebarGroup {...other}>
       <SidebarMenu>
@@ -155,7 +195,7 @@ export function NavUser({
               <SidebarMenuButton className="group/navuser -ml-1.5 transition-none data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:ml-0 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-1!">
                 <Avatar className="size-7 rounded-full">
                   <AvatarImage
-                    src={profile.image}
+                    src={profile.image || undefined}
                     alt={profile.name}
                   />
                   <AvatarFallback className="rounded-full text-xs group-hover/navuser:bg-neutral-200 dark:group-hover/navuser:bg-neutral-700">
@@ -189,17 +229,17 @@ export function NavUser({
               <DropdownMenuGroup>
                 <DropdownMenuItem
                   className="cursor-pointer"
-                  onClick={handleNavigateToProfilePage}
+                  onClick={handleNavigateToFirstOption}
                 >
-                  Profile
+                  {shouldShowAdminOptions ? 'Admin Settings' : 'Profile'}
                   <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="cursor-pointer"
-                  onClick={handleNavigateToBillingPage}
+                  onClick={handleNavigateToSecondOption}
                 >
-                  Billing
-                  <DropdownMenuShortcut>⇧⌘B</DropdownMenuShortcut>
+                  {shouldShowAdminOptions ? 'Admin Dashboard' : 'Billing'}
+                  <DropdownMenuShortcut>⇧⌘{shouldShowAdminOptions ? 'O' : 'B'}</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

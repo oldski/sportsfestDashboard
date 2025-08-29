@@ -69,7 +69,7 @@ export async function getLeastVisitedContacts(
         name: contact.name,
         image: contact.image ?? undefined,
         record: contact.record,
-        pageVisits: contact.pageVisits
+        pageVisits: Number(contact.pageVisits)
       }));
 
       return response;

@@ -18,7 +18,7 @@ export const grantSuperAdmin = authActionClient
   .inputSchema(grantSuperAdminSchema)
   .action(async ({ parsedInput, ctx }) => {
     // Check if current user is super admin
-    if (!ctx.user.isSportsFestAdmin) {
+    if (!ctx.session.user.isSportsFestAdmin) {
       throw new ForbiddenError('Unauthorized: Only super admins can grant super admin access');
     }
 
@@ -30,7 +30,7 @@ export const grantSuperAdmin = authActionClient
 
     // Log the action
     await db.insert(superAdminActionTable).values({
-      performedBy: ctx.user.id,
+      performedBy: ctx.session.user.id,
       targetUserId: parsedInput.targetUserId,
       action: 'granted',
       reason: parsedInput.reason || null

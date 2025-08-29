@@ -14,9 +14,8 @@ import {
 } from '@workspace/ui/components/sidebar';
 import { cn } from '@workspace/ui/lib/utils';
 
-import { createMainNavItems, createSuperAdminNavItems } from '~/components/organizations/slug/nav-items';
+import { createMainNavItems } from '~/components/organizations/slug/nav-items';
 import { useActiveOrganization } from '~/hooks/use-active-organization';
-import { isSuperAdmin } from '~/lib/admin-utils';
 import type { ProfileDto } from '~/types/dtos/profile-dto';
 
 export type NavMainProps = SidebarGroupProps & {
@@ -27,10 +26,8 @@ export function NavMain({ profile, ...props }: NavMainProps): React.JSX.Element 
   const pathname = usePathname();
   const activeOrganization = useActiveOrganization();
   
-  // Choose navigation items based on user role
-  const navItems = profile && isSuperAdmin(profile)
-    ? createSuperAdminNavItems(activeOrganization.slug)
-    : createMainNavItems(activeOrganization.slug);
+  // Show organization navigation for all users (including super admins when impersonating)
+  const navItems = createMainNavItems(activeOrganization.slug);
   
   return (
     <SidebarGroup {...props}>

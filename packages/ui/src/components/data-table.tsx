@@ -16,6 +16,7 @@ import {
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
+  DownloadIcon,
   EyeOffIcon,
   PlusCircleIcon,
   Settings2Icon
@@ -62,6 +63,123 @@ import {
   TableRow,
   type TableProps
 } from './table';
+
+// Export utilities - these will be dynamically imported to avoid bundling issues
+const exportToCSV = async <TData,>(
+  table: ReactTable<TData>,
+  filename: string
+) => {
+  const Papa = (await import('papaparse')).default;
+  const rows = table.getRowModel().rows;
+  const headers = table
+    .getVisibleLeafColumns()
+    .filter((col) => col.id !== 'select' && col.id !== 'actions')
+    .map((col) => 
+      (col.columnDef.meta as any)?.title || col.id
+    );
+
+  const data = rows.map((row) =>
+    table
+      .getVisibleLeafColumns()
+      .filter((col) => col.id !== 'select' && col.id !== 'actions')
+      .reduce((acc, col) => {
+        const value = row.getValue(col.id);
+        acc[col.id] = typeof value === 'string' || typeof value === 'number' 
+          ? value 
+          : String(value || '');
+        return acc;
+      }, {} as Record<string, any>)
+  );
+
+  const csv = Papa.unparse({ fields: headers, data });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+const exportToExcel = async <TData,>(
+  table: ReactTable<TData>,
+  filename: string
+) => {
+  const XLSX = await import('xlsx');
+  const rows = table.getRowModel().rows;
+  const headers = table
+    .getVisibleLeafColumns()
+    .filter((col) => col.id !== 'select' && col.id !== 'actions')
+    .map((col) => 
+      (col.columnDef.meta as any)?.title || col.id
+    );
+
+  const data = [
+    headers,
+    ...rows.map((row) =>
+      table
+        .getVisibleLeafColumns()
+        .filter((col) => col.id !== 'select' && col.id !== 'actions')
+        .map((col) => {
+          const value = row.getValue(col.id);
+          return typeof value === 'string' || typeof value === 'number' 
+            ? value 
+            : String(value || '');
+        })
+    )
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+};
+
+const exportToPDF = async <TData,>(
+  table: ReactTable<TData>,
+  filename: string,
+  title?: string
+) => {
+  const { jsPDF } = await import('jspdf');
+  const autoTable = (await import('jspdf-autotable')).default;
+
+  const doc = new jsPDF();
+  
+  if (title) {
+    doc.setFontSize(16);
+    doc.text(title, 14, 20);
+  }
+
+  const rows = table.getRowModel().rows;
+  const headers = table
+    .getVisibleLeafColumns()
+    .filter((col) => col.id !== 'select' && col.id !== 'actions')
+    .map((col) => 
+      (col.columnDef.meta as any)?.title || col.id
+    );
+
+  const data = rows.map((row) =>
+    table
+      .getVisibleLeafColumns()
+      .filter((col) => col.id !== 'select' && col.id !== 'actions')
+      .map((col) => {
+        const value = row.getValue(col.id);
+        return typeof value === 'string' || typeof value === 'number' 
+          ? value 
+          : String(value || '');
+      })
+  );
+
+  // Use autoTable directly
+  autoTable(doc, {
+    head: [headers],
+    body: data,
+    startY: title ? 30 : 20,
+  });
+
+  doc.save(`${filename}.pdf`);
+};
 
 export type DataTableProps<TData> = TableProps & {
   table: ReactTable<TData>;
@@ -511,11 +629,56 @@ function DataTableFilter({
   );
 }
 
+export type DataTableExportProps<TData> = {
+  table: ReactTable<TData>;
+  filename?: string;
+  title?: string;
+};
+function DataTableExport<TData>({
+  table,
+  filename = 'data',
+  title
+}: DataTableExportProps<TData>): React.JSX.Element {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 text-sm">
+          <DownloadIcon className="size-4 shrink-0" />
+          Export
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Export data</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => exportToCSV(table, filename)}
+          className="cursor-pointer"
+        >
+          Export as CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => exportToExcel(table, filename)}
+          className="cursor-pointer"
+        >
+          Export as Excel
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => exportToPDF(table, filename, title)}
+          className="cursor-pointer"
+        >
+          Export as PDF
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export {
   DataTable,
   DataTableBulkActions,
   DataTableColumnHeader,
   DataTableColumnOptionsHeader,
+  DataTableExport,
   DataTableFilter,
   DataTablePagination
 };
