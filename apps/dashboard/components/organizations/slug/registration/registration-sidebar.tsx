@@ -4,35 +4,57 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { baseUrl, getPathname } from '@workspace/routes';
+import {baseUrl, getPathname, replaceOrgSlug, routes} from '@workspace/routes';
 import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  type SidebarGroupProps
+  type SidebarGroupProps, SidebarHeader
 } from '@workspace/ui/components/sidebar';
 import { cn } from '@workspace/ui/lib/utils';
 
 import { createRegistrationNavItems } from '~/components/organizations/slug/nav-items';
 import { useActiveOrganization } from '~/hooks/use-active-organization';
+import {ChevronLeftIcon} from "lucide-react";
 
 export type RegistrationSidebarProps = SidebarGroupProps;
 
 export function RegistrationSidebar({ ...props }: RegistrationSidebarProps): React.JSX.Element {
   const pathname = usePathname();
   const activeOrganization = useActiveOrganization();
-  
+
   const navItems = createRegistrationNavItems(activeOrganization.slug);
-  
+
   return (
     <SidebarGroup {...props}>
+      <SidebarHeader className="flex h-14 flex-row items-center py-0">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              tooltip="Back"
+            >
+              <Link
+                href={replaceOrgSlug(
+                  routes.dashboard.organizations.slug.Home,
+                  activeOrganization.slug
+                )}
+                className="h-10"
+              >
+                <ChevronLeftIcon className="size-4 shrink-0 text-muted-foreground" />
+                <span className="text-sm font-semibold">Registration</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
       <SidebarGroupLabel>Registration</SidebarGroupLabel>
       <SidebarMenu>
         {navItems.map((item, index) => {
           const isActive = pathname === getPathname(item.href, baseUrl.Dashboard);
-          
+
           return (
             <SidebarMenuItem key={index}>
               <SidebarMenuButton

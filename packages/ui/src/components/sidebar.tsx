@@ -337,11 +337,13 @@ export type SidebarProps = React.ComponentProps<'div'> & {
   side?: 'left' | 'right';
   variant?: 'sidebar' | 'floating' | 'inset';
   collapsible?: 'offcanvas' | 'icon' | 'none';
+  hasSuperAdminBanner?: boolean;
 };
 function Sidebar({
   side = 'left',
   variant = 'sidebar',
   collapsible = 'offcanvas',
+  hasSuperAdminBanner = false,
   className,
   children,
   ...props
@@ -433,7 +435,10 @@ function Sidebar({
             ? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'
             : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l',
           'group-data-[dragging=true]:duration-0! group-data-[dragging=true]_*:!duration-0',
-          className
+          className,
+          hasSuperAdminBanner
+            ? 'h-[calc(100vh-var(--banner-height)-42px)] top-[calc(var(--banner-height)+42px)]'
+            : ''
         )}
         {...props}
       >

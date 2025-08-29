@@ -1709,6 +1709,366 @@ export const playerRelations = relations(playerTable, ({ one, many }) => ({
   eventRosters: many(eventRosterTable) // But can be in multiple event rosters
 }));
 
+// Registration System Tables
+export const productCategoryTable = pgTable(
+  'productCategory',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    displayOrder: integer('displayOrder').default(0),
+    isActive: boolean('isActive').default(true).notNull(),
+    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  (table) => [
+    uniqueIndex('IX_productCategory_name_unique').using(
+      'btree',
+      table.name.asc().nullsLast().op('text_ops')
+    )
+  ]
+);
+
+export const productTable = pgTable(
+  'product',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    categoryId: uuid('categoryId')
+      .notNull()
+      .references(() => productCategoryTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    eventYearId: uuid('eventYearId')
+      .notNull()
+      .references(() => eventYearTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    type: productTypeEnum('type').notNull(),
+    status: productStatusEnum('status').default('active').notNull(),
+    basePrice: doublePrecision('basePrice').notNull(),
+    requiresDeposit: boolean('requiresDeposit').default(false).notNull(),
+    depositAmount: doublePrecision('depositAmount'),
+    maxQuantityPerOrg: integer('maxQuantityPerOrg'),
+    totalInventory: integer('totalInventory'),
+    displayOrder: integer('displayOrder').default(0),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  (table) => [
+    index('IX_product_categoryId').using(
+      'btree',
+      table.categoryId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_product_eventYearId').using(
+      'btree',
+      table.eventYearId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_product_status').using(
+      'btree',
+      table.status.asc().nullsLast()
+    )
+  ]
+);
+
+export const organizationPricingTable = pgTable(
+  'organizationPricing',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    productId: uuid('productId')
+      .notNull()
+      .references(() => productTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    organizationId: uuid('organizationId')
+      .notNull()
+      .references(() => organizationTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    customPrice: doublePrecision('customPrice'),
+    customDepositAmount: doublePrecision('customDepositAmount'),
+    maxQuantity: integer('maxQuantity'),
+    isWaived: boolean('isWaived').default(false).notNull(),
+    waiverReason: text('waiverReason'),
+    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  (table) => [
+    uniqueIndex('IX_organizationPricing_product_org_unique').using(
+      'btree',
+      table.productId.asc().nullsLast().op('uuid_ops'),
+      table.organizationId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_organizationPricing_productId').using(
+      'btree',
+      table.productId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_organizationPricing_organizationId').using(
+      'btree',
+      table.organizationId.asc().nullsLast().op('uuid_ops')
+    )
+  ]
+);
+
+export const orderTable = pgTable(
+  'order',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    orderNumber: varchar('orderNumber', { length: 50 }).notNull(),
+    organizationId: uuid('organizationId')
+      .notNull()
+      .references(() => organizationTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    eventYearId: uuid('eventYearId')
+      .notNull()
+      .references(() => eventYearTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    status: orderStatusEnum('status').default('pending').notNull(),
+    totalAmount: doublePrecision('totalAmount').notNull(),
+    depositAmount: doublePrecision('depositAmount').default(0).notNull(),
+    balanceOwed: doublePrecision('balanceOwed').notNull(),
+    stripeSessionId: varchar('stripeSessionId', { length: 255 }),
+    stripePaymentIntentId: varchar('stripePaymentIntentId', { length: 255 }),
+    isManuallyCreated: boolean('isManuallyCreated').default(false).notNull(),
+    notes: text('notes'),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  (table) => [
+    uniqueIndex('IX_order_orderNumber_unique').using(
+      'btree',
+      table.orderNumber.asc().nullsLast().op('text_ops')
+    ),
+    index('IX_order_organizationId').using(
+      'btree',
+      table.organizationId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_order_eventYearId').using(
+      'btree',
+      table.eventYearId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_order_status').using(
+      'btree',
+      table.status.asc().nullsLast()
+    )
+  ]
+);
+
+export const orderItemTable = pgTable(
+  'orderItem',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    orderId: uuid('orderId')
+      .notNull()
+      .references(() => orderTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    productId: uuid('productId')
+      .notNull()
+      .references(() => productTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    quantity: integer('quantity').notNull(),
+    unitPrice: doublePrecision('unitPrice').notNull(),
+    depositPrice: doublePrecision('depositPrice').default(0).notNull(),
+    totalPrice: doublePrecision('totalPrice').notNull(),
+    productSnapshot: jsonb('productSnapshot'), // Store product details at time of order
+    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  (table) => [
+    index('IX_orderItem_orderId').using(
+      'btree',
+      table.orderId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_orderItem_productId').using(
+      'btree',
+      table.productId.asc().nullsLast().op('uuid_ops')
+    )
+  ]
+);
+
+export const orderPaymentTable = pgTable(
+  'orderPayment',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    orderId: uuid('orderId')
+      .notNull()
+      .references(() => orderTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    type: paymentTypeEnum('type').notNull(),
+    status: paymentStatusEnum('status').default('pending').notNull(),
+    amount: doublePrecision('amount').notNull(),
+    stripePaymentIntentId: varchar('stripePaymentIntentId', { length: 255 }),
+    stripeChargeId: varchar('stripeChargeId', { length: 255 }),
+    paymentMethodType: varchar('paymentMethodType', { length: 50 }),
+    last4: varchar('last4', { length: 4 }),
+    failureReason: text('failureReason'),
+    processedAt: timestamp('processedAt', { precision: 3, mode: 'date' }),
+    refundedAt: timestamp('refundedAt', { precision: 3, mode: 'date' }),
+    refundAmount: doublePrecision('refundAmount'),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  (table) => [
+    index('IX_orderPayment_orderId').using(
+      'btree',
+      table.orderId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_orderPayment_status').using(
+      'btree',
+      table.status.asc().nullsLast()
+    ),
+    index('IX_orderPayment_stripePaymentIntentId').using(
+      'btree',
+      table.stripePaymentIntentId.asc().nullsLast().op('text_ops')
+    )
+  ]
+);
+
+export const orderInvoiceTable = pgTable(
+  'orderInvoice',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    orderId: uuid('orderId')
+      .notNull()
+      .references(() => orderTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    invoiceNumber: varchar('invoiceNumber', { length: 50 }).notNull(),
+    totalAmount: doublePrecision('totalAmount').notNull(),
+    paidAmount: doublePrecision('paidAmount').default(0).notNull(),
+    balanceOwed: doublePrecision('balanceOwed').notNull(),
+    status: varchar('status', { length: 20 }).default('draft').notNull(), // draft, sent, paid, overdue, cancelled
+    dueDate: timestamp('dueDate', { precision: 3, mode: 'date' }),
+    paidAt: timestamp('paidAt', { precision: 3, mode: 'date' }),
+    sentAt: timestamp('sentAt', { precision: 3, mode: 'date' }),
+    stripeInvoiceId: varchar('stripeInvoiceId', { length: 255 }),
+    downloadUrl: text('downloadUrl'),
+    notes: text('notes'),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  (table) => [
+    uniqueIndex('IX_orderInvoice_invoiceNumber_unique').using(
+      'btree',
+      table.invoiceNumber.asc().nullsLast().op('text_ops')
+    ),
+    index('IX_orderInvoice_orderId').using(
+      'btree',
+      table.orderId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_orderInvoice_status').using(
+      'btree',
+      table.status.asc().nullsLast().op('text_ops')
+    )
+  ]
+);
+
+export const tentPurchaseTrackingTable = pgTable(
+  'tentPurchaseTracking',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    organizationId: uuid('organizationId')
+      .notNull()
+      .references(() => organizationTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    eventYearId: uuid('eventYearId')
+      .notNull()
+      .references(() => eventYearTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    tentProductId: uuid('tentProductId')
+      .notNull()
+      .references(() => productTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    quantityPurchased: integer('quantityPurchased').notNull(),
+    maxAllowed: integer('maxAllowed').notNull(),
+    remainingAllowed: integer('remainingAllowed').notNull(),
+    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  (table) => [
+    uniqueIndex('IX_tentPurchaseTracking_org_eventYear_product_unique').using(
+      'btree',
+      table.organizationId.asc().nullsLast().op('uuid_ops'),
+      table.eventYearId.asc().nullsLast().op('uuid_ops'),
+      table.tentProductId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_tentPurchaseTracking_organizationId').using(
+      'btree',
+      table.organizationId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_tentPurchaseTracking_eventYearId').using(
+      'btree',
+      table.eventYearId.asc().nullsLast().op('uuid_ops')
+    )
+  ]
+);
+
 export const playerEventInterestRelations = relations(playerEventInterestTable, ({ one }) => ({
   player: one(playerTable, {
     fields: [playerEventInterestTable.playerId],
@@ -1759,6 +2119,90 @@ export const eventRosterRelations = relations(eventRosterTable, ({ one }) => ({
   player: one(playerTable, {
     fields: [eventRosterTable.playerId],
     references: [playerTable.id]
+  })
+}));
+
+// Registration System Relations
+export const productCategoryRelations = relations(productCategoryTable, ({ many }) => ({
+  products: many(productTable)
+}));
+
+export const productRelations = relations(productTable, ({ one, many }) => ({
+  category: one(productCategoryTable, {
+    fields: [productTable.categoryId],
+    references: [productCategoryTable.id]
+  }),
+  eventYear: one(eventYearTable, {
+    fields: [productTable.eventYearId],
+    references: [eventYearTable.id]
+  }),
+  organizationPricing: many(organizationPricingTable),
+  orderItems: many(orderItemTable),
+  tentPurchases: many(tentPurchaseTrackingTable)
+}));
+
+export const organizationPricingRelations = relations(organizationPricingTable, ({ one }) => ({
+  product: one(productTable, {
+    fields: [organizationPricingTable.productId],
+    references: [productTable.id]
+  }),
+  organization: one(organizationTable, {
+    fields: [organizationPricingTable.organizationId],
+    references: [organizationTable.id]
+  })
+}));
+
+export const orderRelations = relations(orderTable, ({ one, many }) => ({
+  organization: one(organizationTable, {
+    fields: [orderTable.organizationId],
+    references: [organizationTable.id]
+  }),
+  eventYear: one(eventYearTable, {
+    fields: [orderTable.eventYearId],
+    references: [eventYearTable.id]
+  }),
+  orderItems: many(orderItemTable),
+  payments: many(orderPaymentTable),
+  invoices: many(orderInvoiceTable)
+}));
+
+export const orderItemRelations = relations(orderItemTable, ({ one }) => ({
+  order: one(orderTable, {
+    fields: [orderItemTable.orderId],
+    references: [orderTable.id]
+  }),
+  product: one(productTable, {
+    fields: [orderItemTable.productId],
+    references: [productTable.id]
+  })
+}));
+
+export const orderPaymentRelations = relations(orderPaymentTable, ({ one }) => ({
+  order: one(orderTable, {
+    fields: [orderPaymentTable.orderId],
+    references: [orderTable.id]
+  })
+}));
+
+export const orderInvoiceRelations = relations(orderInvoiceTable, ({ one }) => ({
+  order: one(orderTable, {
+    fields: [orderInvoiceTable.orderId],
+    references: [orderTable.id]
+  })
+}));
+
+export const tentPurchaseTrackingRelations = relations(tentPurchaseTrackingTable, ({ one }) => ({
+  organization: one(organizationTable, {
+    fields: [tentPurchaseTrackingTable.organizationId],
+    references: [organizationTable.id]
+  }),
+  eventYear: one(eventYearTable, {
+    fields: [tentPurchaseTrackingTable.eventYearId],
+    references: [eventYearTable.id]
+  }),
+  tentProduct: one(productTable, {
+    fields: [tentPurchaseTrackingTable.tentProductId],
+    references: [productTable.id]
   })
 }));
 

@@ -37,7 +37,7 @@ export function SettingsSidebar({ profile }: SettingsSidebarProps): React.JSX.El
     isImpersonating: false
   };
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader className="flex h-14 flex-row items-center py-0">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -68,7 +68,6 @@ export function SettingsSidebar({ profile }: SettingsSidebarProps): React.JSX.El
           <NavOrganization profile={profile} />
         </ScrollArea>
       </SidebarContent>
-      <SidebarRail />
     </Sidebar>
   );
 }

@@ -16,7 +16,7 @@ export interface SuperAdminBannerProps {
 export function SuperAdminBanner({ className, organizationName }: SuperAdminBannerProps): React.JSX.Element {
 
   return (
-    <Alert className={cn('border-amber-600 bg-amber-400 text-amber-900 rounded-xl', className)}>
+    <Alert className={cn('border-amber-600 bg-amber-400 text-amber-900 rounded-none py-1 px-4 text-xs', className)}>
       <AlertDescription className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <EyeIcon className="h-4 w-4" />
@@ -25,7 +25,7 @@ export function SuperAdminBanner({ className, organizationName }: SuperAdminBann
             <span>You are viewing {organizationName} organization</span>
           </div>
         </div>
-        <Button asChild size="sm" variant="ghost" className="ml-4">
+        <Button asChild size="sm" variant="ghost">
           <Link href="/admin" className="flex items-center space-x-2">
             <HomeIcon className="h-4 w-4" />
             Return to Admin

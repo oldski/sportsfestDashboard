@@ -75,7 +75,7 @@ export function AdminSettingsSidebar({ profile }: AdminSettingsSidebarProps): Re
   const pathname = usePathname();
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -131,9 +131,9 @@ export function AdminSettingsSidebar({ profile }: AdminSettingsSidebarProps): Re
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage 
-                      src={profile.image || undefined} 
-                      alt={profile.name || 'Admin'} 
+                    <AvatarImage
+                      src={profile.image || undefined}
+                      alt={profile.name || 'Admin'}
                     />
                     <AvatarFallback className="rounded-lg">
                       {profile.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'A'}
@@ -159,9 +159,9 @@ export function AdminSettingsSidebar({ profile }: AdminSettingsSidebarProps): Re
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage 
-                        src={profile.image || undefined} 
-                        alt={profile.name || 'Admin'} 
+                      <AvatarImage
+                        src={profile.image || undefined}
+                        alt={profile.name || 'Admin'}
                       />
                       <AvatarFallback className="rounded-lg">
                         {profile.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'A'}
@@ -202,7 +202,6 @@ export function AdminSettingsSidebar({ profile }: AdminSettingsSidebarProps): Re
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   );
 }

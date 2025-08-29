@@ -27,7 +27,7 @@ function PageHeader({
 }: PageHeaderProps): React.JSX.Element {
   return (
     <div
-      className={cn('sticky top-0 z-20 bg-background', className)}
+      className={cn('sticky top-0 z-20 bg-background rounded-xl', className)}
       {...other}
     >
       {children}

@@ -11,7 +11,6 @@ import {
 } from '@workspace/routes';
 
 import { AppSidebar } from '~/components/organizations/slug/app-sidebar';
-import { SettingsSidebar } from '~/components/organizations/slug/settings/settings-sidebar';
 import { useActiveOrganization } from '~/hooks/use-active-organization';
 import type { OrganizationDto } from '~/types/dtos/organization-dto';
 import type { ProfileDto } from '~/types/dtos/profile-dto';
@@ -24,16 +23,6 @@ export type SidebarRendererProps = {
 export function SidebarRenderer(
   props: SidebarRendererProps
 ): React.JSX.Element {
-  const pathname = usePathname();
-  const activeOrganization = useActiveOrganization();
-  const settingsRoute = replaceOrgSlug(
-    routes.dashboard.organizations.slug.settings.Index,
-    activeOrganization.slug
-  );
-
-  if (pathname.startsWith(getPathname(settingsRoute, baseUrl.Dashboard))) {
-    return <SettingsSidebar />;
-  }
-
+  // Now using the unified collapsible sidebar for all organization routes
   return <AppSidebar {...props} />;
 }

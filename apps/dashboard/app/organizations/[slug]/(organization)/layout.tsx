@@ -46,27 +46,29 @@ export default async function OrganizationLayout(
     getProfile()
   ]);
   return (
-    <div className="flex flex-col size-full overflow-hidden">
-      <Providers
-        organization={ctx.organization}
-        defaultOpen={
-          (cookieStore.get('sidebar:state')?.value ?? 'true') === 'true'
-        }
-        defaultWidth={cookieStore.get('sidebar:width')?.value}
-      >
-        <SidebarRenderer
-          organizations={organizations}
-          profile={profile}
-        />
-        {/* Set max-width so full-width tables can overflow horizontally correctly */}
-        <SidebarInset
-          id="skip"
-          className="bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2"
+    <>
+      {isSuperAdmin(profile) && <SuperAdminBanner organizationName={ctx.organization.name} />}
+      <div className={`flex flex-col size-full overflow-hidden ${isSuperAdmin(profile) ? 'h-[calc(100vh-48px)]' : ''}`}>
+        <Providers
+          organization={ctx.organization}
+          defaultOpen={
+            (cookieStore.get('sidebar:state')?.value ?? 'true') === 'true'
+          }
+          defaultWidth={cookieStore.get('sidebar:width')?.value}
         >
-          {isSuperAdmin(profile) && <SuperAdminBanner className="mb-4" organizationName={ctx.organization.name} />}
-          {props.children}
-        </SidebarInset>
-      </Providers>
-    </div>
+          <SidebarRenderer
+            organizations={organizations}
+            profile={profile}
+          />
+          {/* Set max-width so full-width tables can overflow horizontally correctly */}
+          <SidebarInset
+            id="skip"
+            className="bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2"
+          >
+            {props.children}
+          </SidebarInset>
+        </Providers>
+      </div>
+    </>
   );
 }
