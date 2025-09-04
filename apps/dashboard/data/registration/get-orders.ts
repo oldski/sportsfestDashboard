@@ -48,7 +48,7 @@ export const getRegistrationOrders = cache(async (organizationSlug: string): Pro
       .leftJoin(orderItem, eq(order.id, orderItem.orderId))
       .leftJoin(product, eq(orderItem.productId, product.id))
       .leftJoin(productCategory, eq(product.categoryId, productCategory.id))
-      .where(eq(order.organizationId, organization.id))
+      .where(eq(order.organizationId, organization.id as string))
       .orderBy(desc(order.createdAt));
 
     // Get payments for all orders
@@ -58,8 +58,8 @@ export const getRegistrationOrders = cache(async (organizationSlug: string): Pro
         orderId: orderPayment.orderId,
         paymentId: orderPayment.id,
         amount: orderPayment.amount,
-        paymentDate: orderPayment.paymentDate,
-        method: orderPayment.method,
+        paymentDate: orderPayment.processedAt,
+        method: orderPayment.paymentMethodType,
         status: orderPayment.status,
       })
       .from(orderPayment)
@@ -122,8 +122,8 @@ export const getRegistrationOrders = cache(async (organizationSlug: string): Pro
         orderDto.payments.push({
           id: payment.paymentId,
           amount: payment.amount,
-          paymentDate: payment.paymentDate,
-          method: payment.method,
+          paymentDate: payment.paymentDate || new Date(),
+          method: payment.method || '',
           status: payment.status
         });
       }

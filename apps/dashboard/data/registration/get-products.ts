@@ -1,97 +1,99 @@
-import 'server-only';
+'use server';
 
 import { cache } from 'react';
-import { notFound } from 'next/navigation';
+import { db, sql } from '@workspace/database/client';
 
-import { db, desc, eq, and, isNull, or } from '@workspace/database/client';
-import { 
-  product, 
-  productCategory,
-  organizationPricing,
-  eventYear
-} from '@workspace/database/schema';
-
-import { getOrganizationBySlug } from '~/data/organizations/get-organization-by-slug';
 import { getCurrentEventYear } from '~/data/event-years/get-current-event-year';
+import { getProductAvailability } from '~/data/registration/get-product-availability';
 import type { RegistrationProductDto } from '~/types/dtos/registration-product-dto';
 
 export const getRegistrationProducts = cache(async (organizationSlug: string): Promise<RegistrationProductDto[]> => {
-  const organization = await getOrganizationBySlug(organizationSlug);
+  console.log('=== getRegistrationProducts STARTED ===');
+  console.log('getRegistrationProducts called with slug:', organizationSlug);
+  console.log('Function is executing...');
   
-  if (!organization) {
-    notFound();
-  }
-
-  const currentEventYear = await getCurrentEventYear();
-  if (!currentEventYear) {
-    return [];
-  }
-
   try {
-    // Get products with category and organization-specific pricing
-    const productsWithDetails = await db
-      .select({
-        // Product fields
-        productId: product.id,
-        productName: product.name,
-        productDescription: product.description,
-        productType: product.type,
-        productStatus: product.status,
-        productBasePrice: product.basePrice,
-        productRequiresDeposit: product.requiresDeposit,
-        productDepositAmount: product.depositAmount,
-        productMaxQuantityPerOrg: product.maxQuantityPerOrg,
-        productTotalInventory: product.totalInventory,
-        productImageUrl: product.imageUrl,
-        productCreatedAt: product.createdAt,
-        productUpdatedAt: product.updatedAt,
-        // Category fields
-        categoryId: productCategory.id,
-        categoryName: productCategory.name,
-        categoryDescription: productCategory.description,
-        // Organization pricing fields (if exists)
-        orgPricingId: organizationPricing.id,
-        orgCustomPrice: organizationPricing.customPrice,
-        orgCustomDepositAmount: organizationPricing.customDepositAmount,
-      })
-      .from(product)
-      .innerJoin(productCategory, eq(product.categoryId, productCategory.id))
-      .leftJoin(organizationPricing, and(
-        eq(organizationPricing.productId, product.id),
-        eq(organizationPricing.organizationId, organization.id)
-      ))
-      .where(eq(product.eventYearId, currentEventYear.id))
-      .orderBy(desc(product.createdAt));
+    console.log('About to call getCurrentEventYear...');
+    const currentEventYear = await getCurrentEventYear();
+    console.log('currentEventYear call completed:', currentEventYear);
+    
+    if (!currentEventYear) {
+      console.log('No current event year, returning empty array');
+      return [];
+    }
 
-    // Transform to DTOs
-    const products: RegistrationProductDto[] = productsWithDetails.map((row) => ({
-      id: row.productId,
-      name: row.productName,
-      description: row.productDescription || undefined,
-      type: row.productType as RegistrationProductDto['type'],
-      status: row.productStatus as RegistrationProductDto['status'],
-      basePrice: row.productBasePrice,
-      requiresDeposit: row.productRequiresDeposit,
-      depositAmount: row.productDepositAmount || undefined,
-      maxQuantityPerOrg: row.productMaxQuantityPerOrg || undefined,
-      totalInventory: row.productTotalInventory || undefined,
-      imageUrl: row.productImageUrl || undefined,
-      createdAt: row.productCreatedAt,
-      updatedAt: row.productUpdatedAt,
-      category: {
-        id: row.categoryId,
-        name: row.categoryName,
-        description: row.categoryDescription || undefined,
-      },
-      organizationPrice: row.orgPricingId ? {
-        customPrice: row.orgCustomPrice!,
-        customDepositAmount: row.orgCustomDepositAmount || undefined,
-      } : undefined,
-    }));
+    console.log('Fetching products for current event year:', currentEventYear.id);
 
-    return products;
+    console.log('About to execute raw SQL query...');
+    
+    // Use raw SQL to bypass Drizzle ORM issues
+    const result = await db.execute(sql`
+      SELECT 
+        p.id, 
+        p.name, 
+        p.description, 
+        p.type, 
+        p.status, 
+        p."basePrice", 
+        p."requiresDeposit", 
+        p."depositAmount",
+        p."maxQuantityPerOrg", 
+        p."totalInventory", 
+        p."categoryId",
+        pc.name as "categoryName",
+        p."eventYearId",
+        p."createdAt", 
+        p."updatedAt"
+      FROM "product" p
+      LEFT JOIN "productCategory" pc ON p."categoryId" = pc.id
+      WHERE p."eventYearId" = ${currentEventYear.id}
+        AND p.status = 'active'
+      ORDER BY p."createdAt" DESC, p.name ASC
+    `);
+
+    console.log('SQL query executed successfully!');
+    const products = result.rows;
+    console.log('Raw products from DB:', products.length);
+    console.log('First product (if any):', products[0]);
+
+    // Get availability info for all products for this organization
+    const availabilityData = await getProductAvailability(organizationSlug, currentEventYear.id as string);
+    const availabilityMap = new Map(
+      availabilityData.map(item => [item.productId, item])
+    );
+
+    return products.map((product: any) => {
+      const availability = availabilityMap.get(product.id as string);
+      
+      return {
+        id: product.id as string,
+        name: product.name as string,
+        description: product.description as string | undefined,
+        type: product.type as RegistrationProductDto['type'],
+        status: product.status as RegistrationProductDto['status'],
+        basePrice: product.basePrice as number,
+        requiresDeposit: product.requiresDeposit as boolean,
+        depositAmount: product.depositAmount as number | undefined,
+        maxQuantityPerOrg: product.maxQuantityPerOrg as number | undefined,
+        totalInventory: product.totalInventory as number | undefined,
+        imageUrl: undefined, // TODO: Add image support later
+        createdAt: product.createdAt as Date,
+        updatedAt: product.updatedAt as Date,
+        category: {
+          id: product.categoryId as string,
+          name: (product.categoryName as string) || 'Unknown Category',
+          description: undefined, // TODO: Add category description if needed
+        },
+        organizationPrice: undefined, // TODO: Add organization-specific pricing if needed
+        // Add availability information
+        availableQuantity: availability?.availableQuantity ?? null,
+        purchasedQuantity: availability?.purchasedQuantity ?? 0,
+      };
+    });
   } catch (error) {
-    console.error('Error fetching registration products:', error);
-    throw new Error('Failed to fetch registration products');
+    console.error('Error in getRegistrationProducts:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    // Return empty array instead of throwing to prevent app crashes
+    return [];
   }
 });

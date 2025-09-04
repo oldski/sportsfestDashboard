@@ -2,8 +2,8 @@ export type RegistrationProductDto = {
   id: string;
   name: string;
   description?: string;
-  type: 'physical' | 'service' | 'digital' | 'membership';
-  status: 'active' | 'inactive' | 'out_of_stock';
+  type: 'tent_rental' | 'team_registration' | 'merchandise' | 'equipment' | 'services';
+  status: 'active' | 'inactive' | 'archived';
   basePrice: number;
   requiresDeposit: boolean;
   depositAmount?: number;
@@ -23,6 +23,9 @@ export type RegistrationProductDto = {
     customPrice: number;
     customDepositAmount?: number;
   };
+  // Availability information for smart quantity limits
+  availableQuantity: number | null; // null means unlimited
+  purchasedQuantity: number;
 };
 
 export type CartItem = {

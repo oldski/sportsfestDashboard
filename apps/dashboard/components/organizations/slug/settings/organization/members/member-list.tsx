@@ -32,11 +32,13 @@ import type { ProfileDto } from '~/types/dtos/profile-dto';
 export type MemberListProps = React.HtmlHTMLAttributes<HTMLUListElement> & {
   profile: ProfileDto;
   members: MemberDto[];
+  readOnly: boolean;
 };
 
 export function MemberList({
   profile,
   members,
+  readOnly,
   className,
   ...other
 }: MemberListProps): React.JSX.Element {
@@ -51,6 +53,7 @@ export function MemberList({
           key={member.id}
           profile={profile}
           member={member}
+          readOnly={readOnly}
         />
       ))}
     </ul>
@@ -60,11 +63,13 @@ export function MemberList({
 type MemberListItemProps = React.HtmlHTMLAttributes<HTMLLIElement> & {
   profile: ProfileDto;
   member: MemberDto;
+  readOnly: boolean;
 };
 
 function MemberListItem({
   profile,
   member,
+  readOnly,
   className,
   ...other
 }: MemberListItemProps): React.JSX.Element {
@@ -101,7 +106,7 @@ function MemberListItem({
         </div>
       </div>
       <div className="flex flex-row items-center gap-2">
-        {member.isOwner && (
+        {member.isOwner && !readOnly && (
           <Badge
             variant="secondary"
             className="hidden rounded-3xl sm:inline-block"
@@ -115,46 +120,48 @@ function MemberListItem({
         >
           {sportsFestRoleLabels[member.role]}
         </Badge>
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              className="size-8 p-0"
-              title="Open menu"
-            >
-              <MoreHorizontalIcon className="size-4 shrink-0" />
-              <span className="sr-only">Open menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              className="cursor-pointer"
-              disabled={profile.role !== Role.ADMIN || member.isOwner}
-              onClick={handleShowChangeRoleModal}
-            >
-              Change role
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={handleShowTransferOwnershipModal}
-              disabled={
-                !profile.isOwner || member.role !== Role.ADMIN || member.isOwner
-              }
-            >
-              Transfer ownership
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive! cursor-pointer"
-              onClick={handleShowRemoveMemberModal}
-            >
-              {profile.id === member.id
-                ? 'Leave organization'
-                : 'Remove member'}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {!readOnly && (
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                className="size-8 p-0"
+                title="Open menu"
+              >
+                <MoreHorizontalIcon className="size-4 shrink-0" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="cursor-pointer"
+                disabled={profile.role !== Role.ADMIN || member.isOwner}
+                onClick={handleShowChangeRoleModal}
+              >
+                Change role
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={handleShowTransferOwnershipModal}
+                disabled={
+                  !profile.isOwner || member.role !== Role.ADMIN || member.isOwner
+                }
+              >
+                Transfer ownership
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive! cursor-pointer"
+                onClick={handleShowRemoveMemberModal}
+              >
+                {profile.id === member.id
+                  ? 'Leave organization'
+                  : 'Remove member'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </li>
   );

@@ -8,6 +8,7 @@ import {
   orderTable,
   tentPurchaseTrackingTable,
   eventYearTable,
+  PaymentStatus,
   orderPaymentTable
 } from '@workspace/database/schema';
 
@@ -38,6 +39,14 @@ export interface OrganizationDashboardStats {
     year: number;
     name: string;
     registrationOpen: boolean;
+    eventStartDate: Date;
+    eventEndDate: Date;
+    registrationClose: Date;
+    locationName: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
   };
 }
 
@@ -50,7 +59,15 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
       id: eventYearTable.id,
       year: eventYearTable.year,
       name: eventYearTable.name,
-      registrationOpen: eventYearTable.registrationOpen
+      registrationOpen: eventYearTable.registrationOpen,
+      eventStartDate: eventYearTable.eventStartDate,
+      eventEndDate: eventYearTable.eventEndDate,
+      registrationClose: eventYearTable.registrationClose,
+      locationName: eventYearTable.locationName,
+      address: eventYearTable.address,
+      city: eventYearTable.city,
+      state: eventYearTable.state,
+      zipCode: eventYearTable.zipCode
     })
     .from(eventYearTable)
     .where(eq(eventYearTable.isActive, true))
@@ -89,7 +106,7 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
   if (eventYearId) {
     const tentTracking = await db
       .select({
-        tentCount: tentPurchaseTrackingTable.tentCount,
+        tentCount: tentPurchaseTrackingTable.quantityPurchased,
         maxAllowed: tentPurchaseTrackingTable.maxAllowed
       })
       .from(tentPurchaseTrackingTable)
@@ -133,7 +150,7 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
     .where(
       and(
         eq(orderTable.organizationId, ctx.organization.id),
-        eq(orderPaymentTable.status, 'completed')
+        eq(orderPaymentTable.status, PaymentStatus.COMPLETED)
       )
     );
 
@@ -162,12 +179,28 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
       id: eventYear.id,
       year: eventYear.year,
       name: eventYear.name,
-      registrationOpen: eventYear.registrationOpen
+      registrationOpen: eventYear.registrationOpen <= new Date() && new Date() <= eventYear.registrationClose,
+      eventStartDate: eventYear.eventStartDate,
+      eventEndDate: eventYear.eventEndDate,
+      registrationClose: eventYear.registrationClose,
+      locationName: eventYear.locationName,
+      address: eventYear.address,
+      city: eventYear.city,
+      state: eventYear.state,
+      zipCode: eventYear.zipCode
     } : {
       id: '',
       year: 0,
       name: 'No Active Event',
-      registrationOpen: false
+      registrationOpen: false,
+      eventStartDate: new Date(),
+      eventEndDate: new Date(),
+      registrationClose: new Date(),
+      locationName: '',
+      address: '',
+      city: '',
+      state: '',
+      zipCode: ''
     }
   };
 }

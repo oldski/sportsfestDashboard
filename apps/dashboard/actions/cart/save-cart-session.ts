@@ -16,7 +16,7 @@ export async function saveCartSessionAction(sessionId: string, cartItems: CartIt
       sessionId,
       ctx.organization.id,
       cartItems,
-      ctx.user?.id
+      ctx.session?.user?.id
     );
     
     return { success: true };

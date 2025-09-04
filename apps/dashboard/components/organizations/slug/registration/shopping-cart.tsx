@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { 
-  ShoppingCartIcon, 
-  TrashIcon, 
-  PlusIcon, 
+import {
+  ShoppingCartIcon,
+  TrashIcon,
+  PlusIcon,
   MinusIcon,
   CreditCardIcon,
   XIcon
@@ -28,11 +28,11 @@ const formatCurrency = (amount: number) => {
 };
 
 export function ShoppingCart() {
-  const { 
-    items, 
-    removeItem, 
-    updateQuantity, 
-    clearCart, 
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    clearCart,
     getItemCount,
     getSubtotal,
     getTotalDeposit,
@@ -48,21 +48,18 @@ export function ShoppingCart() {
 
   if (items.length === 0) {
     return (
-      <Card className="h-fit">
+      <Card className="h-fit hidden xl:block">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <ShoppingCartIcon className="size-5" />
             <span>Shopping Cart</span>
           </CardTitle>
-          <CardDescription>
-            Your cart is empty
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <ShoppingCartIcon className="size-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-sm text-muted-foreground">
-              Add products to get started
+              Add items to get started
             </p>
           </div>
         </CardContent>
@@ -71,7 +68,7 @@ export function ShoppingCart() {
   }
 
   return (
-    <Card className="h-fit">
+    <Card className="h-fit hidden xl:block">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center space-x-2">
@@ -91,13 +88,23 @@ export function ShoppingCart() {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 py-4">
         {/* Cart Items */}
         <div className="space-y-3">
           {items.map((item) => (
             <div key={`${item.productId}-${item.useDeposit}`} className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+              {/* Remove Button - Left side */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeItem(item.productId)}
+                className="size-6 p-0 text-muted-foreground hover:text-destructive shrink-0 mt-0.5"
+              >
+                <XIcon className="size-3" />
+              </Button>
+
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-sm leading-tight">{item.product.name}</h4>
+                <h4 className="font-medium text-sm leading-tight mb-1">{item.product.name}</h4>
                 <div className="flex items-center space-x-2 mt-1">
                   <Badge variant="outline" className="text-xs">
                     {item.product.category.name}
@@ -118,7 +125,7 @@ export function ShoppingCart() {
                 </p>
               </div>
 
-              <div className="flex flex-col items-end space-y-2">
+              <div className="flex flex-col items-center space-y-2 ml-2">
                 {/* Quantity Controls */}
                 <div className="flex items-center space-x-1">
                   <Button
@@ -142,7 +149,7 @@ export function ShoppingCart() {
                     variant="outline"
                     size="sm"
                     onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                    disabled={item.product.maxQuantityPerOrg && item.quantity >= item.product.maxQuantityPerOrg}
+                    disabled={item.product.maxQuantityPerOrg ? item.quantity >= item.product.maxQuantityPerOrg : false}
                     className="size-7 p-0"
                   >
                     <PlusIcon className="size-3" />
@@ -150,19 +157,9 @@ export function ShoppingCart() {
                 </div>
 
                 {/* Total Price */}
-                <div className="text-right">
+                <div className="text-center">
                   <div className="font-medium text-sm">{formatCurrency(item.totalPrice)}</div>
                 </div>
-
-                {/* Remove Button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeItem(item.productId)}
-                  className="size-7 p-0 text-destructive hover:text-destructive"
-                >
-                  <XIcon className="size-3" />
-                </Button>
               </div>
             </div>
           ))}
@@ -223,8 +220,8 @@ export function ShoppingCart() {
       </CardContent>
 
       <CardFooter className="space-y-2">
-        <Button 
-          className="w-full" 
+        <Button
+          className="w-full"
           size="lg"
           disabled={items.length === 0}
         >

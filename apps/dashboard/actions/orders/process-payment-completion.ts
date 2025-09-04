@@ -1,7 +1,7 @@
 'use server';
 
 import { db, eq } from '@workspace/database/client';
-import { orderTable, orderPaymentTable } from '@workspace/database/schema';
+import { orderTable, orderPaymentTable, OrderStatus } from '@workspace/database/schema';
 import { fulfillOrder } from './fulfill-order';
 
 export interface PaymentCompletionResult {
@@ -47,7 +47,7 @@ export async function processPaymentCompletion(orderId: string): Promise<Payment
     let fulfillmentResult;
     let shouldFulfill = false;
 
-    if (order[0].status === 'pending' && totalPaid > 0) {
+    if (order[0].status === OrderStatus.PENDING && totalPaid > 0) {
       // First payment received - fulfill order to create teams/track resources
       shouldFulfill = true;
     }
@@ -62,7 +62,7 @@ export async function processPaymentCompletion(orderId: string): Promise<Payment
       await db
         .update(orderTable)
         .set({
-          status: 'paid',
+          status: OrderStatus.FULLY_PAID,
           updatedAt: new Date()
         })
         .where(eq(orderTable.id, orderId));
@@ -78,7 +78,7 @@ export async function processPaymentCompletion(orderId: string): Promise<Payment
       await db
         .update(orderTable)
         .set({
-          status: 'partial_payment',
+          status: OrderStatus.DEPOSIT_PAID,
           updatedAt: new Date()
         })
         .where(eq(orderTable.id, orderId));

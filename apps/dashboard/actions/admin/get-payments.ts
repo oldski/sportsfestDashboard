@@ -150,11 +150,11 @@ export async function getPaymentsByStatus(status: PaymentStatus, eventYearId?: s
       })),
       ...paymentsFromOrderPaymentTable.map((item) => ({
         id: item.id,
-        organizationId: item.organizationId,
+        organizationId: item.organizationId || '',
         organizationName: item.organizationName || 'Unknown Organization',
         organizationSlug: item.organizationSlug || '',
         orderId: item.orderId,
-        eventYearId: item.eventYearId,
+        eventYearId: item.eventYearId || '',
         eventYear: item.eventYear || 0,
         eventYearName: item.eventYearName || 'Unknown Event',
         paymentType: item.paymentType as string,

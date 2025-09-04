@@ -1,18 +1,15 @@
 import * as React from 'react';
-import {Card, CardContent, CardHeader} from "@workspace/ui/components/card";
+import {getMembers} from "~/data/members/get-members";
+import {getProfile} from "~/data/account/get-profile";
+import {RecruitmentTeamCard} from "~/components/organizations/slug/home/dashboard-recruitment-team-card";
 
 export default async function YourRecruitmentTeamPage(): Promise<React.JSX.Element> {
+  const [profile, members] = await Promise.all([getProfile(), getMembers()]);
 
   return (
-    <Card>
-      <CardHeader>
-        Your Recruitment Team
-      </CardHeader>
-      <CardContent>
-        List of team members (from /settings/organizations/members/@team)
-
-        include button to invite members (reuse invite button that's in sidebar)
-      </CardContent>
-    </Card>
+    <RecruitmentTeamCard
+      profile={profile}
+      members={members}
+    />
   );
 }

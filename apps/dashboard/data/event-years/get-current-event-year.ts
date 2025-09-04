@@ -1,18 +1,24 @@
 import 'server-only';
 
 import { cache } from 'react';
-import { db, desc, eq } from '@workspace/database/client';
-import { eventYearTable } from '@workspace/database/schema';
+import { db, sql } from '@workspace/database/client';
 
 export const getCurrentEventYear = cache(async () => {
   try {
-    const currentYear = await db
-      .select()
-      .from(eventYearTable)
-      .orderBy(desc(eventYearTable.year))
-      .limit(1);
+    console.log('Getting current (active) event year...');
+    const result = await db.execute(sql`
+      SELECT id, name, year, "isActive" 
+      FROM "eventYear" 
+      WHERE "isActive" = true 
+      LIMIT 1
+    `);
 
-    return currentYear[0] || null;
+    console.log('Active event years found:', result.rows.length);
+    if (result.rows[0]) {
+      console.log('Active event year:', result.rows[0].name, 'ID:', result.rows[0].id);
+    }
+
+    return result.rows[0] || null;
   } catch (error) {
     console.error('Error fetching current event year:', error);
     return null;

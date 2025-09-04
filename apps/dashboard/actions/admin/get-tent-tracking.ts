@@ -153,18 +153,18 @@ export async function getTentTracking(eventYearId?: string): Promise<TentTrackin
       eventYearId: item.eventYearId,
       eventYear: item.eventYear || 0,
       eventYearName: item.eventYearName || 'Unknown Event',
-      tentCount: item.tentCount,
+      tentCount: Number(item.tentCount) || 0,
       maxAllowed: item.maxAllowed,
       tentProductId: item.tentProductId,
       tentProductName: item.tentProductName || 'Tent Rental',
-      totalAmount: item.totalAmount,
-      depositPaid: item.depositPaid,
-      balanceOwed: item.balanceOwed,
+      totalAmount: Number(item.totalAmount) || 0,
+      depositPaid: Number(item.depositPaid) || 0,
+      balanceOwed: Number(item.balanceOwed) || 0,
       status: item.status as 'confirmed' | 'pending_payment' | 'cancelled',
       purchaseDate: item.purchaseDate.toISOString().split('T')[0],
       createdAt: item.createdAt.toISOString().split('T')[0],
       updatedAt: item.updatedAt.toISOString().split('T')[0],
-      isAtLimit: item.tentCount >= item.maxAllowed,
+      isAtLimit: Number(item.tentCount) >= item.maxAllowed,
     }));
   } catch (error) {
     console.error('Error fetching tent tracking data:', error);

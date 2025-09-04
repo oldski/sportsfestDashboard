@@ -198,7 +198,7 @@ export function InvoicesDataTable({
         const createdAt = row.getValue('createdAt') as Date | string | undefined;
         return (
           <div className="text-sm text-muted-foreground">
-            {createdAt ? formatDate(createdAt) : '-'}
+            {createdAt ? formatDate(typeof createdAt === 'string' ? new Date(createdAt) : createdAt) : '-'}
           </div>
         );
       }
@@ -297,10 +297,7 @@ export function InvoicesDataTable({
       </div>
 
       {/* Data table */}
-      <div className="rounded-md border h-full">
-        <DataTable table={table} />
-      </div>
-
+      <DataTable table={table} />
       {/* Pagination */}
       <DataTablePagination table={table} />
     </div>

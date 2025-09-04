@@ -2,7 +2,7 @@ import 'server-only';
 
 import { cache } from 'react';
 import { db, eq, and, gt, lt } from '@workspace/database/client';
-import { cartSession } from '@workspace/database/schema';
+import { cartSessionTable } from '@workspace/database/schema';
 import type { CartItem } from '~/types/dtos/registration-product-dto';
 
 // Generate a unique session ID (client-side only)
@@ -20,10 +20,10 @@ export const getCartSession = cache(async (sessionId: string) => {
   try {
     const sessions = await db
       .select()
-      .from(cartSession)
+      .from(cartSessionTable)
       .where(and(
-        eq(cartSession.sessionId, sessionId),
-        gt(cartSession.expiresAt, new Date()) // Only get non-expired sessions
+        eq(cartSessionTable.sessionId, sessionId),
+        gt(cartSessionTable.expiresAt, new Date()) // Only get non-expired sessions
       ))
       .limit(1);
 
@@ -59,29 +59,36 @@ export async function saveCartSession(
       }
     }));
 
-    // Try to update existing session first
-    const existingSession = await getCartSession(sessionId);
-    
-    if (existingSession) {
+    // Use upsert pattern to handle duplicate key constraint
+    try {
       await db
-        .update(cartSession)
-        .set({
-          cartData: cartData as any,
-          expiresAt: getExpirationDate(),
-          userId: userId || null
-        })
-        .where(eq(cartSession.sessionId, sessionId));
-    } else {
-      // Create new session
-      await db
-        .insert(cartSession)
+        .insert(cartSessionTable)
         .values({
           sessionId,
           organizationId,
           userId: userId || null,
           cartData: cartData as any,
           expiresAt: getExpirationDate()
+        })
+        .onConflictDoUpdate({
+          target: cartSessionTable.sessionId,
+          set: {
+            cartData: cartData as any,
+            expiresAt: getExpirationDate(),
+            userId: userId || null,
+            updatedAt: new Date()
+          }
         });
+    } catch (conflictError) {
+      // Fallback to update if conflict resolution fails
+      await db
+        .update(cartSessionTable)
+        .set({
+          cartData: cartData as any,
+          expiresAt: getExpirationDate(),
+          userId: userId || null
+        })
+        .where(eq(cartSessionTable.sessionId, sessionId));
     }
   } catch (error) {
     console.error('Error saving cart session:', error);
@@ -119,22 +126,32 @@ export async function loadCartItems(sessionId: string): Promise<CartItem[]> {
         maxQuantityPerOrg: item.productSnapshot.maxQuantityPerOrg,
         // Minimal product data - full product would be fetched if needed
         description: '',
-        type: 'physical' as const,
+        type: 'merchandise' as const,
         status: 'active' as const,
         createdAt: new Date(),
         updatedAt: new Date(),
-        category: { id: '', name: '', description: '' }
+        category: { id: '', name: '', description: '' },
+        availableQuantity: null,
+        purchasedQuantity: 0,
+        organizationPrice: undefined,
+        totalInventory: undefined
       } : {
         id: item.productId,
         name: 'Unknown Product',
         basePrice: item.unitPrice,
         requiresDeposit: false,
         description: '',
-        type: 'physical' as const,
+        type: 'merchandise' as const,
         status: 'active' as const,
         createdAt: new Date(),
         updatedAt: new Date(),
-        category: { id: '', name: '', description: '' }
+        category: { id: '', name: '', description: '' },
+        availableQuantity: null,
+        purchasedQuantity: 0,
+        organizationPrice: undefined,
+        totalInventory: undefined,
+        depositAmount: null,
+        maxQuantityPerOrg: null
       }
     }));
   } catch (error) {
@@ -147,8 +164,8 @@ export async function loadCartItems(sessionId: string): Promise<CartItem[]> {
 export async function deleteCartSession(sessionId: string) {
   try {
     await db
-      .delete(cartSession)
-      .where(eq(cartSession.sessionId, sessionId));
+      .delete(cartSessionTable)
+      .where(eq(cartSessionTable.sessionId, sessionId));
   } catch (error) {
     console.error('Error deleting cart session:', error);
   }
@@ -159,8 +176,8 @@ export async function cleanupExpiredCartSessions() {
   try {
     const now = new Date();
     const result = await db
-      .delete(cartSession)
-      .where(lt(cartSession.expiresAt, now));
+      .delete(cartSessionTable)
+      .where(lt(cartSessionTable.expiresAt, now));
     
     console.log(`Cleaned up expired cart sessions`);
     return result;

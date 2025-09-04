@@ -50,7 +50,7 @@ const columns = [
         <Avatar className="size-8">
           <AvatarImage src="" alt="" />
           <AvatarFallback>
-            {row.getValue('name')
+            {(row.getValue('name') as string)
               .split(' ')
               .map((n: string) => n[0])
               .join('')
@@ -97,7 +97,7 @@ const columns = [
       <DataTableColumnHeader column={column} title="Organization" />
     ),
     cell: ({ row }) => {
-      const orgName = row.getValue('organization');
+      const orgName = row.getValue('organization') as string;
       const orgSlug = row.original.organizationSlug;
 
       if (!orgName) {
@@ -137,7 +137,7 @@ const columns = [
       <DataTableColumnHeader column={column} title="Last Login" />
     ),
     cell: ({ row }) => {
-      const lastLogin = row.getValue('lastLogin');
+      const lastLogin = row.getValue('lastLogin') as Date | null;
       if (!lastLogin) {
         return <span className="text-muted-foreground">Never</span>;
       }

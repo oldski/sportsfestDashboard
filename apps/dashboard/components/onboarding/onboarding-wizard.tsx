@@ -109,7 +109,6 @@ export function OnboardingWizard({
             logo: metadata?.organization?.logo ?? undefined,
             name: metadata?.organization?.name ?? '',
             slug: metadata?.organization?.slug ?? '',
-            addExampleData: true
           }
         : undefined,
       inviteTeamStep: activeSteps.includes(OnboardingStep.InviteTeam)

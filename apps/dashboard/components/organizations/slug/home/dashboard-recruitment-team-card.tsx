@@ -6,7 +6,7 @@ import NiceModal from '@ebay/nice-modal-react';
 import { Button } from '@workspace/ui/components/button';
 import {
   Card,
-  CardContent,
+  CardContent, CardFooter,
   CardHeader,
   type CardProps
 } from '@workspace/ui/components/card';
@@ -20,29 +20,17 @@ import { MemberList } from '~/components/organizations/slug/settings/organizatio
 import type { MemberDto } from '~/types/dtos/member-dto';
 import type { ProfileDto } from '~/types/dtos/profile-dto';
 
-export type MembersCardProps = CardProps & {
+export type RecruitmentTeamCardProps = CardProps & {
   profile: ProfileDto;
   members: MemberDto[];
 };
 
-export function MembersCard({
+export function RecruitmentTeamCard({
   profile,
   members,
   className,
   ...other
-}: MembersCardProps): React.JSX.Element {
-  const [searchQuery, setSearchQuery] = React.useState<string>('');
-  const filteredMembers = members.filter(
-    (member) =>
-      !searchQuery ||
-      member.name.toLowerCase().indexOf(searchQuery.toLowerCase()) !== -1 ||
-      member.email.toLowerCase().indexOf(searchQuery.toLowerCase()) !== -1
-  );
-  const handleSearchQueryChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ): void => {
-    setSearchQuery(e.target?.value || '');
-  };
+}: RecruitmentTeamCardProps): React.JSX.Element {
   const handleShowInviteMemberModal = (): void => {
     NiceModal.show(InviteMemberModal, { profile });
   };
@@ -52,36 +40,34 @@ export function MembersCard({
       {...other}
     >
       <CardHeader className="pb-0 flex flex-row items-center gap-2">
-        <InputSearch
-          placeholder="Filter by name or email"
-          value={searchQuery}
-          onChange={handleSearchQueryChange}
-        />
+        Your Recruitment Team
+      </CardHeader>
+      <CardContent className="max-h-72 flex-1 overflow-hidden p-0">
+        {members.length > 0 ? (
+          <ScrollArea className="h-full">
+            <MemberList
+              profile={profile}
+              members={members}
+              readOnly={true}
+            />
+          </ScrollArea>
+        ) : (
+          <EmptyText className="p-6">
+            No members found.
+          </EmptyText>
+        )}
+      </CardContent>
+      <CardFooter>
         <Button
           type="button"
           variant="default"
-          size="default"
+          size="sm"
           className="whitespace-nowrap"
           onClick={handleShowInviteMemberModal}
         >
           Invite member
         </Button>
-      </CardHeader>
-      <CardContent className="max-h-72 flex-1 overflow-hidden p-0">
-        {filteredMembers.length > 0 ? (
-          <ScrollArea className="h-full">
-            <MemberList
-              profile={profile}
-              members={filteredMembers}
-              readOnly={false}
-            />
-          </ScrollArea>
-        ) : (
-          <EmptyText className="p-6">
-            No member found {!!searchQuery && ' (filtered)'}.
-          </EmptyText>
-        )}
-      </CardContent>
+      </CardFooter>
     </Card>
   );
 }

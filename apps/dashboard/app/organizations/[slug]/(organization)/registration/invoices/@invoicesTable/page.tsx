@@ -36,7 +36,7 @@ const mockInvoices: RegistrationInvoiceDto[] = [
           totalPrice: 150.00
         },
         {
-          id: 'item-2', 
+          id: 'item-2',
           productName: '10x10 Event Tent',
           quantity: 1,
           unitPrice: 200.00,
@@ -83,7 +83,7 @@ const mockInvoices: RegistrationInvoiceDto[] = [
     updatedAt: new Date('2025-01-12'),
     order: {
       id: 'ord-2',
-      orderNumber: 'ORD-2025-002', 
+      orderNumber: 'ORD-2025-002',
       totalAmount: 950.00,
       status: 'fully_paid',
       createdAt: new Date('2025-01-10'),
@@ -115,7 +115,7 @@ const mockInvoices: RegistrationInvoiceDto[] = [
   {
     id: 'inv-3',
     invoiceNumber: 'INV-2025-003',
-    orderId: 'ord-3', 
+    orderId: 'ord-3',
     orderNumber: 'ORD-2025-003',
     totalAmount: 800.00,
     paidAmount: 0.00,

@@ -8,7 +8,7 @@ import { userTable, organizationTable, membershipTable } from '@workspace/databa
 export type UserData = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   createdAt: Date;
   lastLogin: Date | null;
   isSportsFestAdmin: boolean;

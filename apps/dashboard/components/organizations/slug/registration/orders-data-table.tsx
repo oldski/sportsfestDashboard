@@ -129,7 +129,7 @@ export function OrdersDataTable({
         const items = row.getValue('items') as RegistrationOrderDto['items'];
         const itemCount = items.length;
         const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-        
+
         return (
           <div className="text-sm">
             <span className="font-medium">{itemCount}</span> item{itemCount !== 1 ? 's' : ''}
@@ -145,7 +145,7 @@ export function OrdersDataTable({
         const payments = row.getValue('payments') as RegistrationOrderDto['payments'];
         const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
         const paymentCount = payments.length;
-        
+
         return (
           <div className="text-sm">
             <div className="font-medium text-green-600">
@@ -167,7 +167,7 @@ export function OrdersDataTable({
         const invoices = row.getValue('invoices') as RegistrationOrderDto['invoices'];
         const invoiceCount = invoices.length;
         const totalBalance = invoices.reduce((sum, invoice) => sum + invoice.balanceOwed, 0);
-        
+
         return (
           <div className="text-sm">
             <div className="font-medium">
@@ -287,10 +287,7 @@ export function OrdersDataTable({
       </div>
 
       {/* Data table */}
-      <div className="rounded-md border h-full">
-        <DataTable table={table} />
-      </div>
-
+      <DataTable table={table} />
       {/* Pagination */}
       <DataTablePagination table={table} />
     </div>

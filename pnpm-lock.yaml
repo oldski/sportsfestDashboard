@@ -16,10 +16,19 @@ overrides:
 importers:
 
   .:
-    dependencies:
+    devDependencies:
+      '@manypkg/cli':
+        specifier: 0.24.0
+        version: 0.24.0
       '@tanstack/react-table':
         specifier: 8.21.3
         version: 8.21.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@turbo/gen':
+        specifier: 2.5.4
+        version: 2.5.4(@types/node@24.0.1)(typescript@5.8.3)
+      cross-env:
+        specifier: 7.0.3
+        version: 7.0.3
       jspdf:
         specifier: ^3.0.2
         version: 3.0.2
@@ -29,25 +38,15 @@ importers:
       papaparse:
         specifier: ^5.5.3
         version: 5.5.3
-      xlsx:
-        specifier: ^0.18.5
-        version: 0.18.5
-    devDependencies:
-      '@manypkg/cli':
-        specifier: 0.24.0
-        version: 0.24.0
-      '@turbo/gen':
-        specifier: 2.5.4
-        version: 2.5.4(@types/node@24.0.1)(typescript@5.8.3)
-      cross-env:
-        specifier: 7.0.3
-        version: 7.0.3
       turbo:
         specifier: 2.5.4
         version: 2.5.4
       typescript:
         specifier: 5.8.3
         version: 5.8.3
+      xlsx:
+        specifier: ^0.18.5
+        version: 0.18.5
 
   apps/dashboard:
     dependencies:
@@ -929,6 +928,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: 4.1.8
         version: 4.1.8
+      '@types/papaparse':
+        specifier: ^5.3.16
+        version: 5.3.16
       '@types/react':
         specifier: 19.0.8
         version: 19.0.8
@@ -4138,6 +4140,9 @@ packages:
 
   '@types/pako@2.0.4':
     resolution: {integrity: sha512-VWDCbrLeVXJM9fihYodcLiIv0ku+AlOa/TQ1SvYOaBuyrSKgEcro95LJyIsJ4vSo6BXIxOKxiJAat04CmST9Fw==}
+
+  '@types/papaparse@5.3.16':
+    resolution: {integrity: sha512-T3VuKMC2H0lgsjI9buTB3uuKj3EMD2eap1MOuEQuBQ44EnDx/IkGhU6EwiTf9zG3za4SKlmwKAImdDKdNnCsXg==}
 
   '@types/pg-pool@2.0.6':
     resolution: {integrity: sha512-TaAUE5rq2VQYxab5Ts7WZhKNmuN78Q6PiFonTDdpbx8a1H0M1vhy3rhiMjl+e2iHmogyMw7jZF4FrE6eJUy5HQ==}
@@ -12760,7 +12765,7 @@ snapshots:
   '@types/glob@7.2.0':
     dependencies:
       '@types/minimatch': 5.1.2
-      '@types/node': 24.0.1
+      '@types/node': 22.15.30
 
   '@types/hast@2.3.10':
     dependencies:
@@ -12817,6 +12822,10 @@ snapshots:
       '@types/node': 22.15.30
 
   '@types/pako@2.0.4': {}
+
+  '@types/papaparse@5.3.16':
+    dependencies:
+      '@types/node': 22.15.30
 
   '@types/pg-pool@2.0.6':
     dependencies:
@@ -12875,7 +12884,7 @@ snapshots:
 
   '@types/through@0.0.33':
     dependencies:
-      '@types/node': 24.0.1
+      '@types/node': 22.15.30
 
   '@types/tinycolor2@1.4.6': {}
 

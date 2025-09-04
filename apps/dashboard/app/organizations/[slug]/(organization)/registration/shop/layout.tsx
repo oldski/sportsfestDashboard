@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { type Metadata } from 'next';
 
-import { getAuthOrganizationContext } from '@workspace/auth/context';
 import { routes } from '@workspace/routes';
 
 import {
@@ -45,11 +44,11 @@ export default async function ShopLayout({
       <PageBody>
         <ShoppingCartProvider>
           <div className="mx-auto space-y-2 p-2 sm:space-y-8 sm:p-6">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
-              <div className="lg:col-span-2">
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:gap-8">
+              <div className="xl:col-span-2">
                 {products}
               </div>
-              <div className="lg:col-span-1">
+              <div className="xl:col-span-1">
                 {shoppingCart}
               </div>
             </div>

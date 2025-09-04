@@ -2,7 +2,8 @@ import { db, eq } from '@workspace/database/client';
 import {
   orderItemTable,
   orderTable,
-  organizationTable
+  organizationTable,
+  OrderStatus
 } from '@workspace/database/schema';
 
 import type { UpsertOrder } from '../provider/types';
@@ -34,20 +35,18 @@ export async function upsertOrder(orderData: UpsertOrder): Promise<void> {
     await db
       .update(orderTable)
       .set({
-        status: orderData.status,
-        provider: orderData.provider,
-        currency: orderData.currency,
-        totalAmount: orderData.totalAmount
+        status: orderData.status as typeof OrderStatus[keyof typeof OrderStatus]
       })
       .where(eq(orderTable.id, orderData.orderId));
   } else {
     await db.insert(orderTable).values({
-      id: orderData.orderId,
       organizationId: orderData.organizationId,
-      status: orderData.status,
-      provider: orderData.provider,
-      currency: orderData.currency,
-      totalAmount: orderData.totalAmount
+      eventYearId: '', // Default empty string since not in UpsertOrder type
+      orderNumber: orderData.orderId, // Use orderId as order number
+      status: orderData.status as typeof OrderStatus[keyof typeof OrderStatus],
+      totalAmount: orderData.totalAmount,
+      depositAmount: 0, // Default since not in UpsertOrder type
+      balanceOwed: orderData.totalAmount // Initially, balance owed equals total
     });
   }
 
@@ -64,22 +63,21 @@ export async function upsertOrder(orderData: UpsertOrder): Promise<void> {
         .set({
           quantity: item.quantity,
           productId: item.productId,
-          variantId: item.variantId,
-          priceAmount: item.priceAmount,
-          type: item.type,
-          model: item.model
+          unitPrice: item.priceAmount || 0,
+          totalPrice: (item.priceAmount || 0) * item.quantity,
+          depositPrice: 0,
+          productSnapshot: null
         })
         .where(eq(orderItemTable.id, item.orderItemId));
     } else {
       await db.insert(orderItemTable).values({
-        id: item.orderItemId,
         orderId: orderData.orderId,
         quantity: item.quantity,
         productId: item.productId,
-        variantId: item.variantId,
-        priceAmount: item.priceAmount,
-        type: item.type,
-        model: item.model
+        unitPrice: item.priceAmount || 0,
+        totalPrice: (item.priceAmount || 0) * item.quantity,
+        depositPrice: 0,
+        productSnapshot: null
       });
     }
   }
