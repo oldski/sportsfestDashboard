@@ -59,8 +59,8 @@ export const routes = {
       Index: `${baseUrl.Dashboard}/organizations`,
       slug: {
         ChoosePlan: `${baseUrl.Dashboard}/organizations/[slug]/choose-plan`,
-        // Contacts: `${baseUrl.Dashboard}/organizations/[slug]/contacts`,
-        Home: `${baseUrl.Dashboard}/organizations/[slug]/home`,
+        Contacts: `${baseUrl.Dashboard}/organizations/[slug]/contacts`,
+        Home: `${baseUrl.Dashboard}/organizations/[slug]/dashboard`,
         registration: {
           Index: `${baseUrl.Dashboard}/organizations/[slug]/registration`,
           Shop: `${baseUrl.Dashboard}/organizations/[slug]/registration/shop`,

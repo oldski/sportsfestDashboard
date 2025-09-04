@@ -274,7 +274,7 @@ export function AppSidebar({
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub>
-                            {item.subItems.map((subItem) => {
+                            {item.subItems?.map((subItem) => {
                               const subPath = subItem.href.startsWith('http') ? new URL(subItem.href).pathname : subItem.href;
 
                               // Find the most specific matching path among siblings

@@ -34,8 +34,14 @@ const eventYearSchema = z.object({
 }).refine((data) => data.eventEndDate > data.eventStartDate, {
   message: 'Event end date must be after start date',
   path: ['eventEndDate'],
-}).refine((data) => data.registrationClose < data.eventEndDate, {
-  message: 'Registration must close before event ends',
+}).refine((data) => data.registrationOpen >= data.eventStartDate, {
+  message: 'Registration must open on or after event start date',
+  path: ['registrationOpen'],
+}).refine((data) => data.registrationClose > data.registrationOpen, {
+  message: 'Registration close date must be after registration open date',
+  path: ['registrationClose'],
+}).refine((data) => data.registrationClose <= data.eventEndDate, {
+  message: 'Registration must close on or before event end date',
   path: ['registrationClose'],
 });
 
@@ -70,6 +76,11 @@ export async function updateEventYear(id: string, data: EventYearFormData) {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Unauthorized');
+  }
+
+  const { isSuperAdmin } = await import('~/lib/admin-utils');
+  if (!isSuperAdmin(session.user)) {
+    throw new Error('Unauthorized: Only super admins can update event years');
   }
 
   const validatedData = eventYearSchema.parse(data);

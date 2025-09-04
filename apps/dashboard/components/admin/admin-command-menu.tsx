@@ -18,7 +18,7 @@ export type AdminCommandMenuProps = NiceModalHocProps;
 
 const adminNavigationGroups = [
   {
-    heading: 'Administration',
+    heading: '',
     items: [
       {
         title: 'Dashboard',

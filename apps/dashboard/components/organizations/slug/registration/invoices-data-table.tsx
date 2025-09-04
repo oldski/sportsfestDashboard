@@ -80,8 +80,16 @@ const formatDate = (date: Date) => {
 export function InvoicesDataTable({
   invoices
 }: InvoicesDataTableProps): React.JSX.Element {
+  // Safety check - ensure we have data
+  if (!invoices || invoices.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No invoices found</p>
+      </div>
+    );
+  }
   const [sorting, setSorting] = React.useState<SortingState>([
-    { id: 'createdAt', desc: true } // Default to newest first
+    { id: 'totalAmount', desc: true } // Default to highest amount first
   ]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
@@ -186,11 +194,14 @@ export function InvoicesDataTable({
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Created" />
       ),
-      cell: ({ row }) => (
-        <div className="text-sm text-muted-foreground">
-          {formatDate(row.getValue('createdAt'))}
-        </div>
-      )
+      cell: ({ row }) => {
+        const createdAt = row.getValue('createdAt') as Date | string | undefined;
+        return (
+          <div className="text-sm text-muted-foreground">
+            {createdAt ? formatDate(createdAt) : '-'}
+          </div>
+        );
+      }
     },
     {
       id: 'actions',

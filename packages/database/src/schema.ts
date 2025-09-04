@@ -1753,7 +1753,7 @@ export const productTable = pgTable(
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     type: productTypeEnum('type').notNull(),
-    status: productStatusEnum('status').default('active').notNull(),
+    status: productStatusEnum('status').default(ProductStatus.ACTIVE).notNull(),
     basePrice: doublePrecision('basePrice').notNull(),
     requiresDeposit: boolean('requiresDeposit').default(false).notNull(),
     depositAmount: doublePrecision('depositAmount'),
@@ -1848,7 +1848,7 @@ export const orderTable = pgTable(
         onDelete: 'cascade',
         onUpdate: 'cascade'
       }),
-    status: orderStatusEnum('status').default('pending').notNull(),
+    status: orderStatusEnum('status').default(OrderStatus.PENDING).notNull(),
     totalAmount: doublePrecision('totalAmount').notNull(),
     depositAmount: doublePrecision('depositAmount').default(0).notNull(),
     balanceOwed: doublePrecision('balanceOwed').notNull(),
@@ -1937,7 +1937,7 @@ export const orderPaymentTable = pgTable(
         onUpdate: 'cascade'
       }),
     type: paymentTypeEnum('type').notNull(),
-    status: paymentStatusEnum('status').default('pending').notNull(),
+    status: paymentStatusEnum('status').default(PaymentStatus.PENDING).notNull(),
     amount: doublePrecision('amount').notNull(),
     stripePaymentIntentId: varchar('stripePaymentIntentId', { length: 255 }),
     stripeChargeId: varchar('stripeChargeId', { length: 255 }),
@@ -2205,4 +2205,72 @@ export const tentPurchaseTrackingRelations = relations(tentPurchaseTrackingTable
     references: [productTable.id]
   })
 }));
+
+export const cartSessionTable = pgTable(
+  'cartSession',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    sessionId: varchar('sessionId', { length: 255 }).notNull().unique(),
+    organizationId: uuid('organizationId')
+      .notNull()
+      .references(() => organizationTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    userId: uuid('userId')
+      .references(() => userTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    cartData: jsonb('cartData').notNull(), // Stores the cart items as JSON
+    expiresAt: timestamp('expiresAt', { mode: 'date' }).notNull(),
+    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  (table) => [
+    index('IX_cartSession_sessionId').using(
+      'btree',
+      table.sessionId.asc().nullsLast().op('text_ops')
+    ),
+    index('IX_cartSession_organizationId').using(
+      'btree',
+      table.organizationId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_cartSession_userId').using(
+      'btree',
+      table.userId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_cartSession_expiresAt').using(
+      'btree',
+      table.expiresAt.asc().nullsLast()
+    )
+  ]
+);
+
+export const cartSessionRelations = relations(cartSessionTable, ({ one }) => ({
+  organization: one(organizationTable, {
+    fields: [cartSessionTable.organizationId],
+    references: [organizationTable.id]
+  }),
+  user: one(userTable, {
+    fields: [cartSessionTable.userId],
+    references: [userTable.id]
+  })
+}));
+
+// Table aliases for imports
+export const cartSession = cartSessionTable;
+export const order = orderTable;
+export const orderItem = orderItemTable;
+export const orderPayment = orderPaymentTable;
+export const orderInvoice = orderInvoiceTable;
+export const product = productTable;
+export const productCategory = productCategoryTable;
+export const organizationPricing = organizationPricingTable;
+export const tentPurchaseTracking = tentPurchaseTrackingTable;
 

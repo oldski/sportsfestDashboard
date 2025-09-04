@@ -8,7 +8,9 @@ import {
   productTable, 
   companyTeamTable, 
   tentPurchaseTrackingTable,
-  eventYearTable 
+  eventYearTable,
+  ProductType,
+  OrderStatus
 } from '@workspace/database/schema';
 
 import { getAuthContext } from '@workspace/auth/context';
@@ -44,14 +46,14 @@ export async function fulfillOrder(orderId: string): Promise<OrderFulfillmentRes
     throw new NotFoundError('Order not found');
   }
 
-  if (order[0].status === 'fulfilled') {
+  if (order[0].status === OrderStatus.FULLY_PAID) {
     return {
       success: false,
       message: 'Order has already been fulfilled'
     };
   }
 
-  if (order[0].status === 'pending') {
+  if (order[0].status === OrderStatus.PENDING) {
     return {
       success: false,
       message: 'Order must have at least one payment before fulfillment'
@@ -65,7 +67,7 @@ export async function fulfillOrder(orderId: string): Promise<OrderFulfillmentRes
       quantity: orderItemTable.quantity,
       productId: productTable.id,
       productName: productTable.name,
-      productType: productTable.productType,
+      productType: productTable.type,
       maxQuantityPerOrg: productTable.maxQuantityPerOrg
     })
     .from(orderItemTable)
@@ -85,7 +87,7 @@ export async function fulfillOrder(orderId: string): Promise<OrderFulfillmentRes
   // Process each order item
   for (const item of orderItems) {
     switch (item.productType) {
-      case 'team_registration':
+      case ProductType.TEAM_REGISTRATION: {
         // Create company team(s) for team registrations
         for (let i = 0; i < item.quantity; i++) {
           const teamName = `${order[0].organizationId} Team ${i + 1}`;
@@ -95,22 +97,22 @@ export async function fulfillOrder(orderId: string): Promise<OrderFulfillmentRes
             .values({
               organizationId: order[0].organizationId,
               eventYearId: order[0].eventYearId,
+              teamNumber: i + 1,
               name: teamName,
-              description: `Team created from order fulfillment`,
-              isActive: true,
-              maxPlayers: 15 // Default max players
+              isPaid: true
             })
             .returning({ id: companyTeamTable.id, name: companyTeamTable.name });
 
-          createdTeams.push(createdTeam.name);
+          createdTeams.push(createdTeam.name || `Team ${i + 1}`);
         }
         break;
+      }
 
-      case 'tent_rental':
+      case ProductType.TENT_RENTAL: {
         // Track tent purchases with limits
         const existingTentTracking = await db
           .select({
-            currentCount: tentPurchaseTrackingTable.tentCount
+            currentCount: tentPurchaseTrackingTable.quantityPurchased
           })
           .from(tentPurchaseTrackingTable)
           .where(
@@ -137,7 +139,8 @@ export async function fulfillOrder(orderId: string): Promise<OrderFulfillmentRes
           await db
             .update(tentPurchaseTrackingTable)
             .set({
-              tentCount: newTentCount,
+              quantityPurchased: newTentCount,
+              remainingAllowed: 2 - newTentCount,
               updatedAt: new Date()
             })
             .where(
@@ -147,32 +150,48 @@ export async function fulfillOrder(orderId: string): Promise<OrderFulfillmentRes
               )
             );
         } else {
-          await db
-            .insert(tentPurchaseTrackingTable)
-            .values({
-              organizationId: order[0].organizationId,
-              eventYearId: order[0].eventYearId,
-              tentCount: item.quantity,
-              maxAllowed: 2
-            });
+          // First need to find the tent product
+          const tentProduct = await db
+            .select({ id: productTable.id })
+            .from(productTable)
+            .where(and(
+              eq(productTable.type, ProductType.TENT_RENTAL),
+              eq(productTable.eventYearId, order[0].eventYearId)
+            ))
+            .limit(1);
+            
+          if (tentProduct[0]) {
+            await db
+              .insert(tentPurchaseTrackingTable)
+              .values({
+                organizationId: order[0].organizationId,
+                eventYearId: order[0].eventYearId,
+                tentProductId: tentProduct[0].id,
+                quantityPurchased: item.quantity,
+                maxAllowed: 2,
+                remainingAllowed: 2 - item.quantity
+              });
+          }
         }
 
         trackedTents += item.quantity;
         break;
+      }
 
-      case 'merchandise':
-      case 'food_service':
+      case ProductType.MERCHANDISE:
+      case ProductType.SERVICES:
+      case ProductType.EQUIPMENT:
       default:
         // These don't require special fulfillment actions
         break;
     }
   }
 
-  // Mark order as fulfilled
+  // Mark order as fully paid (fulfilled)
   await db
     .update(orderTable)
     .set({
-      status: 'fulfilled',
+      status: OrderStatus.FULLY_PAID,
       updatedAt: new Date()
     })
     .where(eq(orderTable.id, orderId));

@@ -14,7 +14,12 @@ import {
   DatabaseIcon,
   ShieldIcon,
   BellIcon,
-  CogIcon
+  CogIcon,
+  PackageIcon,
+  CalendarIcon,
+  TentIcon,
+  CreditCardIcon,
+  FileTextIcon, ActivityIcon, TrophyIcon
 } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
@@ -66,7 +71,39 @@ const adminNavItems: NavItem[] = [
     title: 'Event Registration',
     href: '/admin/event-registration',
     icon: ShoppingCartIcon,
-    description: 'Product catalog and registration management'
+    description: 'Product catalog and registration management',
+    subItems: [
+      {
+        title: 'Overview',
+        href: '/admin/event-registration',
+        icon: BarChart3Icon
+      },
+      {
+        title: 'Products',
+        href: '/admin/event-registration/products',
+        icon: PackageIcon
+      },
+      {
+        title: 'Event Years',
+        href: '/admin/event-registration/event-years',
+        icon: CalendarIcon
+      },
+      {
+        title: 'Tent Tracking',
+        href: '/admin/event-registration/tent-tracking',
+        icon: TentIcon
+      },
+      {
+        title: 'Payments',
+        href: '/admin/event-registration/payments',
+        icon: CreditCardIcon
+      },
+      {
+        title: 'Invoices',
+        href: '/admin/event-registration/invoices',
+        icon: FileTextIcon
+      }
+    ]
   },
   {
     title: 'Organizations',
@@ -81,10 +118,27 @@ const adminNavItems: NavItem[] = [
     description: 'Global user administration'
   },
   {
-    title: 'Reports',
+    title: 'Reports & Analytics',
     href: '/admin/reports',
     icon: BarChart3Icon,
-    description: 'Analytics and insights'
+    description: 'Analytics and insights',
+    subItems: [
+      {
+        title: 'Analytics',
+        href: '/admin/reports',
+        icon: ActivityIcon
+      },
+      {
+        title: 'Game Day',
+        href: '/admin/reports/game-day',
+        icon: TrophyIcon
+      },
+      {
+        title: 'Players',
+        href: '/admin/reports/players',
+        icon: UsersIcon
+      }
+    ]
   },
   {
     title: 'Settings',
@@ -132,16 +186,16 @@ export function AdminAppSidebar({ profile }: AdminAppSidebarProps): React.JSX.El
   const pathname = usePathname();
   const { state, setOpen } = useSidebar();
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({});
-  
-  // Initialize open sections based on active routes  
+
+  // Initialize open sections based on active routes
   React.useEffect(() => {
     const initialOpenSections: Record<string, boolean> = {};
     adminNavItems.forEach((item) => {
       if (item.subItems) {
-        const directMatch = item.href === '/admin' 
-          ? pathname === '/admin' 
+        const directMatch = item.href === '/admin'
+          ? pathname === '/admin'
           : pathname === item.href || pathname.startsWith(item.href + '/');
-        const hasActiveSubItem = item.subItems.some(sub => 
+        const hasActiveSubItem = item.subItems.some(sub =>
           pathname === sub.href || pathname.startsWith(sub.href + '/')
         );
         const isActive = directMatch || hasActiveSubItem;
@@ -150,7 +204,7 @@ export function AdminAppSidebar({ profile }: AdminAppSidebarProps): React.JSX.El
     });
     setOpenSections(prev => {
       // Only update if the sections actually changed to prevent infinite loops
-      const hasChanged = Object.keys(initialOpenSections).some(key => 
+      const hasChanged = Object.keys(initialOpenSections).some(key =>
         prev[key] !== initialOpenSections[key]
       );
       return hasChanged ? initialOpenSections : prev;
@@ -181,20 +235,19 @@ export function AdminAppSidebar({ profile }: AdminAppSidebarProps): React.JSX.El
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Administration</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {adminNavItems.map((item) => {
                 // Special handling for admin root route
-                const directMatch = item.href === '/admin' 
-                  ? pathname === '/admin' 
+                const directMatch = item.href === '/admin'
+                  ? pathname === '/admin'
                   : pathname === item.href || pathname.startsWith(item.href + '/');
                 // Check if any sub-item is active
-                const hasActiveSubItem = item.subItems?.some(sub => 
+                const hasActiveSubItem = item.subItems?.some(sub =>
                   pathname === sub.href || pathname.startsWith(sub.href + '/')
                 ) ?? false;
                 const isActive = directMatch || hasActiveSubItem;
-                
+
                 const hasSubItems = item.subItems && item.subItems.length > 0;
 
                 if (!hasSubItems) {
@@ -224,7 +277,7 @@ export function AdminAppSidebar({ profile }: AdminAppSidebarProps): React.JSX.El
                   >
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton 
+                        <SidebarMenuButton
                           tooltip={item.title}
                           isActive={isActive}
                           className="group-data-[collapsible=icon]:[&>span]:hidden group-data-[collapsible=icon]:justify-center"
@@ -245,10 +298,12 @@ export function AdminAppSidebar({ profile }: AdminAppSidebarProps): React.JSX.El
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <SidebarMenuSub>
-                          {item.subItems.map((subItem) => {
-                            const subIsActive = pathname === subItem.href ||
-                              pathname.startsWith(subItem.href + '/');
-                            
+                          {item.subItems?.map((subItem) => {
+                            // Special handling for overview routes to ensure exact matching
+                            const subIsActive = subItem.href === '/admin/event-registration'
+                              ? pathname === '/admin/event-registration'
+                              : pathname === subItem.href || pathname.startsWith(subItem.href + '/');
+
                             return (
                               <SidebarMenuSubItem key={subItem.href}>
                                 <SidebarMenuSubButton asChild isActive={subIsActive}>

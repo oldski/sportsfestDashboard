@@ -5,76 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@work
 import { Badge } from '@workspace/ui/components/badge';
 
 import { getAdminAnalytics } from '~/actions/admin/get-admin-analytics';
+import { OrganizationGrowthChart } from './charts/organization-growth-chart';
+import { UserGrowthChart } from './charts/user-growth-chart';
+import { RevenueByTypeChart } from './charts/revenue-by-type-chart';
 
 export async function EventAnalyticsCard(): Promise<React.JSX.Element> {
   const analytics = await getAdminAnalytics();
 
   return (
     <div className="space-y-4">
-      {/* Growth Trends */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center">
-              <TrendingUpIcon className="mr-2 h-4 w-4" />
-              Organization Growth
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {analytics.organizationGrowth.slice(-3).map((item, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">{item.month}</span>
-                  <Badge variant="secondary">{item.organizations}</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center">
-              <UsersIcon className="mr-2 h-4 w-4" />
-              User Growth
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {analytics.userGrowth.slice(-3).map((item, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">{item.month}</span>
-                  <Badge variant="secondary">{item.users}</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Revenue Breakdown */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center">
-            <DollarSignIcon className="mr-2 h-4 w-4" />
-            Revenue by Type
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {analytics.revenueByType.map((item, index) => (
-              <div key={index} className="flex justify-between items-center">
-                <span className="text-sm capitalize">{item.type.toLowerCase()}</span>
-                <Badge variant="outline">${item.amount.toLocaleString()}</Badge>
-              </div>
-            ))}
-            {analytics.revenueByType.length === 0 && (
-              <p className="text-sm text-muted-foreground">No revenue data available</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Top Organizations */}
       <Card>
         <CardHeader className="pb-2">

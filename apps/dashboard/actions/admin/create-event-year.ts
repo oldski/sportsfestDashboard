@@ -27,7 +27,11 @@ const createEventYearSchema = z.object({
   registrationClose: z.date({
     required_error: 'Registration close date is required',
   }),
-  location: z.string().min(1, 'Location is required').max(255),
+  locationName: z.string().min(1, 'Location name is required').max(255),
+  address: z.string().min(1, 'Address is required').max(255),
+  city: z.string().min(1, 'City is required').max(100),
+  state: z.string().min(1, 'State is required').max(50),
+  zipCode: z.string().min(1, 'ZIP code is required').max(20),
   maxTeamsPerOrg: z.number().min(1).max(10).default(1),
   teamRegistrationFee: z.number().min(0).default(150),
   isActive: z.boolean().default(false),
@@ -67,8 +71,7 @@ export async function createEventYear(data: CreateEventYearData): Promise<void> 
     await db
       .update(eventYearTable)
       .set({ 
-        isActive: false,
-        updatedAt: new Date()
+        isActive: false
       });
   }
 
@@ -78,14 +81,15 @@ export async function createEventYear(data: CreateEventYearData): Promise<void> 
     .values({
       year: validatedData.year,
       name: validatedData.name,
-      description: validatedData.description || null,
       eventStartDate: validatedData.eventStartDate,
       eventEndDate: validatedData.eventEndDate,
       registrationOpen: validatedData.registrationOpen,
       registrationClose: validatedData.registrationClose,
-      location: validatedData.location,
-      maxTeamsPerOrg: validatedData.maxTeamsPerOrg,
-      teamRegistrationFee: validatedData.teamRegistrationFee,
+      locationName: validatedData.locationName,
+      address: validatedData.address,
+      city: validatedData.city,
+      state: validatedData.state,
+      zipCode: validatedData.zipCode,
       isActive: validatedData.isActive
     });
 

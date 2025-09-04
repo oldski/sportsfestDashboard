@@ -103,15 +103,6 @@ export const completeOnboarding = authActionClient
           ctx.session.user.email
         );
       }
-
-      // Handle add example data
-      if (parsedInput.organizationStep?.addExampleData) {
-        try {
-          await addExampleData(organizationId, ctx.session.user.id);
-        } catch (e) {
-          console.error(e);
-        }
-      }
     }
 
     const memberships = await db
@@ -150,7 +141,7 @@ export const completeOnboarding = authActionClient
     }
 
     // Default redirect - use first organization if available
-    let redirect: string = memberships.length > 0 
+    let redirect: string = memberships.length > 0
       ? replaceOrgSlug(routes.dashboard.organizations.slug.Home, memberships[0].organization.slug)
       : routes.dashboard.organizations.Index;
 

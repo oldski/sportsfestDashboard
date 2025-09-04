@@ -12,6 +12,7 @@ import {
 } from '@workspace/ui/components/page';
 
 import { OrganizationPageTitle } from '~/components/organizations/slug/organization-page-title';
+import { ShoppingCartProvider } from '~/contexts/shopping-cart-context';
 import { createTitle } from '~/lib/formatters';
 
 export const metadata: Metadata = {
@@ -42,16 +43,18 @@ export default async function ShopLayout({
         </PagePrimaryBar>
       </PageHeader>
       <PageBody>
-        <div className="mx-auto space-y-2 p-2 sm:space-y-8 sm:p-6">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-            <div className="w-full lg:w-2/3">
-              {products}
-            </div>
-            <div className="w-full lg:w-1/3">
-              {shoppingCart}
+        <ShoppingCartProvider>
+          <div className="mx-auto space-y-2 p-2 sm:space-y-8 sm:p-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+              <div className="lg:col-span-2">
+                {products}
+              </div>
+              <div className="lg:col-span-1">
+                {shoppingCart}
+              </div>
             </div>
           </div>
-        </div>
+        </ShoppingCartProvider>
       </PageBody>
     </Page>
   );

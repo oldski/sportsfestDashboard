@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { createTitle } from '~/lib/formatters';
 
 export const metadata: Metadata = {
-  title: createTitle('Settings')
+  title: createTitle('Registration')
 };
 
 export default function RegistrationLayout({

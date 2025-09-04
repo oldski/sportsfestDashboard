@@ -6,7 +6,12 @@ import {Button} from "@workspace/ui/components/button";
 import Link from "next/link";
 import {replaceOrgSlug, routes} from "@workspace/routes";
 
-export default async function ViewOrdersPage(): Promise<React.JSX.Element> {
+type ViewOrdersPageProps = {
+  params: Promise<{ slug: string }>;
+};
+
+export default async function ViewOrdersPage({ params }: ViewOrdersPageProps): Promise<React.JSX.Element> {
+  const { slug } = await params;
 
   //TODO: Add an actual snapshot component
   return(
@@ -15,7 +20,7 @@ export default async function ViewOrdersPage(): Promise<React.JSX.Element> {
         Track your registration orders and payments
       </CardDescription>
       <Button asChild variant="outline" className="w-full">
-        <Link href={replaceOrgSlug(routes.dashboard.organizations.slug.registration.Orders, activeOrganization.slug)}>
+        <Link href={replaceOrgSlug(routes.dashboard.organizations.slug.registration.Orders, slug)}>
           View Orders
         </Link>
       </Button>

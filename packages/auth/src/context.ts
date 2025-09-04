@@ -108,7 +108,7 @@ const dedupedGetActiveOrganization = cache(async function () {
   //   .leftJoin(orderItemTable, eq(orderItemTable.orderId, orderTable.id))
   //   .where(eq(orderTable.organizationId, organization.id))
   //   .groupBy(orderTable.id);
-  const orders = []; // Temporary empty array
+  const orders: any[] = []; // Temporary empty array
 
   return {
     ...organization,

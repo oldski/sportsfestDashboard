@@ -76,9 +76,6 @@ export function AdminSidebar(): React.JSX.Element {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
-        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-          Administration
-        </div>
 
         {adminNavItems.map((item) => {
           const isActive = pathname === item.href ||
