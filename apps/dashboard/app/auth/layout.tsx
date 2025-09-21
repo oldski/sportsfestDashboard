@@ -31,7 +31,7 @@ export default async function AuthLayout({
   children
 }: React.PropsWithChildren): Promise<React.JSX.Element> {
   const session = await dedupedAuth();
-  
+
   if (!isChangeEmailRoute() && session) {
     // Check if user is a super admin
     if (isSuperAdmin(session.user)) {
@@ -63,7 +63,7 @@ export default async function AuthLayout({
       </div>
       <div className="w-full md:w-2/3 bg-muted relative block">
         <img
-          src="/images/team-photo.jpg"
+          src="/assets/team-photo.jpg"
           alt="Image"
           className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
         />

@@ -28,7 +28,9 @@ export enum OrganizationCacheKey {
   Invitations,
   ApiKeys,
   Webhooks,
-  RegistrationInvoices
+  RegistrationInvoices,
+  RegistrationStats,
+  RecentActivity
 }
 
 export class Caching {

@@ -1,6 +1,6 @@
 'use server';
 
-import { db, eq, desc, and, or } from '@workspace/database/client';
+import { db, eq, desc, and } from '@workspace/database/client';
 import { 
   paymentTable, 
   orderPaymentTable,

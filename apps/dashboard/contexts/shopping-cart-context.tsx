@@ -10,8 +10,8 @@ import { loadCartSessionAction } from '~/actions/cart/load-cart-session';
 type ShoppingCartContextType = {
   items: CartItem[];
   addItem: (product: RegistrationProductDto, quantity: number, useDeposit: boolean) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeItem: (productId: string, useDeposit?: boolean) => void;
+  updateQuantity: (productId: string, quantity: number, useDeposit?: boolean) => void;
   clearCart: () => void;
   getItemCount: () => number;
   getSubtotal: () => number;
@@ -134,25 +134,40 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
     });
   }, []);
 
-  const removeItem = React.useCallback((productId: string) => {
+  const removeItem = React.useCallback((productId: string, useDeposit?: boolean) => {
     setItems(prev => {
-      const removedItem = prev.find(item => item.productId === productId);
-      if (removedItem) {
-        toast.success(`Removed ${removedItem.product.name} from cart`);
+      let removedItem;
+      if (useDeposit !== undefined) {
+        // Remove specific item by productId and useDeposit
+        removedItem = prev.find(item => item.productId === productId && item.useDeposit === useDeposit);
+        if (removedItem) {
+          toast.success(`Removed ${removedItem.product.name} from cart`);
+        }
+        return prev.filter(item => !(item.productId === productId && item.useDeposit === useDeposit));
+      } else {
+        // Remove all items with this productId (backward compatibility)
+        removedItem = prev.find(item => item.productId === productId);
+        if (removedItem) {
+          toast.success(`Removed ${removedItem.product.name} from cart`);
+        }
+        return prev.filter(item => item.productId !== productId);
       }
-      return prev.filter(item => item.productId !== productId);
     });
   }, []);
 
-  const updateQuantity = React.useCallback((productId: string, quantity: number) => {
+  const updateQuantity = React.useCallback((productId: string, quantity: number, useDeposit?: boolean) => {
     if (quantity <= 0) {
-      removeItem(productId);
+      removeItem(productId, useDeposit);
       return;
     }
 
     setItems(prev => {
       return prev.map(item => {
-        if (item.productId === productId) {
+        const shouldUpdate = useDeposit !== undefined 
+          ? (item.productId === productId && item.useDeposit === useDeposit)
+          : (item.productId === productId);
+          
+        if (shouldUpdate) {
           // Check max quantity constraint
           if (item.product.maxQuantityPerOrg && quantity > item.product.maxQuantityPerOrg) {
             toast.error(`Maximum quantity for ${item.product.name} is ${item.product.maxQuantityPerOrg}`);

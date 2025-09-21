@@ -11,6 +11,7 @@ import {
   PaymentStatus,
   orderPaymentTable
 } from '@workspace/database/schema';
+import { getOrganizationTeamCount } from './get-organization-team-count';
 
 export interface OrganizationDashboardStats {
   teams: {
@@ -77,11 +78,13 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
   const eventYear = currentEventYear[0];
   const eventYearId = eventYear?.id;
 
-  // Get team statistics
-  const teamStats = await db
+  // Get team statistics using paid orders as source of truth
+  const teamCountResult = await getOrganizationTeamCount();
+  
+  // Also get total teams from all years (using companyTeam table for historical data)
+  const totalTeamsAllYears = await db
     .select({
-      totalTeams: sql<number>`count(*)`,
-      activeEventYearTeams: sql<number>`count(*) filter (where ${eventYearId ? eq(companyTeamTable.eventYearId, eventYearId) : sql`false`})`
+      totalTeams: sql<number>`count(*)`
     })
     .from(companyTeamTable)
     .where(eq(companyTeamTable.organizationId, ctx.organization.id));
@@ -160,8 +163,8 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
 
   return {
     teams: {
-      total: Number(teamStats[0]?.totalTeams || 0),
-      activeEventYear: Number(teamStats[0]?.activeEventYearTeams || 0)
+      total: Number(totalTeamsAllYears[0]?.totalTeams || 0),
+      activeEventYear: teamCountResult.totalTeamsPurchased
     },
     players: {
       total: Number(playerStats[0]?.totalPlayers || 0),

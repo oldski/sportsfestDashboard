@@ -1,11 +1,7 @@
 import * as React from 'react';
 import {CardHeader, CardTitle, CardContent, CardDescription, Card} from "@workspace/ui/components/card";
-import {ArrowRightIcon, CalendarIcon, FileTextIcon, PackageIcon, ShoppingCartIcon} from "lucide-react";
-import {Badge} from "@workspace/ui/components/badge";
-import {Button} from "@workspace/ui/components/button";
+import {FileTextIcon} from "lucide-react";
 import Link from "next/link";
-import {replaceOrgSlug, routes} from "@workspace/routes";
-import InvoiceManagementPage from "~/app/organizations/[slug]/(organization)/registration/(registration)/@shopProducts/page";
 
 export default function InvoiceManagementLayout({
   children

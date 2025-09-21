@@ -47,7 +47,7 @@ export default async function TotalCompanyTeamsPage({
                 : routes.dashboard.organizations.slug.registration.Shop,
               slug
             )}>
-              {hasTeams ? 'Manage' : 'Register'}
+              {hasTeams ? 'Manage Rosters' : 'Register'}
             </Link>
           </Button>
         </div>

@@ -133,7 +133,7 @@ export async function getAdminAnalytics(): Promise<AdminAnalytics> {
         3 as pending_payments,
         2 as error_rate
     `);
-  } catch (error) {
+  } catch (_error) {
     // Fallback to mock data if query fails
     systemHealth = [{
       total_users: 110,

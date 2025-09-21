@@ -9,13 +9,23 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-// Format date for display
-const formatDate = (date: Date) => {
+// Format date for display - safely handles null/undefined dates
+const formatDate = (date: Date | null | undefined) => {
+  if (!date) return 'N/A';
+  
+  // Handle case where date might be a string
+  const dateObj = date instanceof Date ? date : new Date(date);
+  
+  // Check if date is valid
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid Date';
+  }
+  
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'long', 
     day: 'numeric'
-  }).format(date);
+  }).format(dateObj);
 };
 
 export async function downloadInvoicePDF(invoice: RegistrationInvoiceDto) {
@@ -44,30 +54,164 @@ export async function downloadInvoicePDF(invoice: RegistrationInvoiceDto) {
 }
 
 async function generateAndDownloadInvoicePDF(invoice: RegistrationInvoiceDto) {
-  // For client-side PDF generation, we can use jsPDF or similar
-  // For now, let's create a simple HTML version and convert to PDF using the browser's print
-  
-  const htmlContent = generateInvoiceHTML(invoice);
-  
-  // Create a new window with the invoice content
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    throw new Error('Popup blocked. Please allow popups for PDF download.');
+  try {
+    // Dynamically import jsPDF
+    const { jsPDF } = await import('jspdf');
+    
+    // Create new PDF document
+    const doc = new jsPDF();
+    
+    // Set fonts and styling
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const contentWidth = pageWidth - (margin * 2);
+    
+    let yPos = margin;
+    
+    // Header
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SportsFest', margin, yPos);
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Event Registration System', margin, yPos + 8);
+    
+    // Invoice title
+    yPos += 25;
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INVOICE', pageWidth - margin - 40, yPos, { align: 'right' });
+    
+    // Invoice details
+    yPos += 15;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Invoice Number: ${invoice.invoiceNumber}`, pageWidth - margin - 80, yPos, { align: 'right' });
+    doc.text(`Order Number: ${invoice.orderNumber}`, pageWidth - margin - 80, yPos + 6, { align: 'right' });
+    doc.text(`Date: ${formatDate(invoice.createdAt)}`, pageWidth - margin - 80, yPos + 12, { align: 'right' });
+    if (invoice.dueDate) {
+      doc.text(`Due: ${formatDate(invoice.dueDate)}`, pageWidth - margin - 80, yPos + 18, { align: 'right' });
+    }
+    doc.text(`Status: ${invoice.status.toUpperCase()}`, pageWidth - margin - 80, yPos + (invoice.dueDate ? 24 : 18), { align: 'right' });
+    
+    yPos += 40;
+    
+    // Invoice information section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Invoice Information', margin, yPos);
+    
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Amount: ${formatCurrency(invoice.totalAmount)}`, margin, yPos);
+    doc.text(`Amount Paid: ${formatCurrency(invoice.paidAmount)}`, margin, yPos + 6);
+    doc.text(`Balance Owed: ${formatCurrency(invoice.balanceOwed)}`, margin, yPos + 12);
+    
+    yPos += 25;
+    
+    // Order items section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Order Items', margin, yPos);
+    
+    yPos += 10;
+    
+    // Items table header
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    const colWidths = [contentWidth * 0.4, contentWidth * 0.15, contentWidth * 0.15, contentWidth * 0.15, contentWidth * 0.15];
+    const colPositions = [
+      margin,
+      margin + colWidths[0],
+      margin + colWidths[0] + colWidths[1],
+      margin + colWidths[0] + colWidths[1] + colWidths[2],
+      margin + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3]
+    ];
+    
+    doc.text('Item', colPositions[0], yPos);
+    doc.text('Qty', colPositions[1], yPos);
+    doc.text('Unit Price', colPositions[2], yPos);
+    doc.text('Total', colPositions[3], yPos);
+    
+    yPos += 8;
+    
+    // Draw line under header
+    doc.setLineWidth(0.1);
+    doc.line(margin, yPos - 2, margin + contentWidth, yPos - 2);
+    
+    // Items data
+    doc.setFont('helvetica', 'normal');
+    invoice.order.items.forEach((item) => {
+      if (yPos > 250) { // Start new page if needed
+        doc.addPage();
+        yPos = margin;
+      }
+      
+      doc.text(item.productName, colPositions[0], yPos);
+      doc.text(item.quantity.toString(), colPositions[1], yPos);
+      doc.text(formatCurrency(item.unitPrice), colPositions[2], yPos);
+      doc.text(formatCurrency(item.totalPrice), colPositions[3], yPos);
+      
+      yPos += 8;
+    });
+    
+    yPos += 10;
+    
+    // Payment history (if any)
+    if (invoice.order.payments && invoice.order.payments.length > 0) {
+      if (yPos > 220) { // Start new page if needed
+        doc.addPage();
+        yPos = margin;
+      }
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Payment History', margin, yPos);
+      
+      yPos += 10;
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Date', colPositions[0], yPos);
+      doc.text('Method', colPositions[1], yPos);
+      doc.text('Status', colPositions[2], yPos);
+      doc.text('Amount', colPositions[3], yPos);
+      
+      yPos += 8;
+      doc.line(margin, yPos - 2, margin + contentWidth, yPos - 2);
+      
+      doc.setFont('helvetica', 'normal');
+      invoice.order.payments.forEach((payment) => {
+        if (yPos > 250) {
+          doc.addPage();
+          yPos = margin;
+        }
+        
+        doc.text(formatDate(payment.paymentDate), colPositions[0], yPos);
+        doc.text(payment.method + (payment.last4 ? ` ****${payment.last4}` : ''), colPositions[1], yPos);
+        doc.text(payment.status, colPositions[2], yPos);
+        doc.text(formatCurrency(payment.amount), colPositions[3], yPos);
+        
+        yPos += 8;
+      });
+    }
+    
+    // Footer
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('SportsFest Event Registration', margin, pageHeight - 20);
+    doc.text('This invoice was generated automatically by the SportsFest registration system.', margin, pageHeight - 15);
+    
+    // Save the PDF
+    doc.save(`${invoice.invoiceNumber}.pdf`);
+    
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw new Error('Failed to generate PDF');
   }
-
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
-
-  // Wait for content to load, then trigger print
-  printWindow.onload = () => {
-    setTimeout(() => {
-      printWindow.print();
-      // Close window after a delay to allow printing
-      setTimeout(() => {
-        printWindow.close();
-      }, 1000);
-    }, 500);
-  };
 }
 
 function generateInvoiceHTML(invoice: RegistrationInvoiceDto): string {
@@ -295,32 +439,168 @@ export async function downloadOrderPDF(order: RegistrationOrderDto) {
 }
 
 async function generateAndDownloadOrderPDF(order: RegistrationOrderDto) {
-  const htmlContent = generateOrderHTML(order);
-  
-  // Create a new window with the order content
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    throw new Error('Popup blocked. Please allow popups for PDF download.');
+  try {
+    // Dynamically import jsPDF
+    const { jsPDF } = await import('jspdf');
+    
+    // Create new PDF document
+    const doc = new jsPDF();
+    
+    // Set fonts and styling
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const contentWidth = pageWidth - (margin * 2);
+    
+    let yPos = margin;
+    
+    // Header
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SportsFest', margin, yPos);
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Event Registration System', margin, yPos + 8);
+    
+    // Order title
+    yPos += 25;
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ORDER', pageWidth - margin - 40, yPos, { align: 'right' });
+    
+    // Order details
+    yPos += 15;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Order Number: ${order.orderNumber}`, pageWidth - margin - 80, yPos, { align: 'right' });
+    doc.text(`Date: ${formatDate(order.createdAt)}`, pageWidth - margin - 80, yPos + 6, { align: 'right' });
+    doc.text(`Status: ${order.status.replace('_', ' ').toUpperCase()}`, pageWidth - margin - 80, yPos + 12, { align: 'right' });
+    
+    yPos += 40;
+    
+    const totalPaid = (order.payments || []).filter(payment => payment && typeof payment.amount === 'number').reduce((sum, payment) => sum + payment.amount, 0);
+    const balanceOwed = order.totalAmount - totalPaid;
+    
+    // Order information section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Order Information', margin, yPos);
+    
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Amount: ${formatCurrency(order.totalAmount)}`, margin, yPos);
+    doc.text(`Amount Paid: ${formatCurrency(totalPaid)}`, margin, yPos + 6);
+    doc.text(`Balance Owed: ${formatCurrency(balanceOwed)}`, margin, yPos + 12);
+    
+    yPos += 25;
+    
+    // Order items section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Order Items', margin, yPos);
+    
+    yPos += 10;
+    
+    // Items table header
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    const colWidths = [contentWidth * 0.4, contentWidth * 0.15, contentWidth * 0.15, contentWidth * 0.15, contentWidth * 0.15];
+    const colPositions = [
+      margin,
+      margin + colWidths[0],
+      margin + colWidths[0] + colWidths[1],
+      margin + colWidths[0] + colWidths[1] + colWidths[2],
+      margin + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3]
+    ];
+    
+    doc.text('Item', colPositions[0], yPos);
+    doc.text('Qty', colPositions[1], yPos);
+    doc.text('Unit Price', colPositions[2], yPos);
+    doc.text('Total', colPositions[3], yPos);
+    
+    yPos += 8;
+    
+    // Draw line under header
+    doc.setLineWidth(0.1);
+    doc.line(margin, yPos - 2, margin + contentWidth, yPos - 2);
+    
+    // Items data
+    doc.setFont('helvetica', 'normal');
+    order.items.forEach((item) => {
+      if (yPos > 250) { // Start new page if needed
+        doc.addPage();
+        yPos = margin;
+      }
+      
+      doc.text(item.productName, colPositions[0], yPos);
+      doc.text(item.quantity.toString(), colPositions[1], yPos);
+      doc.text(formatCurrency(item.unitPrice), colPositions[2], yPos);
+      doc.text(formatCurrency(item.totalPrice), colPositions[3], yPos);
+      
+      yPos += 8;
+    });
+    
+    yPos += 10;
+    
+    // Payment history (if any)
+    if ((order.payments || []).length > 0) {
+      if (yPos > 220) { // Start new page if needed
+        doc.addPage();
+        yPos = margin;
+      }
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Payment History', margin, yPos);
+      
+      yPos += 10;
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Date', colPositions[0], yPos);
+      doc.text('Method', colPositions[1], yPos);
+      doc.text('Status', colPositions[2], yPos);
+      doc.text('Amount', colPositions[3], yPos);
+      
+      yPos += 8;
+      doc.line(margin, yPos - 2, margin + contentWidth, yPos - 2);
+      
+      doc.setFont('helvetica', 'normal');
+      (order.payments || []).filter(payment => payment && payment.amount).forEach((payment) => {
+        if (yPos > 250) {
+          doc.addPage();
+          yPos = margin;
+        }
+        
+        doc.text(formatDate(payment.paymentDate), colPositions[0], yPos);
+        doc.text(payment.method + (payment.last4 ? ` ****${payment.last4}` : ''), colPositions[1], yPos);
+        doc.text(payment.status, colPositions[2], yPos);
+        doc.text(formatCurrency(payment.amount), colPositions[3], yPos);
+        
+        yPos += 8;
+      });
+    }
+    
+    // Footer
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('SportsFest Event Registration', margin, pageHeight - 20);
+    doc.text('This order was generated automatically by the SportsFest registration system.', margin, pageHeight - 15);
+    
+    // Save the PDF
+    doc.save(`${order.orderNumber}.pdf`);
+    
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw new Error('Failed to generate PDF');
   }
-
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
-
-  // Wait for content to load, then trigger print
-  printWindow.onload = () => {
-    setTimeout(() => {
-      printWindow.print();
-      // Close window after a delay to allow printing
-      setTimeout(() => {
-        printWindow.close();
-      }, 1000);
-    }, 500);
-  };
 }
 
 function generateOrderHTML(order: RegistrationOrderDto): string {
   const currentDate = formatDate(new Date());
-  const totalPaid = order.payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const totalPaid = (order.payments || []).filter(payment => payment && typeof payment.amount === 'number').reduce((sum, payment) => sum + payment.amount, 0);
   const balanceOwed = order.totalAmount - totalPaid;
   
   return `
@@ -482,10 +762,10 @@ function generateOrderHTML(order: RegistrationOrderDto): string {
         </div>
     </div>
 
-    ${order.payments.length > 0 ? `
+    ${(order.payments || []).length > 0 ? `
     <div class="payments-section">
         <div class="section-title">Payment History</div>
-        ${order.payments.map(payment => `
+        ${(order.payments || []).filter(payment => payment && payment.amount).map(payment => `
         <div class="payment-item">
             <div>
                 <strong>${formatDate(payment.paymentDate)}</strong><br>

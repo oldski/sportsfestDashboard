@@ -8,9 +8,7 @@ import { APP_DESCRIPTION, APP_NAME } from '@workspace/common/app';
 import { baseUrl } from '@workspace/routes';
 import { Toaster } from '@workspace/ui/components/sonner';
 
-import { Footer } from '~/components/footer';
-import { CookieBanner } from '~/components/fragments/cookie-banner';
-import { Navbar } from '~/components/navbar';
+import { ConditionalLayout } from '~/components/conditional-layout';
 import { Providers } from './providers';
 
 export const viewport: Viewport = {
@@ -67,10 +65,9 @@ export default async function RootLayout({
       <body className={`${inter.className} size-full`}>
         <Providers>
           <div>
-            <Navbar />
-            {children}
-            <Footer />
-            <CookieBanner />
+            <ConditionalLayout>
+              {children}
+            </ConditionalLayout>
           </div>
           <React.Suspense>
             <Toaster />

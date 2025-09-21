@@ -2,7 +2,7 @@
 
 import { ForbiddenError } from '@workspace/common/errors';
 import { and, db, eq, ne, sql } from '@workspace/database/client';
-import { productTable, orderTable, orderPaymentTable, tentPurchaseTrackingTable, eventYearTable, productCategoryTable, orderInvoiceTable, OrderStatus, PaymentStatus, ProductStatus } from '@workspace/database/schema';
+import { productTable, orderTable, orderPaymentTable, tentPurchaseTrackingTable, eventYearTable, orderInvoiceTable, OrderStatus, ProductStatus } from '@workspace/database/schema';
 
 import { getAuthContext } from '@workspace/auth/context';
 import { isSuperAdmin } from '~/lib/admin-utils';

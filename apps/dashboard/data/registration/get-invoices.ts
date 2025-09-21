@@ -8,7 +8,9 @@ import {
   orderInvoiceTable,
   orderTable,
   orderItemTable,
-  productTable
+  orderPaymentTable,
+  productTable,
+  eventYearTable
 } from '@workspace/database/schema';
 
 import {
@@ -47,10 +49,16 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
             totalAmount: orderTable.totalAmount,
             status: orderTable.status,
             createdAt: orderTable.createdAt
+          },
+          eventYear: {
+            id: eventYearTable.id,
+            name: eventYearTable.name,
+            year: eventYearTable.year
           }
         })
         .from(orderInvoiceTable)
         .innerJoin(orderTable, eq(orderInvoiceTable.orderId, orderTable.id))
+        .leftJoin(eventYearTable, eq(orderTable.eventYearId, eventYearTable.id))
         .where(eq(orderTable.organizationId, ctx.organization.id))
         .orderBy(desc(orderInvoiceTable.createdAt));
 
@@ -71,6 +79,19 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
         .where(inArray(orderItemTable.orderId, orderIds))
         : [];
 
+      // Get payment history for all orders using only basic confirmed fields
+      const allOrderPayments = orderIds.length > 0 ? await db
+        .select({
+          orderId: orderPaymentTable.orderId,
+          id: orderPaymentTable.id,
+          amount: orderPaymentTable.amount,
+          createdAt: orderPaymentTable.createdAt
+        })
+        .from(orderPaymentTable)
+        .where(inArray(orderPaymentTable.orderId, orderIds))
+        .orderBy(orderPaymentTable.createdAt)
+        : [];
+
       // Group order items by orderId
       const orderItemsMap = new Map<string, typeof allOrderItems>();
       allOrderItems.forEach(item => {
@@ -78,6 +99,15 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
           orderItemsMap.set(item.orderId, []);
         }
         orderItemsMap.get(item.orderId)!.push(item);
+      });
+
+      // Group order payments by orderId
+      const orderPaymentsMap = new Map<string, typeof allOrderPayments>();
+      allOrderPayments.forEach(payment => {
+        if (!orderPaymentsMap.has(payment.orderId)) {
+          orderPaymentsMap.set(payment.orderId, []);
+        }
+        orderPaymentsMap.get(payment.orderId)!.push(payment);
       });
 
       // Build the response DTOs
@@ -97,6 +127,11 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
         notes: item.invoice.notes ?? undefined,
         createdAt: item.invoice.createdAt,
         updatedAt: item.invoice.updatedAt,
+        eventYear: {
+          id: item.eventYear.id || '',
+          name: item.eventYear.name || 'Unknown Event Year',
+          year: item.eventYear.year || 0
+        },
         order: {
           id: item.order.id,
           orderNumber: item.order.orderNumber,
@@ -109,7 +144,18 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
             quantity: orderItem.quantity,
             unitPrice: orderItem.unitPrice,
             totalPrice: orderItem.totalPrice
-          }))
+          })),
+          payments: (orderPaymentsMap.get(item.order.id) || []).map(payment => ({
+            id: payment.id,
+            amount: payment.amount,
+            method: 'card', // Default for now
+            status: 'completed', // Default for now
+            paymentDate: payment.createdAt,
+            transactionId: undefined, // Not available yet
+            paymentType: 'full' as const, // Default for now
+            last4: undefined,
+            failureReason: undefined
+          })) || []
         }
       }));
 
@@ -117,7 +163,8 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
     },
     Caching.createOrganizationKeyParts(
       OrganizationCacheKey.RegistrationInvoices, 
-      ctx.organization.id
+      ctx.organization.id,
+      'v2' // Added version to invalidate old cache
     ),
     {
       revalidate: defaultRevalidateTimeInSeconds,
@@ -125,7 +172,8 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
         Caching.createOrganizationTag(
           OrganizationCacheKey.RegistrationInvoices,
           ctx.organization.id
-        )
+        ),
+        'invoices-v2' // Added version tag to invalidate old cache
       ]
     }
   )();

@@ -18,12 +18,17 @@ export type OrganizationPageTitleProps = {
     route: Parameters<typeof replaceOrgSlug>[0];
     title: string;
   };
+  secondary?: {
+    route: Parameters<typeof replaceOrgSlug>[0];
+    title: string;
+  };
   title: string;
   info?: string;
 };
 
 export function OrganizationPageTitle({
   index,
+  secondary,
   title,
   info
 }: OrganizationPageTitleProps): React.JSX.Element {
@@ -37,6 +42,17 @@ export function OrganizationPageTitle({
             href={replaceOrgSlug(index.route, slug)}
           >
             {index.title}
+          </Link>
+          <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
+        </>
+      )}
+      {secondary && (
+        <>
+          <Link
+            className="text-sm font-semibold hover:underline"
+            href={replaceOrgSlug(secondary.route, slug)}
+          >
+            {secondary.title}
           </Link>
           <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
         </>

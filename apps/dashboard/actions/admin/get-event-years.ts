@@ -1,7 +1,7 @@
 'use server';
 
-import { db, eq, desc, count, sql } from '@workspace/database/client';
-import { eventYearTable, organizationTable, productTable } from '@workspace/database/schema';
+import { db, eq, desc } from '@workspace/database/client';
+import { eventYearTable } from '@workspace/database/schema';
 import { auth } from '@workspace/auth';
 
 import { isSuperAdmin } from '~/lib/admin-utils';
@@ -52,7 +52,6 @@ export async function getEventYears(): Promise<EventYearWithStats[]> {
     // Transform to match component expectations
     const eventYearsWithStats: EventYearWithStats[] = eventYears.map((ey) => {
       const now = new Date();
-      const eventStart = new Date(ey.eventStartDate);
       const eventEnd = new Date(ey.eventEndDate);
       const regOpen = new Date(ey.registrationOpen);
       const regClose = new Date(ey.registrationClose);

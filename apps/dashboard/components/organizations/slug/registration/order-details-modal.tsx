@@ -39,6 +39,11 @@ import { cn } from '@workspace/ui/lib/utils';
 
 import { useEnhancedModal } from '~/hooks/use-enhanced-modal';
 import { downloadOrderPDF } from '~/lib/pdf-utils';
+import { useOrderPaymentCompletion } from '~/hooks/use-order-payment-completion';
+import { PaymentModal } from '~/components/organizations/slug/registration/payment-modal';
+import { StripeElementsProvider } from '~/contexts/stripe-context';
+import { useParams } from 'next/navigation';
+import { useActiveOrganization } from '~/hooks/use-active-organization';
 import type { RegistrationOrderDto } from '~/types/dtos/registration-order-dto';
 
 export type OrderDetailsModalProps = NiceModalHocProps & {
@@ -78,8 +83,54 @@ const formatDate = (date: Date) => {
 
 export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
   ({ order }) => {
+    console.log('🔄 OrderDetailsModal component starting render');
+    
     const modal = useEnhancedModal();
     const mdUp = useMediaQuery(MediaQueries.MdUp, { ssr: false });
+    
+    console.log('🔍 Modal hook state:', { visible: modal.visible });
+    
+    const params = useParams();
+    const organizationSlug = params.slug as string;
+    const organization = useActiveOrganization();
+    
+    // Debug organization context
+    React.useEffect(() => {
+      console.log('🔍 Organization context:', {
+        organizationSlug,
+        organizationName: organization?.name,
+        hasOrganization: !!organization
+      });
+    }, [organizationSlug, organization]);
+    
+    const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
+    
+    // Reset payment modal state on component mount to ensure clean state
+    React.useEffect(() => {
+      console.log('🔄 Component mounted, resetting payment modal state');
+      setPaymentModalOpen(false);
+    }, []);
+    
+    const {
+      isLoading: isPaymentLoading,
+      clientSecret,
+      orderId: paymentOrderId,
+      orderSummary,
+      createPaymentIntent,
+      resetPayment
+    } = useOrderPaymentCompletion({
+      onSuccess: (completedOrderId) => {
+        toast.success('Payment completed successfully!');
+        resetPayment();
+        setPaymentModalOpen(false);
+        modal.handleClose();
+        // Trigger a page reload to refresh the order data
+        window.location.reload();
+      },
+      onError: (error) => {
+        toast.error(`Payment failed: ${error}`);
+      }
+    });
 
     const handleDownload = async () => {
       try {
@@ -101,8 +152,47 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
       }
     };
 
+    const [shouldOpenModal, setShouldOpenModal] = React.useState(false);
+
+    const handleCompletePayment = async () => {
+      try {
+        console.log('🔄 Starting payment completion for order:', order.id);
+        setShouldOpenModal(false); // Reset flag
+        await createPaymentIntent(order.id, order.items, order.totalAmount);
+        console.log('✅ Payment intent created, setting flag to open modal');
+        setShouldOpenModal(true);
+      } catch (error) {
+        console.error('❌ Error in handleCompletePayment:', error);
+        toast.error('Failed to initiate payment. Please try again.');
+      }
+    };
+
+    // Debug all state values on each render
+    console.log('🔍 Component render - state values:', {
+      shouldOpenModal,
+      hasClientSecret: !!clientSecret,
+      hasPaymentOrderId: !!paymentOrderId,
+      hasOrderSummary: !!orderSummary,
+      paymentModalOpen,
+      shouldOpenModalNow: shouldOpenModal && clientSecret && paymentOrderId && orderSummary && !paymentModalOpen
+    });
+
+    // Open modal when all required data is available
+    React.useEffect(() => {
+      if (shouldOpenModal && clientSecret && paymentOrderId && orderSummary && !paymentModalOpen) {
+        console.log('✅ All data ready, opening payment modal');
+        setPaymentModalOpen(true);
+        setShouldOpenModal(false); // Reset flag
+      }
+    }, [shouldOpenModal, clientSecret, paymentOrderId, orderSummary, paymentModalOpen]);
+
+    console.log('🔍 About to calculate payment totals...');
+    
     const totalPaid = order.payments.reduce((sum, payment) => sum + payment.amount, 0);
     const balanceOwed = order.totalAmount - totalPaid;
+    const canCompletePayment = balanceOwed > 0 && order.status === 'deposit_paid';
+    
+    console.log('✅ Payment calculations done:', { totalPaid, balanceOwed, canCompletePayment });
 
     const title = `Order ${order.orderNumber}`;
     
@@ -125,6 +215,22 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
         </div>
 
         <Separator />
+
+        {/* Payment Completion Alert */}
+        {canCompletePayment && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <CreditCardIcon className="size-5 text-blue-600 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-medium text-blue-900 mb-1">Complete Your Payment</h4>
+                <p className="text-sm text-blue-700">
+                  You have a remaining balance of <span className="font-medium">{formatCurrency(balanceOwed)}</span> on this order.
+                  Complete your payment to finalize your purchase.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Order Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -261,6 +367,8 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
       </div>
     );
 
+    console.log('✅ renderContent created');
+
     const renderFooter = (
       <div className="flex items-center justify-between">
         <Button
@@ -272,8 +380,21 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
         </Button>
         
         <div className="flex items-center space-x-2">
+          {canCompletePayment && (
+            <Button
+              onClick={handleCompletePayment}
+              disabled={isPaymentLoading}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+            >
+              <CreditCardIcon className="size-4" />
+              <span>
+                {isPaymentLoading ? 'Processing...' : `Pay ${formatCurrency(balanceOwed)}`}
+              </span>
+            </Button>
+          )}
           <Button
             onClick={handleDownload}
+            variant="outline"
             className="flex items-center space-x-2"
           >
             <DownloadIcon className="size-4" />
@@ -289,28 +410,93 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
       </div>
     );
 
-    if (mdUp) {
-      return (
-        <Dialog open={modal.visible} onOpenChange={modal.handleClose}>
-          <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col">
-            <DialogHeader className="flex-shrink-0">
-              <DialogTitle>{title}</DialogTitle>
-              <DialogDescription>
-                View complete order details, items, and payment information
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex-1 overflow-y-auto px-1">
-              {renderContent}
-            </div>
-            <DialogFooter className="flex-shrink-0 border-t pt-4">
-              {renderFooter}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      );
-    }
+    console.log('✅ renderFooter created');
 
-    return (
+    // Debug modal state changes
+    React.useEffect(() => {
+      console.log('🔍 paymentModalOpen changed to:', paymentModalOpen);
+    }, [paymentModalOpen]);
+
+    // Debug modal component rendering
+    React.useEffect(() => {
+      console.log('🔍 Payment modal component state:', {
+        clientSecret: !!clientSecret,
+        paymentOrderId: !!paymentOrderId,
+        orderSummary: !!orderSummary,
+        paymentModalOpen,
+        shouldRenderModal: !!(clientSecret && paymentOrderId && orderSummary)
+      });
+    }, [clientSecret, paymentOrderId, orderSummary, paymentModalOpen]);
+
+    // Create payment modal component
+    console.log('🔍 About to create payment modal component:', {
+      hasClientSecret: !!clientSecret,
+      hasPaymentOrderId: !!paymentOrderId,
+      hasOrderSummary: !!orderSummary,
+      paymentModalOpen,
+      organizationName: organization?.name
+    });
+
+    const paymentModalComponent = React.useMemo(() => {
+      console.log('🔍 useMemo running - payment modal component:', {
+        hasClientSecret: !!clientSecret,
+        hasPaymentOrderId: !!paymentOrderId,
+        hasOrderSummary: !!orderSummary,
+        paymentModalOpen,
+        organizationName: organization?.name
+      });
+
+      if (clientSecret && paymentOrderId && orderSummary) {
+        console.log('✅ All conditions met, creating Stripe payment modal component');
+        
+        return (
+          <StripeElementsProvider clientSecret={clientSecret}>
+            <PaymentModal
+              isOpen={paymentModalOpen}
+              onClose={() => {
+                console.log('🔄 Payment modal onClose called');
+                setPaymentModalOpen(false);
+                resetPayment();
+              }}
+              onSuccess={(completedOrderId) => {
+                console.log('✅ Payment modal onSuccess called:', completedOrderId);
+                toast.success('Payment completed successfully!');
+                resetPayment();
+                setPaymentModalOpen(false);
+                modal.handleClose();
+                window.location.reload();
+              }}
+              clientSecret={clientSecret}
+              orderId={paymentOrderId}
+              orderSummary={orderSummary}
+              organizationName={organization?.name || 'Organization'}
+            />
+          </StripeElementsProvider>
+        );
+      }
+      
+      console.log('❌ Payment modal conditions not met, not rendering');
+      return null;
+    }, [clientSecret, paymentOrderId, orderSummary, paymentModalOpen, organization?.name]);
+
+    const orderDetailsComponent = mdUp ? (
+      <Dialog open={modal.visible} onOpenChange={modal.handleClose}>
+        <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>
+              View complete order details, items, and payment information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-1">
+            {renderContent}
+          </div>
+          <DialogFooter className="flex-shrink-0 border-t pt-4">
+            {renderFooter}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    ) : (
       <Drawer open={modal.visible} onOpenChange={modal.handleClose}>
         <DrawerContent className="max-h-[95vh] flex flex-col">
           <DrawerHeader className="flex-shrink-0">
@@ -327,6 +513,18 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+    );
+
+    console.log('🔍 Rendering order details modal with payment modal:', {
+      showOrderDetails: modal.visible,
+      showPaymentModal: !!paymentModalComponent
+    });
+
+    return (
+      <>
+        {orderDetailsComponent}
+        {paymentModalComponent}
+      </>
     );
   }
 );

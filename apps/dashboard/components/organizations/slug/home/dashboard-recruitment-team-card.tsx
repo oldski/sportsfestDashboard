@@ -39,8 +39,17 @@ export function RecruitmentTeamCard({
       className={cn('flex h-full flex-col gap-0 pb-0', className)}
       {...other}
     >
-      <CardHeader className="pb-0 flex flex-row items-center gap-2">
+      <CardHeader className="pb-0 flex flex-row justify-between gap-2 align-items-center">
         Your Recruitment Team
+        <Button
+          type="button"
+          variant="default"
+          size="sm"
+          className="whitespace-nowrap mb-4"
+          onClick={handleShowInviteMemberModal}
+        >
+          Invite member
+        </Button>
       </CardHeader>
       <CardContent className="max-h-72 flex-1 overflow-hidden p-0">
         {members.length > 0 ? (
@@ -57,17 +66,6 @@ export function RecruitmentTeamCard({
           </EmptyText>
         )}
       </CardContent>
-      <CardFooter>
-        <Button
-          type="button"
-          variant="default"
-          size="sm"
-          className="whitespace-nowrap"
-          onClick={handleShowInviteMemberModal}
-        >
-          Invite member
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

@@ -1406,6 +1406,7 @@ export const eventRosterTable = pgTable(
     }),
     eventType: eventTypeEnum('eventType').notNull(),
     isStarter: boolean('isStarter').default(true).notNull(), // Starter vs backup
+    squadLeader: boolean('squadLeader').default(false).notNull(), // One per event per team
     assignedAt: timestamp('assignedAt', { precision: 3, mode: 'date' })
     .defaultNow()
     .notNull()

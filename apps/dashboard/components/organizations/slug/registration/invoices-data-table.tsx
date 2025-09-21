@@ -17,7 +17,8 @@ import {
   MoreHorizontalIcon,
   DownloadIcon,
   EyeIcon,
-  SearchIcon
+  SearchIcon,
+  FilterIcon
 } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
@@ -34,6 +35,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@workspace/ui/components/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@workspace/ui/components/select';
 import { Input } from '@workspace/ui/components/input';
 import { toast } from '@workspace/ui/components/sonner';
 import { cn } from '@workspace/ui/lib/utils';
@@ -92,6 +100,24 @@ export function InvoicesDataTable({
     { id: 'totalAmount', desc: true } // Default to highest amount first
   ]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [eventYearFilter, setEventYearFilter] = React.useState<string>('all');
+
+  // Get unique event years from invoices
+  const availableEventYears = React.useMemo(() => {
+    const eventYearMap = new Map();
+    invoices.forEach(invoice => {
+      if (!eventYearMap.has(invoice.eventYear.id)) {
+        eventYearMap.set(invoice.eventYear.id, invoice.eventYear);
+      }
+    });
+    return Array.from(eventYearMap.values()).sort((a, b) => b.year - a.year);
+  }, [invoices]);
+
+  // Apply event year filter
+  const filteredInvoices = React.useMemo(() => {
+    if (eventYearFilter === 'all') return invoices;
+    return invoices.filter(invoice => invoice.eventYear.id === eventYearFilter);
+  }, [invoices, eventYearFilter]);
 
   const columns: ColumnDef<RegistrationInvoiceDto>[] = [
     {
@@ -115,6 +141,21 @@ export function InvoicesDataTable({
           {row.original.order.orderNumber}
         </div>
       )
+    },
+    {
+      accessorKey: 'eventYear',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Event Year" />
+      ),
+      cell: ({ row }) => {
+        const eventYear = row.getValue('eventYear') as RegistrationInvoiceDto['eventYear'];
+        return (
+          <div className="text-sm">
+            <div className="font-medium">{eventYear.name}</div>
+            <div className="text-muted-foreground">{eventYear.year}</div>
+          </div>
+        );
+      }
     },
     {
       accessorKey: 'status',
@@ -165,26 +206,6 @@ export function InvoicesDataTable({
             balance > 0 ? 'text-orange-600' : 'text-green-600'
           )}>
             {formatCurrency(balance)}
-          </div>
-        );
-      }
-    },
-    {
-      accessorKey: 'dueDate',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Due Date" />
-      ),
-      cell: ({ row }) => {
-        const dueDate = row.getValue('dueDate') as Date | undefined;
-        if (!dueDate) return <span className="text-muted-foreground">—</span>;
-
-        const isOverdue = dueDate < new Date() && row.original.status !== 'paid';
-        return (
-          <div className={cn(
-            'text-sm',
-            isOverdue ? 'text-red-600 font-medium' : ''
-          )}>
-            {formatDate(dueDate)}
           </div>
         );
       }
@@ -264,7 +285,7 @@ export function InvoicesDataTable({
   ];
 
   const table = useReactTable({
-    data: invoices,
+    data: filteredInvoices,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -293,7 +314,20 @@ export function InvoicesDataTable({
             className="pl-10"
           />
         </div>
-        {/* TODO: Add status filter dropdown */}
+        <Select value={eventYearFilter} onValueChange={setEventYearFilter}>
+          <SelectTrigger className="w-[200px]">
+            <FilterIcon className="mr-2 h-4 w-4" />
+            <SelectValue placeholder="Filter by event year" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Event Years</SelectItem>
+            {availableEventYears.map((eventYear) => (
+              <SelectItem key={eventYear.id} value={eventYear.id}>
+                {eventYear.year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Data table */}

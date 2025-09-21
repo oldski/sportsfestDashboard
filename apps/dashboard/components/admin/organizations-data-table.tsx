@@ -81,20 +81,20 @@ const columns = [
       title: 'Member Count'
     }
   }),
-  columnHelper.accessor('isActive', {
-    id: 'isActive',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Status" />
-    ),
-    cell: ({ row }) => (
-      <Badge variant={row.getValue('isActive') ? 'default' : 'secondary'}>
-        {row.getValue('isActive') ? 'Active' : 'Inactive'}
-      </Badge>
-    ),
-    meta: {
-      title: 'Status'
-    }
-  }),
+  // columnHelper.accessor('isActive', {
+  //   id: 'isActive',
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="Status" />
+  //   ),
+  //   cell: ({ row }) => (
+  //     <Badge variant={row.getValue('isActive') ? 'default' : 'secondary'}>
+  //       {row.getValue('isActive') ? 'Active' : 'Inactive'}
+  //     </Badge>
+  //   ),
+  //   meta: {
+  //     title: 'Status'
+  //   }
+  // }),
   columnHelper.display({
     id: 'actions',
     cell: ({ row }) => {

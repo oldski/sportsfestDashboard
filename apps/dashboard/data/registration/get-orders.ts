@@ -3,14 +3,15 @@ import 'server-only';
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
 
-import { db, desc, eq, and } from '@workspace/database/client';
+import { db, desc, eq, and, inArray } from '@workspace/database/client';
 import { 
-  order, 
-  orderItem, 
-  product, 
-  productCategory,
-  orderPayment,
-  orderInvoice
+  orderTable, 
+  orderItemTable, 
+  productTable, 
+  productCategoryTable,
+  orderPaymentTable,
+  orderInvoiceTable,
+  eventYearTable
 } from '@workspace/database/schema';
 
 import { getOrganizationBySlug } from '~/data/organizations/get-organization-by-slug';
@@ -28,57 +29,62 @@ export const getRegistrationOrders = cache(async (organizationSlug: string): Pro
     const ordersWithItems = await db
       .select({
         // Order fields
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        organizationId: order.organizationId,
-        orderTotalAmount: order.totalAmount,
-        orderStatus: order.status,
-        orderCreatedAt: order.createdAt,
-        orderUpdatedAt: order.updatedAt,
+        orderId: orderTable.id,
+        orderNumber: orderTable.orderNumber,
+        organizationId: orderTable.organizationId,
+        orderTotalAmount: orderTable.totalAmount,
+        orderStatus: orderTable.status,
+        orderCreatedAt: orderTable.createdAt,
+        orderUpdatedAt: orderTable.updatedAt,
+        // Event Year fields
+        eventYearId: eventYearTable.id,
+        eventYearName: eventYearTable.name,
+        eventYearYear: eventYearTable.year,
         // Order item fields
-        itemId: orderItem.id,
-        itemQuantity: orderItem.quantity,
-        itemUnitPrice: orderItem.unitPrice,
-        itemTotalPrice: orderItem.totalPrice,
+        itemId: orderItemTable.id,
+        itemQuantity: orderItemTable.quantity,
+        itemUnitPrice: orderItemTable.unitPrice,
+        itemTotalPrice: orderItemTable.totalPrice,
         // Product fields
-        productName: product.name,
-        productCategoryName: productCategory.name,
+        productName: productTable.name,
+        productCategoryName: productCategoryTable.name,
       })
-      .from(order)
-      .leftJoin(orderItem, eq(order.id, orderItem.orderId))
-      .leftJoin(product, eq(orderItem.productId, product.id))
-      .leftJoin(productCategory, eq(product.categoryId, productCategory.id))
-      .where(eq(order.organizationId, organization.id as string))
-      .orderBy(desc(order.createdAt));
+      .from(orderTable)
+      .leftJoin(eventYearTable, eq(orderTable.eventYearId, eventYearTable.id))
+      .leftJoin(orderItemTable, eq(orderTable.id, orderItemTable.orderId))
+      .leftJoin(productTable, eq(orderItemTable.productId, productTable.id))
+      .leftJoin(productCategoryTable, eq(productTable.categoryId, productCategoryTable.id))
+      .where(eq(orderTable.organizationId, organization.id as string))
+      .orderBy(desc(orderTable.createdAt));
 
     // Get payments for all orders
     const orderIds = [...new Set(ordersWithItems.map(row => row.orderId))];
     const payments = orderIds.length > 0 ? await db
       .select({
-        orderId: orderPayment.orderId,
-        paymentId: orderPayment.id,
-        amount: orderPayment.amount,
-        paymentDate: orderPayment.processedAt,
-        method: orderPayment.paymentMethodType,
-        status: orderPayment.status,
+        orderId: orderPaymentTable.orderId,
+        paymentId: orderPaymentTable.id,
+        amount: orderPaymentTable.amount,
+        paymentDate: orderPaymentTable.processedAt,
+        method: orderPaymentTable.paymentMethodType,
+        status: orderPaymentTable.status,
       })
-      .from(orderPayment)
-      .where(eq(orderPayment.orderId, orderIds[0])) // This will need to be updated for multiple orders
+      .from(orderPaymentTable)
+      .where(inArray(orderPaymentTable.orderId, orderIds))
       : [];
 
     // Get invoices for all orders
     const invoices = orderIds.length > 0 ? await db
       .select({
-        orderId: orderInvoice.orderId,
-        invoiceId: orderInvoice.id,
-        invoiceNumber: orderInvoice.invoiceNumber,
-        invoiceStatus: orderInvoice.status,
-        invoiceTotalAmount: orderInvoice.totalAmount,
-        invoicePaidAmount: orderInvoice.paidAmount,
-        invoiceBalanceOwed: orderInvoice.balanceOwed,
+        orderId: orderInvoiceTable.orderId,
+        invoiceId: orderInvoiceTable.id,
+        invoiceNumber: orderInvoiceTable.invoiceNumber,
+        invoiceStatus: orderInvoiceTable.status,
+        invoiceTotalAmount: orderInvoiceTable.totalAmount,
+        invoicePaidAmount: orderInvoiceTable.paidAmount,
+        invoiceBalanceOwed: orderInvoiceTable.balanceOwed,
       })
-      .from(orderInvoice)
-      .where(eq(orderInvoice.orderId, orderIds[0])) // This will need to be updated for multiple orders
+      .from(orderInvoiceTable)
+      .where(inArray(orderInvoiceTable.orderId, orderIds))
       : [];
 
     // Group the data by order
@@ -94,6 +100,11 @@ export const getRegistrationOrders = cache(async (organizationSlug: string): Pro
           status: row.orderStatus as RegistrationOrderDto['status'],
           createdAt: row.orderCreatedAt,
           updatedAt: row.orderUpdatedAt,
+          eventYear: {
+            id: row.eventYearId || '',
+            name: row.eventYearName || 'Unknown Event Year',
+            year: row.eventYearYear || 0
+          },
           items: [],
           payments: [],
           invoices: []

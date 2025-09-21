@@ -14,6 +14,11 @@ export type RegistrationInvoiceDto = {
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
+  eventYear: {
+    id: string;
+    name: string;
+    year: number;
+  };
   // Related order information
   order: {
     id: string;
@@ -28,6 +33,18 @@ export type RegistrationInvoiceDto = {
       quantity: number;
       unitPrice: number;
       totalPrice: number;
+    }[];
+    // Payment history for detailed breakdown (optional for backward compatibility)
+    payments?: {
+      id: string;
+      amount: number;
+      method: string;
+      status: string;
+      paymentDate: Date;
+      transactionId?: string;
+      paymentType: 'deposit' | 'full' | 'balance_payment';
+      last4?: string;
+      failureReason?: string;
     }[];
   };
 };

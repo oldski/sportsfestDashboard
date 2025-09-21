@@ -8,7 +8,9 @@ import {
   FileTextIcon,
   CalendarIcon,
   DollarSignIcon,
-  PackageIcon
+  PackageIcon,
+  CreditCardIcon,
+  ReceiptIcon
 } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
@@ -74,10 +76,48 @@ const formatDate = (date: Date) => {
   return format(date, 'MMM d, yyyy');
 };
 
+// Format payment type for display
+const formatPaymentType = (paymentType: string) => {
+  switch (paymentType) {
+    case 'deposit':
+      return 'Deposit Payment';
+    case 'full':
+      return 'Full Payment';
+    case 'balance_payment':
+      return 'Balance Payment';
+    default:
+      return 'Payment';
+  }
+};
+
+// Get payment type badge variant
+const getPaymentTypeVariant = (paymentType: string) => {
+  switch (paymentType) {
+    case 'deposit':
+      return 'secondary'; // Blue
+    case 'full':
+      return 'default'; // Green
+    case 'balance_payment':
+      return 'outline'; // Gray
+    default:
+      return 'outline';
+  }
+};
+
 export const InvoiceDetailsModal = NiceModal.create<InvoiceDetailsModalProps>(
   ({ invoice }) => {
     const modal = useEnhancedModal();
     const mdUp = useMediaQuery(MediaQueries.MdUp, { ssr: false });
+
+    // Debug logging to check invoice structure
+    React.useEffect(() => {
+      console.log('🔍 Invoice data structure:', {
+        hasOrder: !!invoice.order,
+        hasPayments: !!(invoice.order?.payments),
+        paymentsLength: invoice.order?.payments?.length,
+        invoiceData: invoice
+      });
+    }, [invoice]);
 
     const handleDownload = async () => {
       try {
@@ -204,30 +244,102 @@ export const InvoiceDetailsModal = NiceModal.create<InvoiceDetailsModalProps>(
               </div>
             </div>
 
-            {/* Payment Dates */}
-            {(invoice.sentAt || invoice.paidAt) && (
-              <div>
-                <h4 className="font-medium text-sm text-muted-foreground mb-2">Payment History</h4>
-                <div className="space-y-2">
-                  {invoice.sentAt && (
-                    <div className="flex justify-between">
-                      <span className="text-sm">Invoice Sent:</span>
-                      <span className="text-sm">{formatDate(invoice.sentAt)}</span>
-                    </div>
-                  )}
-                  {invoice.paidAt && (
-                    <div className="flex justify-between">
-                      <span className="text-sm">Payment Received:</span>
-                      <span className="text-sm text-green-600">{formatDate(invoice.paidAt)}</span>
-                    </div>
-                  )}
-                </div>
+            {/* Invoice Status Info */}
+            <div>
+              <h4 className="font-medium text-sm text-muted-foreground mb-2">Invoice Status</h4>
+              <div className="space-y-2">
+                {invoice.sentAt && (
+                  <div className="flex justify-between">
+                    <span className="text-sm">Invoice Sent:</span>
+                    <span className="text-sm">{formatDate(invoice.sentAt)}</span>
+                  </div>
+                )}
+                {invoice.paidAt && (
+                  <div className="flex justify-between">
+                    <span className="text-sm">Fully Paid:</span>
+                    <span className="text-sm text-green-600">{formatDate(invoice.paidAt)}</span>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
         <Separator />
+
+        {/* Payment Transaction History */}
+        {invoice.order.payments && invoice.order.payments.length > 0 && (
+          <>
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                <CreditCardIcon className="size-4 text-muted-foreground" />
+                <h4 className="font-medium">Payment Transactions</h4>
+              </div>
+              <div className="space-y-3">
+                {invoice.order.payments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h5 className="font-medium text-sm">{formatPaymentType(payment.paymentType)}</h5>
+                        <Badge variant={getPaymentTypeVariant(payment.paymentType)} className="text-xs">
+                          {payment.paymentType === 'deposit' ? 'Deposit' : payment.paymentType === 'full' ? 'Full' : 'Balance'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {payment.status}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <div className="flex items-center space-x-4">
+                          <span>Method: {payment.method}{payment.last4 ? ` ****${payment.last4}` : ''}</span>
+                          <span>Date: {formatDate(payment.paymentDate)}</span>
+                        </div>
+                        {payment.transactionId && (
+                          <div className="font-mono text-xs">
+                            Transaction ID: {payment.transactionId}
+                          </div>
+                        )}
+                        {payment.failureReason && (
+                          <div className="text-xs text-red-600">
+                            Failure reason: {payment.failureReason}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-semibold text-green-600">
+                        {formatCurrency(payment.amount)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Payment Summary */}
+              <div className="mt-4 pt-4 border-t bg-blue-50/50 rounded-lg p-3">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">Total Payments Received:</span>
+                    <span className="font-semibold text-green-600">
+                      {formatCurrency((invoice.order.payments || []).reduce((sum, payment) => sum + payment.amount, 0))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">Invoice Total:</span>
+                    <span className="font-semibold">{formatCurrency(invoice.totalAmount)}</span>
+                  </div>
+                  {invoice.balanceOwed > 0 && (
+                    <div className="flex justify-between text-sm pt-1 border-t">
+                      <span className="font-medium text-orange-600">Outstanding Balance:</span>
+                      <span className="font-semibold text-orange-600">{formatCurrency(invoice.balanceOwed)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+          </>
+        )}
 
         {/* Order Items */}
         <div>

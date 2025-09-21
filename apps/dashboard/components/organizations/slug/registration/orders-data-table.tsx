@@ -17,7 +17,8 @@ import {
   MoreHorizontalIcon,
   DownloadIcon,
   EyeIcon,
-  SearchIcon
+  SearchIcon,
+  FilterIcon
 } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
@@ -34,6 +35,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@workspace/ui/components/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@workspace/ui/components/select';
 import { Input } from '@workspace/ui/components/input';
 import { toast } from '@workspace/ui/components/sonner';
 import { cn } from '@workspace/ui/lib/utils';
@@ -44,6 +52,7 @@ import type { RegistrationOrderDto } from '~/types/dtos/registration-order-dto';
 
 export type OrdersDataTableProps = {
   orders: RegistrationOrderDto[];
+  autoOpenOrderId?: string;
 };
 
 // Status badge variant mapping
@@ -78,12 +87,41 @@ const formatDate = (date: Date) => {
 };
 
 export function OrdersDataTable({
-  orders
+  orders,
+  autoOpenOrderId
 }: OrdersDataTableProps): React.JSX.Element {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'createdAt', desc: true } // Default to newest first
   ]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [eventYearFilter, setEventYearFilter] = React.useState<string>('all');
+
+  // Get unique event years from orders
+  const availableEventYears = React.useMemo(() => {
+    const eventYearMap = new Map();
+    orders.forEach(order => {
+      if (!eventYearMap.has(order.eventYear.id)) {
+        eventYearMap.set(order.eventYear.id, order.eventYear);
+      }
+    });
+    return Array.from(eventYearMap.values()).sort((a, b) => b.year - a.year);
+  }, [orders]);
+
+  // Apply event year filter
+  const filteredOrders = React.useMemo(() => {
+    if (eventYearFilter === 'all') return orders;
+    return orders.filter(order => order.eventYear.id === eventYearFilter);
+  }, [orders, eventYearFilter]);
+
+  // Auto-open order dialog if autoOpenOrderId is provided
+  React.useEffect(() => {
+    if (autoOpenOrderId && orders.length > 0) {
+      const orderToOpen = orders.find(order => order.id === autoOpenOrderId);
+      if (orderToOpen) {
+        NiceModal.show(OrderDetailsModal, { order: orderToOpen });
+      }
+    }
+  }, [autoOpenOrderId, orders]);
 
   const columns: ColumnDef<RegistrationOrderDto>[] = [
     {
@@ -96,6 +134,21 @@ export function OrdersDataTable({
           {row.getValue('orderNumber')}
         </div>
       )
+    },
+    {
+      accessorKey: 'eventYear',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Event Year" />
+      ),
+      cell: ({ row }) => {
+        const eventYear = row.getValue('eventYear') as RegistrationOrderDto['eventYear'];
+        return (
+          <div className="text-sm">
+            <div className="font-medium">{eventYear.name}</div>
+            <div className="text-muted-foreground">{eventYear.year}</div>
+          </div>
+        );
+      }
     },
     {
       accessorKey: 'status',
@@ -254,7 +307,7 @@ export function OrdersDataTable({
   ];
 
   const table = useReactTable({
-    data: orders,
+    data: filteredOrders,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -283,7 +336,20 @@ export function OrdersDataTable({
             className="pl-10"
           />
         </div>
-        {/* TODO: Add status filter dropdown */}
+        <Select value={eventYearFilter} onValueChange={setEventYearFilter}>
+          <SelectTrigger className="w-[200px]">
+            <FilterIcon className="mr-2 h-4 w-4" />
+            <SelectValue placeholder="Filter by event year" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Event Years</SelectItem>
+            {availableEventYears.map((eventYear) => (
+              <SelectItem key={eventYear.id} value={eventYear.id}>
+                {eventYear.year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Data table */}

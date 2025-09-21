@@ -1,51 +1,88 @@
 import * as React from 'react';
-import {Badge} from "@workspace/ui/components/badge";
-import {Progress} from "@workspace/ui/components/progress";
-import {CardDescription} from "@workspace/ui/components/card";
-import {Button} from "@workspace/ui/components/button";
-import Link from "next/link";
-import {replaceOrgSlug, routes} from "@workspace/routes";
-import {DollarSignIcon, PackageIcon, TrendingUpIcon} from "lucide-react";
+import { formatDistanceToNow } from 'date-fns';
+import { 
+  DollarSignIcon, 
+  PackageIcon, 
+  TrendingUpIcon,
+  FileTextIcon
+} from "lucide-react";
+
+import { getOrganizationRecentActivity } from '~/data/organization/get-organization-recent-activity';
+
+// Get icon component based on icon name
+const getIconComponent = (iconName: string) => {
+  switch (iconName) {
+    case 'dollar-sign':
+      return DollarSignIcon;
+    case 'package':
+      return PackageIcon;
+    case 'trending-up':
+      return TrendingUpIcon;
+    case 'file-text':
+      return FileTextIcon;
+    default:
+      return PackageIcon;
+  }
+};
+
+// Get icon color based on color name
+const getIconColor = (color: string) => {
+  switch (color) {
+    case 'green':
+      return 'text-green-600';
+    case 'blue':
+      return 'text-blue-600';
+    case 'purple':
+      return 'text-purple-600';
+    case 'orange':
+      return 'text-orange-600';
+    default:
+      return 'text-gray-600';
+  }
+};
+
+// Format relative time
+const formatRelativeTime = (date: Date) => {
+  return formatDistanceToNow(date, { addSuffix: true });
+};
 
 export default async function RecentActivityPage(): Promise<React.JSX.Element> {
+  const activities = await getOrganizationRecentActivity(5);
 
-  //TODO: Add an actual snapshot component
-  return(
+  if (activities.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <TrendingUpIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-sm text-muted-foreground">
+          No recent activity. Start by creating your first order!
+        </p>
+      </div>
+    );
+  }
+
+  return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-          <div className="flex items-center space-x-3">
-            <DollarSignIcon className="h-4 w-4 text-green-600" />
-            <div>
-              <p className="font-medium">Payment Received</p>
-              <p className="text-sm text-muted-foreground">Invoice #INV-2025-001 - $425.00</p>
+        {activities.map((activity) => {
+          const IconComponent = getIconComponent(activity.icon);
+          const iconColor = getIconColor(activity.color);
+          
+          return (
+            <div key={activity.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <IconComponent className={`h-4 w-4 ${iconColor}`} />
+                <div>
+                  <p className="font-medium">{activity.title}</p>
+                  <p className="text-sm text-muted-foreground">{activity.description}</p>
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {formatRelativeTime(activity.createdAt)}
+              </span>
             </div>
-          </div>
-          <span className="text-xs text-muted-foreground">2 hours ago</span>
-        </div>
-
-        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-          <div className="flex items-center space-x-3">
-            <PackageIcon className="h-4 w-4 text-blue-600" />
-            <div>
-              <p className="font-medium">Order Created</p>
-              <p className="text-sm text-muted-foreground">Order #ORD-2025-001 - $1,275.00</p>
-            </div>
-          </div>
-          <span className="text-xs text-muted-foreground">1 day ago</span>
-        </div>
-
-        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-          <div className="flex items-center space-x-3">
-            <TrendingUpIcon className="h-4 w-4 text-purple-600" />
-            <div>
-              <p className="font-medium">Registration Started</p>
-              <p className="text-sm text-muted-foreground">Welcome to SportsFest 2025!</p>
-            </div>
-          </div>
-          <span className="text-xs text-muted-foreground">3 days ago</span>
-        </div>
+          );
+        })}
       </div>
     </>
-  )
+  );
 }

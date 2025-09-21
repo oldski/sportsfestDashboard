@@ -9,6 +9,8 @@ import {
   ActiveOrganizationProvider,
   type ActiveOrganization
 } from '~/hooks/use-active-organization';
+import { StripeProvider } from '~/contexts/stripe-context';
+import { ShoppingCartProvider } from '~/contexts/shopping-cart-context';
 
 export type ProvidersProps = React.PropsWithChildren<{
   organization: ActiveOrganization;
@@ -24,15 +26,19 @@ export function Providers({
 }: ProvidersProps): React.JSX.Element {
   return (
     <ActiveOrganizationProvider organization={organization}>
-      {/* Provide a second modal provider so we can use 'useActiveOrganization' in modals */}
-      <NiceModal.Provider>
-        <SidebarProvider
-          defaultOpen={defaultOpen}
-          defaultWidth={defaultWidth}
-        >
-          {children}
-        </SidebarProvider>
-      </NiceModal.Provider>
+      <StripeProvider>
+        <ShoppingCartProvider>
+          {/* Provide a second modal provider so we can use 'useActiveOrganization' in modals */}
+          <NiceModal.Provider>
+            <SidebarProvider
+              defaultOpen={defaultOpen}
+              defaultWidth={defaultWidth}
+            >
+              {children}
+            </SidebarProvider>
+          </NiceModal.Provider>
+        </ShoppingCartProvider>
+      </StripeProvider>
     </ActiveOrganizationProvider>
   );
 }

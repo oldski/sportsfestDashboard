@@ -2,7 +2,7 @@
 
 import { isSuperAdmin } from '~/lib/admin-utils';
 import { getAuthContext } from '@workspace/auth/context';
-import { db, sql, desc, eq } from '@workspace/database/client';
+import { db, sql } from '@workspace/database/client';
 import { organizationTable, membershipTable } from '@workspace/database/schema';
 
 export type OrganizationData = {

@@ -60,3 +60,25 @@ export function formatCurrency(amount: number): string {
     currency: 'USD',
   }).format(amount);
 }
+
+export function formatPhoneNumber(phoneNumber: string | null): string {
+  if (!phoneNumber) {
+    return '—';
+  }
+
+  // Remove all non-digits
+  const cleaned = phoneNumber.replace(/\D/g, '');
+
+  // Check if it's a valid US phone number (10 digits)
+  if (cleaned.length !== 10) {
+    return phoneNumber; // Return original if not 10 digits
+  }
+
+  // Format as (XXX) XXX-XXXX
+  const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+  if (match) {
+    return `(${match[1]}) ${match[2]}-${match[3]}`;
+  }
+
+  return phoneNumber; // Fallback to original
+}

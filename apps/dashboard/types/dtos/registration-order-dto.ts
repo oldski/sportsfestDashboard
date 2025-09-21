@@ -6,6 +6,11 @@ export type RegistrationOrderDto = {
   status: 'pending' | 'deposit_paid' | 'fully_paid' | 'cancelled' | 'refunded';
   createdAt: Date;
   updatedAt: Date;
+  eventYear: {
+    id: string;
+    name: string;
+    year: number;
+  };
   // Order items
   items: {
     id: string;

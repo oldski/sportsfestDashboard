@@ -18,6 +18,12 @@ import { Separator } from '@workspace/ui/components/separator';
 import { cn } from '@workspace/ui/lib/utils';
 
 import { useShoppingCart } from '~/contexts/shopping-cart-context';
+import { usePayment } from '~/hooks/use-payment';
+import { PaymentModal } from './payment-modal';
+import { StripeElementsProvider } from '~/contexts/stripe-context';
+import { useParams } from 'next/navigation';
+import { toast } from '@workspace/ui/components/sonner';
+import { useActiveOrganization } from '~/hooks/use-active-organization';
 
 // Format currency
 const formatCurrency = (amount: number) => {
@@ -40,11 +46,54 @@ export function ShoppingCart() {
     getCartTotal
   } = useShoppingCart();
 
+  const params = useParams();
+  const organizationSlug = params.slug as string;
+  const organization = useActiveOrganization();
+
+  const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
+
+  const {
+    isLoading: isPaymentLoading,
+    clientSecret,
+    orderId,
+    orderSummary,
+    createPaymentIntent,
+    resetPayment
+  } = usePayment({
+    organizationSlug,
+    onSuccess: (orderId) => {
+      toast.success('Payment completed successfully!');
+      clearCart();
+      resetPayment();
+      setPaymentModalOpen(false);
+    },
+    onError: (error) => {
+      toast.error(`Payment failed: ${error}`);
+    }
+  });
+
   const itemCount = getItemCount();
   const subtotal = getSubtotal();
   const totalDeposit = getTotalDeposit();
   const futurePayments = getFuturePayments();
   const cartTotal = getCartTotal();
+
+  // Convert cart items to payment hook format
+  const convertCartItemsForPayment = () => {
+    return items.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      name: item.product.name,
+      unitPrice: item.unitPrice,
+      depositPrice: item.useDeposit ? item.depositPrice : undefined,
+    }));
+  };
+
+  const handleCheckout = async (paymentType: 'full' | 'deposit') => {
+    const paymentItems = convertCartItemsForPayment();
+    await createPaymentIntent(paymentItems, paymentType);
+    setPaymentModalOpen(true);
+  };
 
   if (items.length === 0) {
     return (
@@ -97,7 +146,7 @@ export function ShoppingCart() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => removeItem(item.productId)}
+                onClick={() => removeItem(item.productId, item.useDeposit)}
                 className="size-6 p-0 text-muted-foreground hover:text-destructive shrink-0 mt-0.5"
               >
                 <XIcon className="size-3" />
@@ -131,7 +180,7 @@ export function ShoppingCart() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                    onClick={() => updateQuantity(item.productId, item.quantity - 1, item.useDeposit)}
                     disabled={item.quantity <= 1}
                     className="size-7 p-0"
                   >
@@ -142,13 +191,13 @@ export function ShoppingCart() {
                     min="1"
                     max={item.product.maxQuantityPerOrg || 999}
                     value={item.quantity}
-                    onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
+                    onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1, item.useDeposit)}
                     className="w-12 h-7 text-center text-xs"
                   />
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                    onClick={() => updateQuantity(item.productId, item.quantity + 1, item.useDeposit)}
                     disabled={item.product.maxQuantityPerOrg ? item.quantity >= item.product.maxQuantityPerOrg : false}
                     className="size-7 p-0"
                   >
@@ -220,18 +269,65 @@ export function ShoppingCart() {
       </CardContent>
 
       <CardFooter className="space-y-2">
-        <Button
-          className="w-full"
-          size="lg"
-          disabled={items.length === 0}
-        >
-          <CreditCardIcon className="size-4 mr-2" />
-          Proceed to Checkout
-          {totalDeposit > 0 && (
-            <span className="ml-2">({formatCurrency(totalDeposit > 0 ? totalDeposit : subtotal)})</span>
-          )}
-        </Button>
+        {/* Show payment option buttons when deposits are available */}
+        {totalDeposit > 0 ? (
+          <div className="w-full space-y-2">
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={() => handleCheckout('deposit')}
+              disabled={items.length === 0 || isPaymentLoading}
+              variant="default"
+            >
+              <CreditCardIcon className="size-4 mr-2" />
+              {isPaymentLoading ? 'Processing...' : `Pay Deposit - ${formatCurrency(totalDeposit)}`}
+            </Button>
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={() => handleCheckout('full')}
+              disabled={items.length === 0 || isPaymentLoading}
+              variant="outline"
+            >
+              <CreditCardIcon className="size-4 mr-2" />
+              {isPaymentLoading ? 'Processing...' : `Pay Full Amount - ${formatCurrency(subtotal)}`}
+            </Button>
+          </div>
+        ) : (
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={() => handleCheckout('full')}
+            disabled={items.length === 0 || isPaymentLoading}
+          >
+            <CreditCardIcon className="size-4 mr-2" />
+            {isPaymentLoading ? 'Processing...' : `Proceed to Checkout - ${formatCurrency(subtotal)}`}
+          </Button>
+        )}
       </CardFooter>
+
+      {/* Payment Modal */}
+      {clientSecret && orderId && orderSummary && (
+        <StripeElementsProvider clientSecret={clientSecret}>
+          <PaymentModal
+            isOpen={paymentModalOpen}
+            onClose={() => {
+              setPaymentModalOpen(false);
+              resetPayment();
+            }}
+            onSuccess={(completedOrderId) => {
+              toast.success('Payment completed successfully!');
+              clearCart();
+              resetPayment();
+              setPaymentModalOpen(false);
+            }}
+            clientSecret={clientSecret}
+            orderId={orderId}
+            orderSummary={orderSummary}
+            organizationName={organization.name}
+          />
+        </StripeElementsProvider>
+      )}
     </Card>
   );
 }

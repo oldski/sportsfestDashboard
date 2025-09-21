@@ -10,9 +10,13 @@ export const metadata: Metadata = {
   title: createTitle('Players')
 };
 
+interface PlayersLayoutProps {
+  playersTable: React.ReactNode;
+}
+
 export default function PlayersLayout({
-  children
-}: React.PropsWithChildren): React.JSX.Element {
+  playersTable
+}: PlayersLayoutProps): React.JSX.Element {
   return (
     <TransitionProvider>
       <Page>
@@ -22,17 +26,11 @@ export default function PlayersLayout({
               title="Players"
               info=" Players who've showed interest in joining the team"
             />
-            <PageActions>
-              actions area. see org / home for reference
-            </PageActions>
           </PagePrimaryBar>
-          <PageSecondaryBar>
-            Add a link to copy URL Here
-          </PageSecondaryBar>
         </PageHeader>
         <PageBody>
           <div className="mx-auto w-full space-y-2 p-2 sm:space-y-8 sm:p-6">
-            {children}
+            {playersTable}
           </div>
         </PageBody>
       </Page>
