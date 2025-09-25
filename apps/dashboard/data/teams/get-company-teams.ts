@@ -2,13 +2,35 @@ import 'server-only';
 
 import { getAuthOrganizationContext } from '@workspace/auth/context';
 import { db, eq, and, sql, inArray } from '@workspace/database/client';
-import { 
+import {
   companyTeamTable,
   teamRosterTable,
   playerTable,
-  eventYearTable
+  eventYearTable,
+  eventRosterTable,
+  EventType
 } from '@workspace/database/schema';
 import { syncCompanyTeams } from './sync-company-teams';
+
+/**
+ * Get required player count for each event type
+ */
+function getRequiredPlayersForEvent(eventType: EventType): number {
+  switch (eventType) {
+    case EventType.BEACH_VOLLEYBALL:
+      return 12; // 6 starters + 6 subs
+    case EventType.BEACH_DODGEBALL:
+      return 10; // 6 starters + 4 subs
+    case EventType.BOTE_BEACH_CHALLENGE:
+      return 11; // 7 starters + 4 subs
+    case EventType.TUG_OF_WAR:
+      return 9; // 5 starters + 4 subs
+    case EventType.CORN_TOSS:
+      return 4; // 4 players total (2 squads of 2)
+    default:
+      return 0;
+  }
+}
 
 export interface TeamMember {
   id: string;
@@ -20,6 +42,13 @@ export interface TeamMember {
   assignedAt: Date;
 }
 
+export interface EventRosterSummary {
+  eventType: EventType;
+  playerCount: number;
+  hasSquadLeader: boolean;
+  requiredPlayers: number;
+}
+
 export interface CompanyTeam {
   id: string;
   teamNumber: number;
@@ -28,6 +57,7 @@ export interface CompanyTeam {
   memberCount: number;
   maxMembers: number;
   members: TeamMember[];
+  eventRosterSummaries: EventRosterSummary[];
   eventYear: {
     id: string;
     year: number;
@@ -153,6 +183,33 @@ export async function getCompanyTeams(): Promise<CompanyTeamsResult> {
 
   const availablePlayerCount = Number(availablePlayersResult[0]?.count || 0);
 
+  // Get event roster summaries for all teams
+  const eventRosterSummaries = teamIds.length > 0 ? await db
+    .select({
+      teamId: eventRosterTable.companyTeamId,
+      eventType: eventRosterTable.eventType,
+      playerCount: sql<number>`COUNT(*)`,
+      hasSquadLeader: sql<boolean>`BOOL_OR(${eventRosterTable.squadLeader})`,
+    })
+    .from(eventRosterTable)
+    .where(inArray(eventRosterTable.companyTeamId, teamIds))
+    .groupBy(eventRosterTable.companyTeamId, eventRosterTable.eventType)
+    : [];
+
+  // Group event rosters by team
+  const eventRostersByTeam = eventRosterSummaries.reduce((acc, summary) => {
+    if (!acc[summary.teamId]) {
+      acc[summary.teamId] = [];
+    }
+    acc[summary.teamId].push({
+      eventType: summary.eventType,
+      playerCount: Number(summary.playerCount),
+      hasSquadLeader: summary.hasSquadLeader,
+      requiredPlayers: getRequiredPlayersForEvent(summary.eventType),
+    });
+    return acc;
+  }, {} as Record<string, EventRosterSummary[]>);
+
   // Build company teams with their rosters
   const teams: CompanyTeam[] = companyTeams.map(team => ({
     id: team.id,
@@ -162,6 +219,7 @@ export async function getCompanyTeams(): Promise<CompanyTeamsResult> {
     memberCount: rostersByTeam[team.id]?.length || 0,
     maxMembers: 20, // Maximum suggested team size (can exceed if needed)
     members: rostersByTeam[team.id] || [],
+    eventRosterSummaries: eventRostersByTeam[team.id] || [],
     eventYear: activeEventYear,
   }));
 

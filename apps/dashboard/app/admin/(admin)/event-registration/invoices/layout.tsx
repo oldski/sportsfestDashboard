@@ -51,7 +51,7 @@ export default async function InvoicesLayout({
             </PagePrimaryBar>
           </PageHeader>
           <PageBody>
-            <div className="mx-auto space-y-2 p-2 sm:space-y-8 sm:p-6">
+            <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <h3 className="text-lg font-semibold">Invoice Management</h3>

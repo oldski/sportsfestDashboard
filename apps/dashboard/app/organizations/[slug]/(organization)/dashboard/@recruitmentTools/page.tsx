@@ -1,18 +1,20 @@
 import * as React from 'react';
-import {Card, CardContent, CardHeader} from "@workspace/ui/components/card";
+import {getCustomRecruitmentDocuments} from '~/data/wordpress/get-recruitment-documents';
+import { RecruitmentDocumentsSimple } from '~/components/organizations/slug/dashboard/recruitment-documents-simple';
 
-export default async function RecruitmentToolsPage(): Promise<React.JSX.Element> {
+interface RecruitmentToolsPageProps {
+  params: { slug: string };
+}
+
+export default async function RecruitmentToolsPage({ params }: RecruitmentToolsPageProps): Promise<React.JSX.Element> {
+  // Fetch recruitment documents from WordPress
+  const documentsResult = await getCustomRecruitmentDocuments();
 
   return (
-    <Card>
-      <CardHeader>
-        Recruitment Tools
-        Team sign up link
-      </CardHeader>
-      <CardContent>
-        List of links.
-        dialog with videos
-      </CardContent>
-    </Card>
+    <RecruitmentDocumentsSimple
+      documents={documentsResult.documents}
+      organizationSlug={params.slug}
+      error={documentsResult.error}
+    />
   );
 }

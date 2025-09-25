@@ -16,6 +16,7 @@ type ShoppingCartContextType = {
   getItemCount: () => number;
   getSubtotal: () => number;
   getTotalDeposit: () => number;
+  getDueToday: () => number;
   getFuturePayments: () => number;
   getCartTotal: () => number;
 };
@@ -89,8 +90,13 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         const existingItem = updatedItems[existingItemIndex];
         const newQuantity = existingItem.quantity + quantity;
         
-        // Check max quantity constraint
-        if (product.maxQuantityPerOrg && newQuantity > product.maxQuantityPerOrg) {
+        // Check available quantity first (takes precedence over max quantity)
+        if (product.availableQuantity !== null && newQuantity > product.availableQuantity) {
+          toast.error(`Only ${product.availableQuantity} available for your organization`);
+          return prev;
+        }
+        // Fallback to max quantity constraint for products without availability system
+        if (product.availableQuantity === null && product.maxQuantityPerOrg && newQuantity > product.maxQuantityPerOrg) {
           toast.error(`Maximum quantity for ${product.name} is ${product.maxQuantityPerOrg}`);
           return prev;
         }
@@ -105,7 +111,13 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         return updatedItems;
       } else {
         // Add new item
-        if (product.maxQuantityPerOrg && quantity > product.maxQuantityPerOrg) {
+        // Check available quantity first (takes precedence over max quantity)
+        if (product.availableQuantity !== null && quantity > product.availableQuantity) {
+          toast.error(`Only ${product.availableQuantity} available for your organization`);
+          return prev;
+        }
+        // Fallback to max quantity constraint for products without availability system
+        if (product.availableQuantity === null && product.maxQuantityPerOrg && quantity > product.maxQuantityPerOrg) {
           toast.error(`Maximum quantity for ${product.name} is ${product.maxQuantityPerOrg}`);
           return prev;
         }
@@ -168,8 +180,13 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
           : (item.productId === productId);
           
         if (shouldUpdate) {
-          // Check max quantity constraint
-          if (item.product.maxQuantityPerOrg && quantity > item.product.maxQuantityPerOrg) {
+          // Check available quantity first (takes precedence over max quantity)
+          if (item.product.availableQuantity !== null && quantity > item.product.availableQuantity) {
+            toast.error(`Only ${item.product.availableQuantity} available for your organization`);
+            return item;
+          }
+          // Fallback to max quantity constraint for products without availability system
+          if (item.product.availableQuantity === null && item.product.maxQuantityPerOrg && quantity > item.product.maxQuantityPerOrg) {
             toast.error(`Maximum quantity for ${item.product.name} is ${item.product.maxQuantityPerOrg}`);
             return item;
           }
@@ -214,6 +231,18 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
       .reduce((total, item) => total + item.totalPrice, 0);
   }, [items]);
 
+  const getDueToday = React.useCallback(() => {
+    return items.reduce((total, item) => {
+      if (item.useDeposit) {
+        // For deposit items, only the deposit amount is due today
+        return total + item.totalPrice;
+      } else {
+        // For non-deposit items, the full amount is due today
+        return total + item.totalPrice;
+      }
+    }, 0);
+  }, [items]);
+
   const getFuturePayments = React.useCallback(() => {
     return items
       .filter(item => item.useDeposit && item.product.requiresDeposit)
@@ -244,6 +273,7 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
     getItemCount,
     getSubtotal,
     getTotalDeposit,
+    getDueToday,
     getFuturePayments,
     getCartTotal
   }), [
@@ -255,6 +285,7 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
     getItemCount,
     getSubtotal,
     getTotalDeposit,
+    getDueToday,
     getFuturePayments,
     getCartTotal
   ]);

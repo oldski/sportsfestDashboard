@@ -43,7 +43,7 @@ export default async function ShopLayout({
       </PageHeader>
       <PageBody>
         <ShoppingCartProvider>
-          <div className="mx-auto space-y-2 p-2 sm:space-y-8 sm:p-6">
+          <div className="mx-auto w-full space-y-6 p-2 py-4 sm:space-y-8 sm:p-6">
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:gap-8">
               <div className="xl:col-span-2">
                 {products}

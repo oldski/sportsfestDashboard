@@ -132,7 +132,7 @@ export function EventRosterDialog({
   // Get available team members not in this event
   const availablePlayers = React.useMemo(() => {
     const eventPlayerIds = new Set(eventData.players.map(p => p.id));
-    return availableTeamPlayers.filter(player => 
+    return availableTeamPlayers.filter(player =>
       !eventPlayerIds.has(player.id)
     );
   }, [availableTeamPlayers, eventData.players]);
@@ -141,7 +141,7 @@ export function EventRosterDialog({
   const filterPlayers = <T extends { firstName: string; lastName: string; gender: string }>(players: T[], tabKey: keyof typeof searchQueries) => {
     const query = searchQueries[tabKey];
     if (!query.trim()) return players;
-    
+
     const searchTerm = query.toLowerCase();
     return players.filter(player =>
       player.firstName.toLowerCase().includes(searchTerm) ||
@@ -161,14 +161,14 @@ export function EventRosterDialog({
   const sortedAvailablePlayers = [...filteredAvailablePlayers].sort((a, b) => {
     const aInterest = a.eventInterestRating || 0;
     const bInterest = b.eventInterestRating || 0;
-    
+
     // Sort by interest (higher interest first - remember 1 is highest, 5 is lowest)
     if (aInterest !== bInterest) {
       if (aInterest === 0 && bInterest !== 0) return 1; // No interest goes last
       if (bInterest === 0 && aInterest !== 0) return -1; // No interest goes last
       return aInterest - bInterest; // 1 comes before 5 (higher interest first)
     }
-    
+
     // If same interest, sort by name
     return a.firstName.localeCompare(b.firstName);
   });
@@ -228,7 +228,7 @@ export function EventRosterDialog({
   // Check if we can add more players of specific gender
   const canAddGender = (gender: string) => {
     if (eventType === 'corn_toss') return eventData.availableSlots.filled < eventData.availableSlots.total;
-    
+
     if (gender === 'male') {
       return eventData.availableSlots.genderBreakdown.male.filled < eventData.availableSlots.genderBreakdown.male.required;
     }
@@ -341,7 +341,7 @@ export function EventRosterDialog({
           <TabsContent value="current" className="mt-4">
             <ScrollArea className="h-[500px]">
               {sortedCurrentPlayers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-muted-foreground h-full">
                   <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>{searchQueries.current ? 'No players match your search' : 'No players in this event roster'}</p>
                   <p className="text-sm">{searchQueries.current ? 'Try adjusting your search terms' : 'Add players from the Available tab'}</p>
@@ -367,7 +367,7 @@ export function EventRosterDialog({
                       // For now, we can use the existing toast pattern
                     }}
                   />
-                  
+
                   {/* Squad Leader and Remove Player Actions */}
                   {sortedCurrentPlayers.length > 0 && (
                     <Card className="mt-6">

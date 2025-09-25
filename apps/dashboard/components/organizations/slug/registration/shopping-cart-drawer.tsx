@@ -12,13 +12,27 @@ import {
 
 import { Badge } from '@workspace/ui/components/badge';
 import { Button } from '@workspace/ui/components/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@workspace/ui/components/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@workspace/ui/components/dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+  DrawerClose,
+  DrawerTrigger
+} from '@workspace/ui/components/drawer';
 import { Input } from '@workspace/ui/components/input';
 import { Separator } from '@workspace/ui/components/separator';
 import { cn } from '@workspace/ui/lib/utils';
 
 import { useShoppingCart } from '~/contexts/shopping-cart-context';
+import { usePayment } from '~/hooks/use-payment';
+import { PaymentModal } from './payment-modal';
+import { StripeElementsProvider } from '~/contexts/stripe-context';
+import { useParams } from 'next/navigation';
+import { toast } from '@workspace/ui/components/sonner';
+import { useSession } from 'next-auth/react';
+import { useActiveOrganization } from '~/hooks/use-active-organization';
 
 // Format currency
 const formatCurrency = (amount: number) => {
@@ -28,7 +42,7 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-export function FloatingShoppingCart() {
+export function ShoppingCartDrawer() {
   const {
     items,
     removeItem,
@@ -37,17 +51,65 @@ export function FloatingShoppingCart() {
     getItemCount,
     getSubtotal,
     getTotalDeposit,
+    getDueToday,
     getFuturePayments,
     getCartTotal
   } = useShoppingCart();
 
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const params = useParams();
+  const organizationSlug = params.slug as string;
+  const organization = useActiveOrganization();
+  const { data: session } = useSession();
+
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
+
+  const {
+    isLoading: isPaymentLoading,
+    clientSecret,
+    orderId,
+    orderSummary,
+    createPaymentIntent,
+    resetPayment
+  } = usePayment({
+    organizationSlug,
+    onSuccess: (orderId) => {
+      toast.success('Payment completed successfully!');
+      clearCart();
+      resetPayment();
+      setPaymentModalOpen(false);
+    },
+    onError: (error) => {
+      toast.error(`Payment failed: ${error}`);
+    }
+  });
 
   const itemCount = getItemCount();
   const subtotal = getSubtotal();
   const totalDeposit = getTotalDeposit();
+  const dueToday = getDueToday();
   const futurePayments = getFuturePayments();
   const cartTotal = getCartTotal();
+
+  // Convert cart items to payment hook format
+  const convertCartItemsForPayment = () => {
+    return items.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      name: item.product.name,
+      unitPrice: item.unitPrice,
+      depositPrice: item.useDeposit ? item.depositPrice : undefined,
+      useDeposit: item.useDeposit,
+      fullPrice: item.product.organizationPrice?.customPrice || item.product.basePrice,
+    }));
+  };
+
+  const handleCheckout = async (paymentType: 'full' | 'deposit') => {
+    const paymentItems = convertCartItemsForPayment();
+    await createPaymentIntent(paymentItems, paymentType);
+    setIsDrawerOpen(false); // Close drawer
+    setPaymentModalOpen(true); // Open payment modal
+  };
 
   // Don't show floating cart if empty
   if (items.length === 0) {
@@ -56,37 +118,37 @@ export function FloatingShoppingCart() {
 
   return (
     <>
-      {/* Floating Cart Button - Only show on mobile/tablet */}
-      <div className="fixed top-12 right-6 z-50 xl:hidden">
-        <Button
-          size="lg"
-          onClick={() => setIsModalOpen(true)}
-          className="h-14 px-4 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground"
-        >
-          <ShoppingCartIcon className="size-5 mr-2" />
-          <span className="font-medium">
-            {itemCount} item{itemCount !== 1 ? 's' : ''}
-          </span>
-          <Badge variant="secondary" className="ml-2 bg-white/20 text-primary-foreground border-0">
-            {formatCurrency(totalDeposit > 0 ? totalDeposit : subtotal)}
-          </Badge>
-        </Button>
-      </div>
+      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+        {/* Floating Cart Button - Show on all screen sizes */}
+        <div className="fixed bottom-6 right-6 z-50">
+          <DrawerTrigger asChild>
+            <Button
+              size="lg"
+              className="h-14 px-4 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              <ShoppingCartIcon className="size-5 mr-2" />
+              <span className="font-medium">
+                {itemCount} item{itemCount !== 1 ? 's' : ''}
+              </span>
+              <Badge variant="secondary" className="ml-2 bg-white/20 text-primary-foreground border-0">
+                {formatCurrency(dueToday)}
+              </Badge>
+            </Button>
+          </DrawerTrigger>
+        </div>
 
-      {/* Modal Cart */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] p-0">
-          <DialogHeader className="px-6 py-4 border-b">
-            <DialogTitle className="flex items-center space-x-2">
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="border-b">
+            <DrawerTitle className="flex items-center space-x-2">
               <ShoppingCartIcon className="size-5" />
               <span>Shopping Cart</span>
               <Badge variant="secondary">
                 {itemCount} item{itemCount !== 1 ? 's' : ''}
               </Badge>
-            </DialogTitle>
-          </DialogHeader>
+            </DrawerTitle>
+          </DrawerHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 pb-4">
+          <div className="flex-1 overflow-y-auto px-4 py-4">
             {/* Clear Cart Button - Above items */}
             <div className="flex justify-end mb-4">
               <Button
@@ -94,7 +156,7 @@ export function FloatingShoppingCart() {
                 size="sm"
                 onClick={() => {
                   clearCart();
-                  setIsModalOpen(false); // Close modal after clearing
+                  setIsDrawerOpen(false); // Close drawer after clearing
                 }}
                 className="text-muted-foreground hover:text-destructive"
               >
@@ -114,7 +176,7 @@ export function FloatingShoppingCart() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => removeItem(item.productId)}
+                    onClick={() => removeItem(item.productId, item.useDeposit)}
                     className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive shrink-0 mt-0.5"
                   >
                     <XIcon className="size-3" />
@@ -148,7 +210,7 @@ export function FloatingShoppingCart() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.productId, item.quantity - 1, item.useDeposit)}
                         disabled={item.quantity <= 1}
                         className="h-8 w-8 p-0"
                       >
@@ -162,16 +224,17 @@ export function FloatingShoppingCart() {
                           : (item.product.maxQuantityPerOrg || 999)
                         }
                         value={item.quantity}
-                        onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
+                        onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1, item.useDeposit)}
                         className="w-14 h-8 text-center text-xs"
                       />
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.productId, item.quantity + 1, item.useDeposit)}
                         disabled={
-                          (item.product.availableQuantity !== null && item.quantity >= (item.product.availableQuantity + item.quantity)) ||
-                          (item.product.maxQuantityPerOrg !== undefined && item.quantity >= item.product.maxQuantityPerOrg)
+                          item.product.availableQuantity !== null
+                            ? item.quantity >= item.product.availableQuantity
+                            : (item.product.maxQuantityPerOrg ? item.quantity >= item.product.maxQuantityPerOrg : false)
                         }
                         className="h-8 w-8 p-0"
                       >
@@ -201,8 +264,8 @@ export function FloatingShoppingCart() {
               {totalDeposit > 0 && (
                 <>
                   <div className="flex justify-between text-sm">
-                    <span>Due Today (Deposits):</span>
-                    <span className="font-medium text-blue-600">{formatCurrency(totalDeposit)}</span>
+                    <span>Due Today:</span>
+                    <span className="font-medium text-blue-600">{formatCurrency(dueToday)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Future Payments:</span>
@@ -231,7 +294,7 @@ export function FloatingShoppingCart() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-blue-700">Pay today:</span>
-                    <span className="font-medium text-blue-900">{formatCurrency(totalDeposit)}</span>
+                    <span className="font-medium text-blue-900">{formatCurrency(dueToday)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-blue-700">Pay later:</span>
@@ -242,28 +305,49 @@ export function FloatingShoppingCart() {
             )}
           </div>
 
-          {/* Checkout Footer */}
-          <div className="border-t px-6 py-4">
+          {/* Drawer Footer with Buttons */}
+          <DrawerFooter className="border-t">
             <Button
               className="w-full"
               size="lg"
-              disabled={items.length === 0}
-              onClick={() => {
-                // Close modal and proceed to checkout
-                setIsModalOpen(false);
-                // TODO: Implement actual checkout logic
-                console.log('Proceeding to checkout...');
-              }}
+              onClick={() => handleCheckout(totalDeposit > 0 ? 'deposit' : 'full')}
+              disabled={items.length === 0 || isPaymentLoading}
             >
               <CreditCardIcon className="size-4 mr-2" />
-              Proceed to Checkout
-              {totalDeposit > 0 && (
-                <span className="ml-2">({formatCurrency(totalDeposit > 0 ? totalDeposit : subtotal)})</span>
-              )}
+              {isPaymentLoading ? 'Processing...' : `Complete Purchase - ${formatCurrency(dueToday)}`}
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            <DrawerClose asChild>
+              <Button variant="outline" className="w-full">
+                Continue Shopping
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Payment Modal */}
+      {clientSecret && orderId && orderSummary && (
+        <StripeElementsProvider clientSecret={clientSecret}>
+          <PaymentModal
+            isOpen={paymentModalOpen}
+            onClose={() => {
+              setPaymentModalOpen(false);
+              resetPayment();
+            }}
+            onSuccess={(completedOrderId) => {
+              toast.success('Payment completed successfully!');
+              clearCart();
+              resetPayment();
+              setPaymentModalOpen(false);
+            }}
+            clientSecret={clientSecret}
+            orderId={orderId}
+            orderSummary={orderSummary}
+            organizationName={organization.name}
+            userEmail={session?.user?.email || ''}
+          />
+        </StripeElementsProvider>
+      )}
     </>
   );
 }

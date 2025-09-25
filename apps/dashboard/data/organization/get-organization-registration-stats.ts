@@ -87,12 +87,42 @@ export async function getOrganizationRegistrationStats(): Promise<OrganizationRe
       );
 
       // Get order statistics for the active event year
+      // Exclude abandoned orders (pending orders with no payments)
       const orderStats = await db
         .select({
-          totalOrders: sql<number>`COUNT(*)`,
-          totalAmount: sql<number>`COALESCE(SUM(${orderTable.totalAmount}), 0)`,
+          totalOrders: sql<number>`
+            COUNT(*) FILTER (WHERE
+              ${orderTable.status} != ${OrderStatus.PENDING}
+              OR EXISTS (
+                SELECT 1 FROM ${orderPaymentTable}
+                WHERE ${orderPaymentTable.orderId} = ${orderTable.id}
+                AND ${orderPaymentTable.status} = ${PaymentStatus.COMPLETED}
+              )
+            )
+          `,
+          totalAmount: sql<number>`
+            COALESCE(SUM(CASE
+              WHEN ${orderTable.status} != ${OrderStatus.PENDING}
+              OR EXISTS (
+                SELECT 1 FROM ${orderPaymentTable}
+                WHERE ${orderPaymentTable.orderId} = ${orderTable.id}
+                AND ${orderPaymentTable.status} = ${PaymentStatus.COMPLETED}
+              )
+              THEN ${orderTable.totalAmount}
+              ELSE 0
+            END), 0)
+          `,
           completedOrders: sql<number>`COUNT(*) FILTER (WHERE ${orderTable.status} = ${OrderStatus.FULLY_PAID})`,
-          pendingOrders: sql<number>`COUNT(*) FILTER (WHERE ${orderTable.status} IN (${OrderStatus.PENDING}, ${OrderStatus.DEPOSIT_PAID}))`,
+          pendingOrders: sql<number>`
+            COUNT(*) FILTER (WHERE
+              ${orderTable.status} IN (${OrderStatus.PENDING}, ${OrderStatus.DEPOSIT_PAID})
+              AND EXISTS (
+                SELECT 1 FROM ${orderPaymentTable}
+                WHERE ${orderPaymentTable.orderId} = ${orderTable.id}
+                AND ${orderPaymentTable.status} = ${PaymentStatus.COMPLETED}
+              )
+            )
+          `,
         })
         .from(orderTable)
         .where(whereCondition);
@@ -122,10 +152,11 @@ export async function getOrganizationRegistrationStats(): Promise<OrganizationRe
       
       itemStats.forEach(item => {
         const productName = item.productName.toLowerCase();
+        const quantity = Number(item.totalQuantity);
         if (productName.includes('team') || productName.includes('company team')) {
-          totalTeams += item.totalQuantity;
+          totalTeams += quantity;
         } else if (productName.includes('tent') || productName.includes('pavilion')) {
-          totalTents += item.totalQuantity;
+          totalTents += quantity;
         }
       });
 
@@ -145,7 +176,7 @@ export async function getOrganizationRegistrationStats(): Promise<OrganizationRe
 
       const stats = orderStats[0];
       const payments = paymentStats[0];
-      
+
       const totalOrders = stats?.totalOrders || 0;
       const totalAmount = stats?.totalAmount || 0;
       const amountPaid = payments?.totalPaid || 0;

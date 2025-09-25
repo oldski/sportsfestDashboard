@@ -53,7 +53,7 @@ export default async function TeamOverviewLayout({
           <PageSecondaryBar>
             <div className="flex items-center justify-between w-full">
               <TeamSecondaryNavigation teamsData={teamsData} slug={slug} />
-              <RosterExportDropdown teamData={team} eventRostersData={eventRostersData} />
+              <RosterExportDropdown teamData={team} eventRostersData={eventRostersData || undefined} />
             </div>
           </PageSecondaryBar>
         </PageHeader>

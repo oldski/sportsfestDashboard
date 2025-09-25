@@ -21,7 +21,10 @@ export default async function PlayersTablePage({
   const [playersData, eventYears] = await Promise.all([
     getPlayers({
       organizationId: organization.id,
-      // Keep it simple - no complex filtering initially
+      pagination: {
+        page: 1,
+        limit: 1000 // Get all players for export - set high limit
+      }
     }),
     getEventYears(),
   ]);

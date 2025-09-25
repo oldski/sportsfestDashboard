@@ -14,7 +14,6 @@ import {
 } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import {
-  MoreHorizontalIcon,
   DownloadIcon,
   EyeIcon,
   SearchIcon,
@@ -29,13 +28,6 @@ import {
   DataTablePagination
 } from '@workspace/ui/components/data-table';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@workspace/ui/components/dropdown-menu';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -47,12 +39,13 @@ import { toast } from '@workspace/ui/components/sonner';
 import { cn } from '@workspace/ui/lib/utils';
 
 import { OrderDetailsModal } from '~/components/organizations/slug/registration/order-details-modal';
-import { downloadOrderPDF } from '~/lib/pdf-utils';
+import { generateOrderPDF } from '~/components/organizations/slug/registration/generate-order-pdf';
 import type { RegistrationOrderDto } from '~/types/dtos/registration-order-dto';
 
 export type OrdersDataTableProps = {
   orders: RegistrationOrderDto[];
   autoOpenOrderId?: string;
+  organizationName: string;
 };
 
 // Status badge variant mapping
@@ -88,7 +81,8 @@ const formatDate = (date: Date) => {
 
 export function OrdersDataTable({
   orders,
-  autoOpenOrderId
+  autoOpenOrderId,
+  organizationName
 }: OrdersDataTableProps): React.JSX.Element {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'createdAt', desc: true } // Default to newest first
@@ -107,10 +101,24 @@ export function OrdersDataTable({
     return Array.from(eventYearMap.values()).sort((a, b) => b.year - a.year);
   }, [orders]);
 
-  // Apply event year filter
+  // Apply event year filter and hide pending $0 orders
   const filteredOrders = React.useMemo(() => {
-    if (eventYearFilter === 'all') return orders;
-    return orders.filter(order => order.eventYear.id === eventYearFilter);
+    // First filter out pending orders with nothing paid (abandoned cart orders)
+    const validOrders = orders.filter(order => {
+      // Hide pending orders that haven't been paid (abandoned carts)
+      // These are orders where status is pending AND no payments have been made
+      if (order.status === 'pending') {
+        const totalPaid = order.payments.reduce((sum, payment) => sum + payment.amount, 0);
+        if (totalPaid === 0) {
+          return false; // Hide abandoned cart orders
+        }
+      }
+      return true;
+    });
+
+    // Then apply event year filter
+    if (eventYearFilter === 'all') return validOrders;
+    return validOrders.filter(order => order.eventYear.id === eventYearFilter);
   }, [orders, eventYearFilter]);
 
   // Auto-open order dialog if autoOpenOrderId is provided
@@ -253,53 +261,33 @@ export function OrdersDataTable({
         const order = row.original;
 
         return (
-          <div className="text-right">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreHorizontalIcon className="size-4" />
-                  <span className="sr-only">Open actions menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[160px]">
-                <DropdownMenuItem
-                  onClick={() => {
-                    NiceModal.show(OrderDetailsModal, { order });
-                  }}
-                >
-                  <EyeIcon className="mr-2 size-4" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={async () => {
-                    try {
-                      await downloadOrderPDF(order);
-                      toast.success('Order PDF downloaded successfully');
-                    } catch (error) {
-                      console.error('Error downloading PDF:', error);
-                      toast.error('Failed to download order PDF');
-                    }
-                  }}
-                >
-                  <DownloadIcon className="mr-2 size-4" />
-                  Download PDF
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(order.orderNumber);
-                      toast.success('Order number copied to clipboard');
-                    } catch (error) {
-                      console.error('Error copying to clipboard:', error);
-                      toast.error('Failed to copy order number');
-                    }
-                  }}
-                >
-                  Copy Order #
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="text-right flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                NiceModal.show(OrderDetailsModal, { order });
+              }}
+            >
+              <EyeIcon className="size-4" />
+              <span className="sr-only">View Details</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await generateOrderPDF(order, organizationName);
+                  toast.success('Order PDF downloaded successfully');
+                } catch (error) {
+                  console.error('Error downloading PDF:', error);
+                  toast.error('Failed to download order PDF');
+                }
+              }}
+            >
+              <DownloadIcon className="size-4" />
+              <span className="sr-only">Download PDF</span>
+            </Button>
           </div>
         );
       }
@@ -353,7 +341,9 @@ export function OrdersDataTable({
       </div>
 
       {/* Data table */}
-      <DataTable table={table} />
+      <div className="overflow-x-auto">
+        <DataTable table={table} className="min-w-[800px]" />
+      </div>
       {/* Pagination */}
       <DataTablePagination table={table} />
     </div>

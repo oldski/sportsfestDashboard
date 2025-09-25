@@ -106,17 +106,17 @@ export function DragDropRoster({
     if (eventType === EventType.CORN_TOSS) {
       return { male: 0, female: 0, any: 4, total: 4 }; // All players are "active" in corn toss
     }
-    
-    // Event-specific starter requirements
+
+    // Starter requirements for each event (the active players during the event)
     switch (eventType) {
       case 'beach_volleyball':
-        return { male: 3, female: 3, any: 0, total: 6 };
+        return { male: 3, female: 3, any: 0, total: 6 }; // 6 active players on court
       case 'beach_dodgeball':
-        return { male: 3, female: 3, any: 0, total: 6 };
+        return { male: 3, female: 3, any: 0, total: 6 }; // 6 active players on court
       case 'bote_beach_challenge':
-        return { male: 4, female: 3, any: 0, total: 7 };
+        return { male: 4, female: 3, any: 0, total: 7 }; // 7 active participants
       case 'tug_of_war':
-        return { male: 3, female: 2, any: 0, total: 5 };
+        return { male: 3, female: 2, any: 0, total: 5 }; // 5 active pullers
       default:
         return { male: 0, female: 0, any: 0, total: 0 };
     }

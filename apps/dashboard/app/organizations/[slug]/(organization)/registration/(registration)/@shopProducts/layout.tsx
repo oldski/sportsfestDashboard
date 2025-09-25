@@ -16,8 +16,8 @@ export default function ShopProductsLayout({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <ShoppingCartIcon className="h-5 w-5 text-blue-600" />
-            <CardTitle className="text-lg">Shop Products</CardTitle>
+            <ShoppingCartIcon className="h-5 w-5" />
+            <CardTitle className="text-lg">Registration</CardTitle>
           </div>
           <ArrowRightIcon className="h-4 w-4 text-muted-foreground" />
         </div>

@@ -20,8 +20,9 @@ export function SiteHeading({
     <div className={cn( "mx-auto flex max-w-5xl flex-col items-center gap-6 text-center", className)}>
       {badge && (
         <Badge
-          variant="outline"
-          className={cn("h-8 rounded-full px-3 text-sm font-medium shadow-xs", className)}
+          variant="default"
+          // className={cn("h-8 rounded-full px-3 text-sm font-medium shadow-xs", className)}
+          className={cn("h-8 rounded-full px-3 text-sm font-medium shadow-xs")}
         >
           {badge}
         </Badge>
@@ -30,7 +31,7 @@ export function SiteHeading({
         <h1 className="text-pretty text-5xl font-bold lg:text-6xl">{title}</h1>
       )}
       {description && (
-        <p className={cn("text-lg text-muted-foreground lg:text-xl", className)}>
+        <p className={cn("text-lg text-muted-foreground opacity-85 lg:text-xl", className)}>
           {description}
         </p>
       )}

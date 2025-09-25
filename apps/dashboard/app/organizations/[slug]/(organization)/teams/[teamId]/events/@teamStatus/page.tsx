@@ -39,7 +39,7 @@ export default async function TeamStatusPage({
           </p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold">{team.memberCount}/20</div>
+          <div className="text-2xl font-bold">{team.memberCount}</div>
           <div className="text-sm text-muted-foreground">Team Members</div>
         </div>
       </div>

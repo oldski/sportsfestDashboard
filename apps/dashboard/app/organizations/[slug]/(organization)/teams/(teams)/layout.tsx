@@ -21,7 +21,6 @@ export type TeamsOverviewLayoutProps = {
 export default async function TeamsOverviewLayout({
   teams,
   companyTeamsOverview,
-  transferWarnings,
   availablePlayers,
   params,
 }: TeamsOverviewLayoutProps): Promise<React.JSX.Element> {
@@ -49,23 +48,25 @@ export default async function TeamsOverviewLayout({
             </PageActions>
           </PagePrimaryBar>
           <PageSecondaryBar>
-            <TeamSecondaryNavigation teamsData={teamsData} slug={slug} />
+            <div className="flex items-center justify-between w-full">
+              <TeamSecondaryNavigation teamsData={teamsData} slug={slug} />
+            </div>
           </PageSecondaryBar>
         </PageHeader>
         <PageBody>
-          { !teamsData.eventYear ? (
-            <Card>
-              <CardContent className="flex items-center justify-center p-8">
-                <div className="text-center">
-                  <h2 className="text-xl font-semibold mb-2">No Active Event Year</h2>
-                  <p className="text-muted-foreground">
-                    Teams can only be managed when there is an active event year.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="mx-auto w-full space-y-2 p-2 sm:space-y-8 sm:p-6">
+          <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
+            { !teamsData.eventYear ? (
+              <Card>
+                <CardContent className="flex items-center justify-center p-8">
+                  <div className="text-center">
+                    <h2 className="text-xl font-semibold mb-2">No Active Event Year</h2>
+                    <p className="text-muted-foreground">
+                      Teams can only be managed when there is an active event year.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
               <div className="space-y-6">
                 {/* Company Teams Overview */}
                 {companyTeamsOverview}
@@ -73,16 +74,14 @@ export default async function TeamsOverviewLayout({
                 {/* Teams Grid */}
                 {teams}
 
-                {/* Available Players and Transfer Warnings */}
+                {/* Available Players */}
                 <div className="grid gap-6 lg:grid-cols-2">
                   {availablePlayers}
-                  <div className={teamsData.availablePlayerCount > 0 ? '' : 'lg:col-span-2'}>
-                    {transferWarnings}
-                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
         </PageBody>
       </Page>
     </TransitionProvider>

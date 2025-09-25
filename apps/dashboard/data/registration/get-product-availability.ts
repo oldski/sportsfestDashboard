@@ -30,14 +30,30 @@ export async function getProductAvailability(
     console.log('Found organization ID:', organizationId);
 
     // Get all products for current event year with their purchased quantities
+    // Exclude abandoned orders (pending orders with no payments)
     const result = await db.execute(sql`
-      SELECT 
+      SELECT
         p.id as "productId",
         p."maxQuantityPerOrg",
-        COALESCE(SUM(oi.quantity), 0) as "purchasedQuantity"
+        COALESCE(SUM(
+          CASE
+            WHEN o."eventYearId" = ${currentEventYearId}
+            AND o."organizationId" = ${organizationId}
+            AND (
+              o.status != 'pending'
+              OR EXISTS (
+                SELECT 1 FROM "orderPayment" op
+                WHERE op."orderId" = o.id
+                AND op.status = 'completed'
+              )
+            )
+            THEN oi.quantity
+            ELSE 0
+          END
+        ), 0) as "purchasedQuantity"
       FROM "product" p
       LEFT JOIN "orderItem" oi ON oi."productId" = p.id
-      LEFT JOIN "order" o ON o.id = oi."orderId" AND o."organizationId" = ${organizationId}
+      LEFT JOIN "order" o ON o.id = oi."orderId"
       WHERE p."eventYearId" = ${currentEventYearId}
         AND p.status = 'active'
       GROUP BY p.id, p."maxQuantityPerOrg"
@@ -53,7 +69,7 @@ export async function getProductAvailability(
         ? Math.max(0, maxQuantityPerOrg - purchasedQuantity)
         : null; // null means unlimited
 
-      console.log(`Product ${row.productId}: max=${maxQuantityPerOrg}, purchased=${purchasedQuantity}, available=${availableQuantity}`);
+      // console.log(`Product ${row.productId}: max=${maxQuantityPerOrg}, purchased=${purchasedQuantity}, available=${availableQuantity}`);
 
       return {
         productId: row.productId as string,

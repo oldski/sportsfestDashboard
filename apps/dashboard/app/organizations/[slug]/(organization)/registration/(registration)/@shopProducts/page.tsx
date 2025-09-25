@@ -17,11 +17,11 @@ export default async function ShopProductsPage({ params }: ShopProductsPageProps
   return(
     <>
       <CardDescription className="mb-4">
-        Browse and purchase SportsFest products and services
+        Browse and purchase SportsFest teams and tents
       </CardDescription>
       <Button asChild className="w-full">
         <Link href={replaceOrgSlug(routes.dashboard.organizations.slug.registration.Shop, slug)}>
-          Browse Products
+          Get Your Team
         </Link>
       </Button>
     </>

@@ -30,6 +30,7 @@ import {
 import type { PlayerWithDetails, GetPlayersResult } from '~/data/players/get-players';
 import { formatPhoneNumber } from '~/lib/formatters';
 import {Input} from "@workspace/ui/components/input";
+import { generatePlayersReactPDF } from './generate-players-pdf';
 
 interface PlayersDataTableProps {
   data: GetPlayersResult;
@@ -60,17 +61,15 @@ function getGenderDisplay(gender: string) {
 
 // Custom export functions for players data table
 const exportPlayersToCSV = async (
-  table: ReactTable<PlayerWithDetails>,
+  players: PlayerWithDetails[],
   filename: string
 ) => {
   const Papa = (await import('papaparse')).default;
-  const rows = table.getRowModel().rows;
-  
+
   // Define headers manually for complete control
   const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Age', 'T-Shirt', 'Registered'];
 
-  const data = rows.map((row) => {
-    const player = row.original;
+  const data = players.map((player) => {
     return {
       'First Name': player.firstName || '',
       'Last Name': player.lastName || '',
@@ -95,19 +94,17 @@ const exportPlayersToCSV = async (
 };
 
 const exportPlayersToExcel = async (
-  table: ReactTable<PlayerWithDetails>,
+  players: PlayerWithDetails[],
   filename: string
 ) => {
   const XLSX = await import('xlsx');
-  const rows = table.getRowModel().rows;
-  
+
   // Define headers manually for complete control
   const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Age', 'T-Shirt', 'Registered'];
 
   const data = [
     headers,
-    ...rows.map((row) => {
-      const player = row.original;
+    ...players.map((player) => {
       return [
         player.firstName || '',
         player.lastName || '',
@@ -128,58 +125,24 @@ const exportPlayersToExcel = async (
 };
 
 const exportPlayersToPDF = async (
-  table: ReactTable<PlayerWithDetails>,
-  filename: string,
-  title?: string
+  players: PlayerWithDetails[],
+  organizationName: string,
+  eventYearName?: string
 ) => {
-  const { jsPDF } = await import('jspdf');
-  const autoTable = (await import('jspdf-autotable')).default;
-
-  const doc = new jsPDF();
-
-  if (title) {
-    doc.setFontSize(16);
-    doc.text(title, 14, 20);
-  }
-
-  const rows = table.getRowModel().rows;
-  
-  // Define headers manually for complete control
-  const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Age', 'T-Shirt', 'Registered'];
-
-  const data = rows.map((row) => {
-    const player = row.original;
-    return [
-      player.firstName || '',
-      player.lastName || '',
-      player.email || '',
-      player.phone || '',
-      getGenderDisplay(player.gender),
-      player.dateOfBirth ? format(new Date(player.dateOfBirth), 'yyyy-MM-dd') : '',
-      player.tshirtSize ? player.tshirtSize.toUpperCase() : '',
-      player.createdAt ? format(new Date(player.createdAt), 'yyyy-MM-dd') : '',
-    ];
-  });
-
-  // Use autoTable directly
-  autoTable(doc, {
-    head: [headers],
-    body: data,
-    startY: title ? 30 : 20,
-  });
-
-  doc.save(`${filename}.pdf`);
+  await generatePlayersReactPDF(players, organizationName, eventYearName);
 };
 
 // Custom DataTableExport component for players
 function PlayersDataTableExport({
-  table,
-  filename,
-  title
+  players,
+  organizationName,
+  eventYearName,
+  filename
 }: {
-  table: ReactTable<PlayerWithDetails>;
+  players: PlayerWithDetails[];
+  organizationName: string;
+  eventYearName?: string;
   filename: string;
-  title?: string;
 }) {
   return (
     <DropdownMenu>
@@ -193,19 +156,19 @@ function PlayersDataTableExport({
         <DropdownMenuLabel>Export data</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => exportPlayersToCSV(table, filename)}
+          onClick={() => exportPlayersToCSV(players, filename)}
           className="cursor-pointer"
         >
           Export as CSV
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => exportPlayersToExcel(table, filename)}
+          onClick={() => exportPlayersToExcel(players, filename)}
           className="cursor-pointer"
         >
           Export as Excel
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => exportPlayersToPDF(table, filename, title)}
+          onClick={() => exportPlayersToPDF(players, organizationName, eventYearName)}
           className="cursor-pointer"
         >
           Export as PDF
@@ -215,7 +178,7 @@ function PlayersDataTableExport({
   );
 }
 
-export function PlayersDataTable({ data, organization }: PlayersDataTableProps) {
+export function PlayersDataTable({ data, organization, eventYears }: PlayersDataTableProps) {
   const [globalFilter, setGlobalFilter] = React.useState('');
 
   const columns: ColumnDef<PlayerWithDetails>[] = [
@@ -321,20 +284,22 @@ export function PlayersDataTable({ data, organization }: PlayersDataTableProps) 
     onGlobalFilterChange: setGlobalFilter,
   });
 
+  console.log(data)
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Input
           placeholder="Search players..."
           value={globalFilter}
           onChange={(event) => setGlobalFilter(event.target.value)}
           className="max-w-sm"
         />
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center">
           <PlayersDataTableExport
-            table={table}
+            players={data.players}
+            organizationName={organization.name}
+            eventYearName={data.eventYear?.name}
             filename={`players-${organization.slug}-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}`}
-            title={`${organization.name} Roster`}
           />
           <DataTableColumnOptionsHeader table={table} />
         </div>

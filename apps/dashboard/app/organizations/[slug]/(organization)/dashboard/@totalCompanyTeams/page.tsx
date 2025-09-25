@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
-import { VolleyballIcon } from 'lucide-react';
+import {TrophyIcon, UsersIcon, VolleyballIcon} from 'lucide-react';
 
 import { Button } from '@workspace/ui/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
@@ -25,12 +25,14 @@ export default async function TotalCompanyTeamsPage({
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="space-y-1">
-          <CardTitle className="text-sm font-medium">Company Teams</CardTitle>
-          <CardDescription className="text-xs text-muted-foreground">
+          <CardTitle className="flex items-center gap-2">
+            <TrophyIcon className="h-5 w-5" />
+            Company Teams
+          </CardTitle>
+          <CardDescription>
             {stats.currentEventYear.name}
           </CardDescription>
         </div>
-        <VolleyballIcon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent className="flex h-full items-end">
         <div className="flex w-full items-center justify-between">

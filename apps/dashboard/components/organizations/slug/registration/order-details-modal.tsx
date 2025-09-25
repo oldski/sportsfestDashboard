@@ -38,12 +38,13 @@ import { MediaQueries } from '@workspace/ui/lib/media-queries';
 import { cn } from '@workspace/ui/lib/utils';
 
 import { useEnhancedModal } from '~/hooks/use-enhanced-modal';
-import { downloadOrderPDF } from '~/lib/pdf-utils';
+import { generateOrderPDF } from '~/components/organizations/slug/registration/generate-order-pdf';
 import { useOrderPaymentCompletion } from '~/hooks/use-order-payment-completion';
 import { PaymentModal } from '~/components/organizations/slug/registration/payment-modal';
 import { StripeElementsProvider } from '~/contexts/stripe-context';
 import { useParams } from 'next/navigation';
 import { useActiveOrganization } from '~/hooks/use-active-organization';
+import { useSession } from 'next-auth/react';
 import type { RegistrationOrderDto } from '~/types/dtos/registration-order-dto';
 
 export type OrderDetailsModalProps = NiceModalHocProps & {
@@ -84,16 +85,17 @@ const formatDate = (date: Date) => {
 export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
   ({ order }) => {
     console.log('🔄 OrderDetailsModal component starting render');
-    
+
     const modal = useEnhancedModal();
     const mdUp = useMediaQuery(MediaQueries.MdUp, { ssr: false });
-    
+
     console.log('🔍 Modal hook state:', { visible: modal.visible });
-    
+
     const params = useParams();
     const organizationSlug = params.slug as string;
     const organization = useActiveOrganization();
-    
+    const { data: session } = useSession();
+
     // Debug organization context
     React.useEffect(() => {
       console.log('🔍 Organization context:', {
@@ -102,15 +104,15 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
         hasOrganization: !!organization
       });
     }, [organizationSlug, organization]);
-    
+
     const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
-    
+
     // Reset payment modal state on component mount to ensure clean state
     React.useEffect(() => {
       console.log('🔄 Component mounted, resetting payment modal state');
       setPaymentModalOpen(false);
     }, []);
-    
+
     const {
       isLoading: isPaymentLoading,
       clientSecret,
@@ -134,7 +136,7 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
 
     const handleDownload = async () => {
       try {
-        await downloadOrderPDF(order);
+        await generateOrderPDF(order, organization?.name || 'Organization');
         toast.success('Order PDF downloaded successfully');
       } catch (error) {
         console.error('Error downloading PDF:', error);
@@ -187,15 +189,15 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
     }, [shouldOpenModal, clientSecret, paymentOrderId, orderSummary, paymentModalOpen]);
 
     console.log('🔍 About to calculate payment totals...');
-    
+
     const totalPaid = order.payments.reduce((sum, payment) => sum + payment.amount, 0);
     const balanceOwed = order.totalAmount - totalPaid;
     const canCompletePayment = balanceOwed > 0 && order.status === 'deposit_paid';
-    
+
     console.log('✅ Payment calculations done:', { totalPaid, balanceOwed, canCompletePayment });
 
     const title = `Order ${order.orderNumber}`;
-    
+
     const renderContent = (
       <div className="space-y-6">
         {/* Order Header */}
@@ -378,7 +380,7 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
         >
           Copy Order #
         </Button>
-        
+
         <div className="flex items-center space-x-2">
           {canCompletePayment && (
             <Button
@@ -448,7 +450,7 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
 
       if (clientSecret && paymentOrderId && orderSummary) {
         console.log('✅ All conditions met, creating Stripe payment modal component');
-        
+
         return (
           <StripeElementsProvider clientSecret={clientSecret}>
             <PaymentModal
@@ -470,11 +472,12 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
               orderId={paymentOrderId}
               orderSummary={orderSummary}
               organizationName={organization?.name || 'Organization'}
+              userEmail={session?.user?.email || ''}
             />
           </StripeElementsProvider>
         );
       }
-      
+
       console.log('❌ Payment modal conditions not met, not rendering');
       return null;
     }, [clientSecret, paymentOrderId, orderSummary, paymentModalOpen, organization?.name]);

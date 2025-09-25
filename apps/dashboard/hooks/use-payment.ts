@@ -18,6 +18,8 @@ export interface CartItem {
   name: string;
   unitPrice: number;
   depositPrice?: number;
+  useDeposit?: boolean;
+  fullPrice: number;
 }
 
 export interface OrderSummary {
@@ -26,10 +28,14 @@ export interface OrderSummary {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
+    isDeposit?: boolean;
+    fullPrice?: number;
   }>;
   subtotal: number;
   depositAmount?: number;
   totalAmount: number;
+  dueToday: number;
+  futurePayments: number;
   paymentType: 'full' | 'deposit';
 }
 
@@ -45,24 +51,45 @@ export function usePayment({ organizationSlug, onSuccess, onError }: PaymentHook
   ) => {
     setIsLoading(true);
     try {
-      // Calculate order summary
-      const items = cartItems.map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.unitPrice * item.quantity,
-      }));
+      // Calculate order summary similar to shopping cart logic
+      const items = cartItems.map(item => {
+        const isUsingDeposit = item.useDeposit && item.depositPrice !== undefined;
+
+        return {
+          name: item.name + (isUsingDeposit ? ' (Deposit)' : ''),
+          quantity: item.quantity,
+          unitPrice: item.unitPrice, // This is already the effective price from cart
+          totalPrice: item.unitPrice * item.quantity,
+          isDeposit: isUsingDeposit,
+          fullPrice: isUsingDeposit ? item.fullPrice : undefined,
+        };
+      });
 
       const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
-      const depositAmount = cartItems.reduce((sum, item) => 
-        sum + (item.depositPrice || 0) * item.quantity, 0
-      );
+
+      // Calculate future payments for deposit items
+      const futurePayments = items.reduce((sum, item) => {
+        if (item.isDeposit && item.fullPrice) {
+          return sum + ((item.fullPrice - item.unitPrice) * item.quantity);
+        }
+        return sum;
+      }, 0);
+
+      // Calculate total order value (including future payments)
+      const totalOrderValue = items.reduce((sum, item) => {
+        if (item.isDeposit && item.fullPrice) {
+          return sum + (item.fullPrice * item.quantity);
+        }
+        return sum + item.totalPrice;
+      }, 0);
 
       const summary: OrderSummary = {
         items,
         subtotal,
-        depositAmount: paymentType === 'deposit' ? depositAmount : undefined,
-        totalAmount: subtotal,
+        depositAmount: paymentType === 'deposit' ? subtotal : undefined,
+        totalAmount: totalOrderValue,
+        dueToday: subtotal,
+        futurePayments,
         paymentType,
       };
 

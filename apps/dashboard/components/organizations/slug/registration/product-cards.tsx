@@ -47,15 +47,29 @@ type ProductCardProps = {
 };
 
 function ProductCard({ product }: ProductCardProps) {
-  const { addItem } = useShoppingCart();
+  const { addItem, items } = useShoppingCart();
   const [quantity, setQuantity] = React.useState(1);
   const [paymentOption, setPaymentOption] = React.useState<'full' | 'deposit'>('full');
   const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
 
+  // Calculate quantities already in cart for this product
+  const cartQuantity = React.useMemo(() => {
+    return items
+      .filter(item => item.productId === product.id)
+      .reduce((total, item) => total + item.quantity, 0);
+  }, [items, product.id]);
+
+  // Calculate effective available quantity considering cart items
+  const effectiveAvailableQuantity = React.useMemo(() => {
+    if (product.availableQuantity === null) return null; // No limit
+    return Math.max(0, product.availableQuantity - cartQuantity);
+  }, [product.availableQuantity, cartQuantity]);
+
   const isOutOfStock = product.status === 'archived' || (product.totalInventory !== undefined && product.totalInventory === 0);
   const isInactive = product.status === 'inactive';
-  const isQuantityLimited = product.availableQuantity === 0;
+  const isQuantityLimited = effectiveAvailableQuantity !== null && effectiveAvailableQuantity === 0;
   const isUnavailable = isOutOfStock || isInactive || isQuantityLimited;
+
 
   const effectivePrice = product.organizationPrice?.customPrice || product.basePrice;
   const effectiveDepositAmount = product.organizationPrice?.customDepositAmount || product.depositAmount;
@@ -67,14 +81,14 @@ function ProductCard({ product }: ProductCardProps) {
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity < 1) return;
 
-    // Check available quantity limits (takes precedence over maxQuantityPerOrg)
-    if (product.availableQuantity !== null && newQuantity > product.availableQuantity) {
-      toast.error(`Only ${product.availableQuantity} available for your organization`);
+    // Check effective available quantity (considering cart items)
+    if (effectiveAvailableQuantity !== null && newQuantity > effectiveAvailableQuantity) {
+      toast.error(`Only ${effectiveAvailableQuantity} more available for your organization`);
       return;
     }
 
     // Legacy check for products without availability system
-    if (product.maxQuantityPerOrg && newQuantity > product.maxQuantityPerOrg) {
+    if (effectiveAvailableQuantity === null && product.maxQuantityPerOrg && newQuantity > product.maxQuantityPerOrg) {
       toast.error(`Maximum quantity is ${product.maxQuantityPerOrg}`);
       return;
     }
@@ -202,7 +216,7 @@ function ProductCard({ product }: ProductCardProps) {
               <Input
                 type="number"
                 min="1"
-                max={product.availableQuantity !== null ? product.availableQuantity : (product.maxQuantityPerOrg || 999)}
+                max={effectiveAvailableQuantity !== null ? effectiveAvailableQuantity : (product.maxQuantityPerOrg || 999)}
                 value={quantity}
                 onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
                 className="w-20 text-center"
@@ -214,8 +228,8 @@ function ProductCard({ product }: ProductCardProps) {
                 onClick={() => handleQuantityChange(quantity + 1)}
                 disabled={
                   isUnavailable ||
-                  (product.availableQuantity !== null && quantity >= product.availableQuantity) ||
-                  (product.maxQuantityPerOrg !== undefined && quantity >= product.maxQuantityPerOrg)
+                  (effectiveAvailableQuantity !== null && quantity >= effectiveAvailableQuantity) ||
+                  (effectiveAvailableQuantity === null && product.maxQuantityPerOrg != null && quantity >= product.maxQuantityPerOrg)
                 }
               >
                 <PlusIcon className="size-4" />
@@ -225,13 +239,18 @@ function ProductCard({ product }: ProductCardProps) {
             <div className="mt-1 space-y-1">
               {product.availableQuantity !== null ? (
                 <p className="text-xs text-muted-foreground">
-                  {product.availableQuantity === 0 ? (
-                    <span className="text-destructive font-medium">Limit reached for your organization</span>
+                  {effectiveAvailableQuantity === 0 ? (
+                    <span className="text-destructive font-medium">
+                      {cartQuantity > 0 ? 'All available items in cart' : 'Limit reached for your organization'}
+                    </span>
                   ) : (
-                    `${product.availableQuantity} remaining for your organization`
+                    `${effectiveAvailableQuantity} remaining for your organization`
                   )}
                   {product.purchasedQuantity > 0 && (
                     <span className="ml-2">({product.purchasedQuantity} purchased)</span>
+                  )}
+                  {cartQuantity > 0 && (
+                    <span className="ml-2 text-blue-600">({cartQuantity} in cart)</span>
                   )}
                 </p>
               ) : (
@@ -291,7 +310,7 @@ export function ProductCards({ products }: ProductCardsProps) {
   const unavailableProducts = products.filter(product => product.status !== 'active');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       {/* Active Products */}
       {activeProducts.length > 0 && (
         <div>

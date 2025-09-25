@@ -45,8 +45,16 @@ export default async function InvoicesLayout({
           />
         </PagePrimaryBar>
       </PageHeader>
-      <PageBody>
-        <div className="mx-auto space-y-2 p-2 sm:space-y-8 sm:p-6">
+      <PageBody disableScroll>
+        <div className="mx-auto w-full space-y-4 p-2 py-4 sm:space-y-8 sm:p-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Invoices</h3>
+              <p className="text-sm text-muted-foreground">
+                Your invoices of current and past SportsFest Events
+              </p>
+            </div>
+          </div>
           {invoicesTable}
         </div>
       </PageBody>

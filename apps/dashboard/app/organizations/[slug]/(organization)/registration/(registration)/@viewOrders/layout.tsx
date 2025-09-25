@@ -16,7 +16,7 @@ export default function ViewOrdersLayout({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <PackageIcon className="h-5 w-5 text-green-600" />
+            <PackageIcon className="h-5 w-5" />
             <CardTitle className="text-lg">View Orders</CardTitle>
           </div>
           <ArrowRightIcon className="h-4 w-4 text-muted-foreground" />

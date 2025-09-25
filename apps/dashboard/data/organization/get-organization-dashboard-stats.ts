@@ -2,14 +2,17 @@
 
 import { getAuthOrganizationContext } from '@workspace/auth/context';
 import { db, eq, and, sql } from '@workspace/database/client';
-import { 
+import {
   companyTeamTable,
   playerTable,
   orderTable,
+  orderItemTable,
+  productTable,
   tentPurchaseTrackingTable,
   eventYearTable,
   PaymentStatus,
-  orderPaymentTable
+  orderPaymentTable,
+  ProductType
 } from '@workspace/database/schema';
 import { getOrganizationTeamCount } from './get-organization-team-count';
 
@@ -98,7 +101,7 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
     .from(playerTable)
     .where(eq(playerTable.organizationId, ctx.organization.id));
 
-  // Get tent tracking for current event year
+  // Get tent purchases from actual orders for current event year
   let tentStats = {
     purchased: 0,
     maxAllowed: 2,
@@ -107,9 +110,30 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
   };
 
   if (eventYearId) {
+    // Calculate purchased tents from completed orders
+    const tentPurchases = await db
+      .select({
+        totalQuantity: sql<number>`coalesce(sum(${orderItemTable.quantity}), 0)`
+      })
+      .from(orderItemTable)
+      .innerJoin(orderTable, eq(orderItemTable.orderId, orderTable.id))
+      .innerJoin(productTable, eq(orderItemTable.productId, productTable.id))
+      .innerJoin(orderPaymentTable, eq(orderTable.id, orderPaymentTable.orderId))
+      .where(
+        and(
+          eq(orderTable.organizationId, ctx.organization.id),
+          eq(orderTable.eventYearId, eventYearId),
+          eq(productTable.type, ProductType.TENT_RENTAL),
+          eq(orderPaymentTable.status, PaymentStatus.COMPLETED)
+        )
+      );
+
+    const purchased = Number(tentPurchases[0]?.totalQuantity || 0);
+
+    // Try to get max allowed from tracking table, fallback to default
+    let maxAllowed = 2;
     const tentTracking = await db
       .select({
-        tentCount: tentPurchaseTrackingTable.quantityPurchased,
         maxAllowed: tentPurchaseTrackingTable.maxAllowed
       })
       .from(tentPurchaseTrackingTable)
@@ -121,16 +145,16 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
       )
       .limit(1);
 
-    if (tentTracking[0]) {
-      const purchased = tentTracking[0].tentCount;
-      const maxAllowed = tentTracking[0].maxAllowed;
-      tentStats = {
-        purchased,
-        maxAllowed,
-        remainingAllowed: maxAllowed - purchased,
-        utilizationRate: Math.round((purchased / maxAllowed) * 100)
-      };
+    if (tentTracking[0]?.maxAllowed) {
+      maxAllowed = tentTracking[0].maxAllowed;
     }
+
+    tentStats = {
+      purchased,
+      maxAllowed,
+      remainingAllowed: Math.max(0, maxAllowed - purchased),
+      utilizationRate: maxAllowed > 0 ? Math.round((purchased / maxAllowed) * 100) : 0
+    };
   }
 
   // Get order statistics

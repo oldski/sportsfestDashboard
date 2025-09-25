@@ -49,6 +49,9 @@
     "./send-revoked-invitation-email": "./src/send-revoked-invitation-email.ts",
     "./send-verify-email-address-email": "./src/send-verify-email-address-email.ts",
     "./send-welcome-email": "./src/send-welcome-email.ts",
+    "./send-team-signup-notification-email": "./src/send-team-signup-notification-email.ts",
+    "./send-purchase-confirmation-email": "./src/send-purchase-confirmation-email.ts",
+    "./send-admin-purchase-notification-email": "./src/send-admin-purchase-notification-email.ts",
     "./templates/confirm-email-address-change-email": "./src/templates/confirm-email-address-change-email.tsx",
     "./templates/connected-account-security-alert-email": "./src/templates/connected-account-security-alert-email.tsx",
     "./templates/feedback-email": "./src/templates/feedback-email.tsx",
@@ -56,6 +59,9 @@
     "./templates/password-reset-email": "./src/templates/password-reset-email.tsx",
     "./templates/revoked-invitation-email": "./src/templates/revoked-invitation-email.tsx",
     "./templates/verify-email-address-email": "./src/templates/verify-email-address-email.tsx",
-    "./templates/welcome-email": "./src/templates/welcome-email.tsx"
+    "./templates/welcome-email": "./src/templates/welcome-email.tsx",
+    "./templates/team-signup-notification-email": "./src/templates/team-signup-notification-email.tsx",
+    "./templates/purchase-confirmation-email": "./src/templates/purchase-confirmation-email.tsx",
+    "./templates/admin-purchase-notification-email": "./src/templates/admin-purchase-notification-email.tsx"
   }
 }

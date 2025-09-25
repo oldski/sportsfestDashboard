@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
-import { TentIcon } from 'lucide-react';
+import {TentIcon, Users} from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
 import { Button } from '@workspace/ui/components/button';
@@ -14,8 +14,8 @@ type TotalTentsPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export default async function TotalTentsPage({ 
-  params 
+export default async function TotalTentsPage({
+  params
 }: TotalTentsPageProps): Promise<React.JSX.Element> {
   const { slug } = await params;
   const stats = await getOrganizationDashboardStats();
@@ -27,12 +27,14 @@ export default async function TotalTentsPage({
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="space-y-1">
-          <CardTitle className="text-sm font-medium">Tents</CardTitle>
-          <CardDescription className="text-xs text-muted-foreground">
+          <CardTitle className="flex items-center gap-2">
+            <TentIcon className="h-5 w-5" />
+            Tents
+          </CardTitle>
+          <CardDescription>
             {stats.currentEventYear.name}
           </CardDescription>
         </div>
-        <TentIcon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
@@ -47,14 +49,16 @@ export default async function TotalTentsPage({
               <Badge variant="secondary">Full</Badge>
             )}
           </div>
-          
+
           <Progress value={utilizationRate} className="h-2" />
-          
-          <Button asChild size="sm" variant={canPurchaseMore ? 'default' : 'outline'}>
-            <Link href={replaceOrgSlug(routes.dashboard.organizations.slug.registration.Shop, slug)}>
-              {canPurchaseMore ? 'Add More' : 'View Shop'}
-            </Link>
-          </Button>
+
+          { canPurchaseMore && (
+            <Button asChild size="sm" variant={canPurchaseMore ? 'default' : 'outline'}>
+              <Link href={replaceOrgSlug(routes.dashboard.organizations.slug.registration.Shop, slug)}>
+                Get a tent
+              </Link>
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

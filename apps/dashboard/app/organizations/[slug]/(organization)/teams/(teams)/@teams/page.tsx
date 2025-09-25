@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
-import { Users, Crown } from 'lucide-react';
+import {Users, Crown, ChevronDown, ChevronUp, Trophy} from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { Button } from '@workspace/ui/components/button';
@@ -9,6 +9,40 @@ import { Avatar, AvatarFallback } from '@workspace/ui/components/avatar';
 import { replaceOrgSlug, routes } from '@workspace/routes';
 
 import { getCompanyTeams } from '~/data/teams/get-company-teams';
+import {Collapsible, CollapsibleTrigger, CollapsibleContent} from "@workspace/ui/components/collapsible";
+import { EventType } from '@workspace/database/schema';
+
+// Event display information with consistent ordering
+const EVENT_DISPLAY_INFO = {
+  [EventType.BEACH_VOLLEYBALL]: { icon: '🏐', title: 'Beach Volleyball', order: 1 },
+  [EventType.BEACH_DODGEBALL]: { icon: '⚡', title: 'Beach Dodgeball', order: 2 },
+  [EventType.BOTE_BEACH_CHALLENGE]: { icon: '🏄', title: 'Bote Beach Challenge', order: 3 },
+  [EventType.TUG_OF_WAR]: { icon: '🪢', title: 'Tug of War', order: 4 },
+  [EventType.CORN_TOSS]: { icon: '🌽', title: 'Corn Toss', order: 5 },
+};
+
+// All events in order
+const ALL_EVENTS = Object.values(EventType).sort((a, b) =>
+  EVENT_DISPLAY_INFO[a].order - EVENT_DISPLAY_INFO[b].order
+);
+
+// Helper function to get required players for each event type
+function getRequiredPlayersForEventType(eventType: EventType): number {
+  switch (eventType) {
+    case EventType.BEACH_VOLLEYBALL:
+      return 12; // 6 starters + 6 subs
+    case EventType.BEACH_DODGEBALL:
+      return 10; // 6 starters + 4 subs
+    case EventType.BOTE_BEACH_CHALLENGE:
+      return 11; // 7 starters + 4 subs
+    case EventType.TUG_OF_WAR:
+      return 9; // 5 starters + 4 subs
+    case EventType.CORN_TOSS:
+      return 4; // 4 players total (2 squads of 2)
+    default:
+      return 0;
+  }
+}
 
 type TeamsParallelRouteProps = {
   params: Promise<{ slug: string }>;
@@ -46,31 +80,31 @@ export default async function TeamsParallelRoute({
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {teamsData.teams.map((team) => (
         <Card key={team.id} className="relative">
-          <CardHeader className="pb-3">
+          <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">
                 {team.name || `Team ${team.teamNumber}`}
               </CardTitle>
+              <CardDescription>
+                {team.memberCount} members
+              </CardDescription>
             </div>
-            <CardDescription>
-              {team.memberCount}/{team.maxMembers} members
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Progress Bar */}
-            <div className="w-full bg-muted rounded-full h-2">
-              <div
-                className="bg-primary rounded-full h-2 transition-all duration-300"
-                style={{ width: `${(team.memberCount / team.maxMembers) * 100}%` }}
-              />
-            </div>
 
             {/* Team Members */}
             {team.members.length > 0 ? (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium">Team Members</h4>
-                <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {team.members.map((member) => (
+                <div className="space-y-1 max-h-64 overflow-y-auto">
+                  {team.members
+                    .sort((a, b) => {
+                      // Captain first, then by first name
+                      if (a.isCaptain && !b.isCaptain) return -1;
+                      if (!a.isCaptain && b.isCaptain) return 1;
+                      return a.firstName.localeCompare(b.firstName);
+                    })
+                    .map((member) => (
                     <div key={member.id} className="flex items-center gap-2 text-sm">
                       <Avatar className="h-6 w-6">
                         <AvatarFallback className="text-xs">
@@ -86,6 +120,56 @@ export default async function TeamsParallelRoute({
                     </div>
                   ))}
                 </div>
+                <div className="relative">
+                  <Collapsible
+                    className="flex w-full flex-col gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <h4 className="text-sm font-semibold">
+                        Event Roster Status
+                      </h4>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8 group">
+                          <ChevronDown className="h-4 w-4 group-data-[state=open]:hidden" />
+                          <ChevronUp className="h-4 w-4 group-data-[state=closed]:hidden" />
+                          <span className="sr-only">Toggle</span>
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
+                    <CollapsibleContent className="absolute bottom-full left-0 right-0 z-10 mb-2 flex flex-col gap-2 bg-background border border-border rounded-md shadow-lg p-3">
+                      {ALL_EVENTS.map((eventType) => {
+                        const eventInfo = EVENT_DISPLAY_INFO[eventType];
+                        const eventRoster = team.eventRosterSummaries.find(er => er.eventType === eventType);
+                        const playerCount = eventRoster?.playerCount || 0;
+                        const hasSquadLeader = eventRoster?.hasSquadLeader || false;
+                        const requiredPlayers = eventRoster?.requiredPlayers || getRequiredPlayersForEventType(eventType);
+                        const isComplete = playerCount >= requiredPlayers;
+
+                        return (
+                          <div key={eventType} className="rounded-md border px-3 py-2 text-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">{eventInfo.icon}</span>
+                                <span className="font-medium">{eventInfo.title}</span>
+                                {hasSquadLeader && (
+                                  <Crown className="h-3 w-3 text-amber-500" />
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant={isComplete ? "default" : "secondary"}
+                                  className="text-xs"
+                                >
+                                  {playerCount}/{requiredPlayers}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
               </div>
             ) : (
               <div className="text-center py-4 text-muted-foreground">
@@ -98,7 +182,14 @@ export default async function TeamsParallelRoute({
             <div className="flex gap-2 pt-2">
               <Button asChild size="sm" className="flex-1">
                 <Link href={replaceOrgSlug(routes.dashboard.organizations.slug.Teams, slug) + `/${team.id}`}>
+                  <Users className="h-4 w-4 mr-1" />
                   Manage Team
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="flex-1">
+                <Link href={replaceOrgSlug(routes.dashboard.organizations.slug.Teams, slug) + `/${team.id}/events`}>
+                  <Trophy className="h-4 w-4 mr-1" />
+                  Event Rosters
                 </Link>
               </Button>
             </div>

@@ -46,7 +46,7 @@ export default async function DashboardLayout({
         </PagePrimaryBar>
       </PageHeader>
       <PageBody>
-        <div className="mx-auto space-y-2 p-2 sm:space-y-8 sm:p-6">
+        <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
           {/* Overview Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {totalCompanies}

@@ -52,7 +52,7 @@ export default async function ReportsAnalyticsLayout({
         </PageSecondaryBar>
       </PageHeader>
       <PageBody>
-        <div className="mx-auto space-y-2 p-2 sm:space-y-8 sm:p-6">
+        <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
           {/* Primary Analytics Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {revenueAnalytics}

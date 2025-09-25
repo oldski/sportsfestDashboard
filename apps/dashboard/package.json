@@ -22,6 +22,7 @@
     "@dnd-kit/utilities": "3.2.2",
     "@ebay/nice-modal-react": "1.2.13",
     "@hookform/resolvers": "5.1.0",
+    "@react-pdf/renderer": "^4.3.0",
     "@stripe/react-stripe-js": "4.0.0",
     "@stripe/stripe-js": "7.3.1",
     "@t3-oss/env-nextjs": "0.13.6",

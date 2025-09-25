@@ -38,7 +38,8 @@ import { MediaQueries } from '@workspace/ui/lib/media-queries';
 import { cn } from '@workspace/ui/lib/utils';
 
 import { useEnhancedModal } from '~/hooks/use-enhanced-modal';
-import { downloadInvoicePDF } from '~/lib/pdf-utils';
+import { generateInvoicePDF } from '~/components/organizations/slug/registration/generate-invoice-pdf';
+import { useActiveOrganization } from '~/hooks/use-active-organization';
 import type { RegistrationInvoiceDto } from '~/types/dtos/registration-invoice-dto';
 
 export type InvoiceDetailsModalProps = NiceModalHocProps & {
@@ -108,6 +109,7 @@ export const InvoiceDetailsModal = NiceModal.create<InvoiceDetailsModalProps>(
   ({ invoice }) => {
     const modal = useEnhancedModal();
     const mdUp = useMediaQuery(MediaQueries.MdUp, { ssr: false });
+    const organization = useActiveOrganization();
 
     // Debug logging to check invoice structure
     React.useEffect(() => {
@@ -121,7 +123,7 @@ export const InvoiceDetailsModal = NiceModal.create<InvoiceDetailsModalProps>(
 
     const handleDownload = async () => {
       try {
-        await downloadInvoicePDF(invoice);
+        await generateInvoicePDF(invoice, organization?.name || 'Organization');
         toast.success('Invoice PDF downloaded successfully');
       } catch (error) {
         console.error('Error downloading PDF:', error);

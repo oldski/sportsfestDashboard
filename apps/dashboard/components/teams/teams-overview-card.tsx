@@ -38,7 +38,7 @@ export function TeamsOverviewCard({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-center lg:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -48,7 +48,7 @@ export function TeamsOverviewCard({
               {eventYearName} • {teamCount} teams purchased • {availablePlayerCount} unassigned players
             </CardDescription>
           </div>
-          <Button 
+          <Button
             onClick={handleAutoGenerateRosters}
             disabled={availablePlayerCount === 0 || isGenerating}
             className="ml-4"

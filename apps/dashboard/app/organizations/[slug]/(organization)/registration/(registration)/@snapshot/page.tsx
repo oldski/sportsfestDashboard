@@ -36,33 +36,19 @@ export default async function SnapshotPage(): Promise<React.JSX.Element> {
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <div>
           <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
           <p className="text-2xl font-bold">{stats.totalOrders}</p>
         </div>
         <div>
           <p className="text-sm font-medium text-muted-foreground">Teams Purchased</p>
-          <p className="text-2xl font-bold text-blue-600">{stats.totalTeams}</p>
+          <p className="text-2xl font-bold">{stats.totalTeams}</p>
         </div>
         <div>
           <p className="text-sm font-medium text-muted-foreground">Tents Purchased</p>
-          <p className="text-2xl font-bold text-purple-600">{stats.totalTents}</p>
+          <p className="text-2xl font-bold">{stats.totalTents}</p>
         </div>
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">Registration Status</p>
-          <Badge variant={statusDisplay.variant} className="mt-1">
-            {statusDisplay.text}
-          </Badge>
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <div className="flex items-center justify-between text-sm mb-2">
-          <span>Registration Progress</span>
-          <span>{stats.progressPercentage}% Complete</span>
-        </div>
-        <Progress value={stats.progressPercentage} className="h-2" />
       </div>
 
       {stats.balanceOwed > 0 && stats.orderWithBalance && (

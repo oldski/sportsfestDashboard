@@ -14,7 +14,6 @@ import {
 } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import {
-  MoreHorizontalIcon,
   DownloadIcon,
   EyeIcon,
   SearchIcon,
@@ -29,13 +28,6 @@ import {
   DataTablePagination
 } from '@workspace/ui/components/data-table';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@workspace/ui/components/dropdown-menu';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -47,11 +39,12 @@ import { toast } from '@workspace/ui/components/sonner';
 import { cn } from '@workspace/ui/lib/utils';
 
 import { InvoiceDetailsModal } from '~/components/organizations/slug/registration/invoice-details-modal';
-import { downloadInvoicePDF } from '~/lib/pdf-utils';
+import { generateInvoicePDF } from '~/components/organizations/slug/registration/generate-invoice-pdf';
 import type { RegistrationInvoiceDto } from '~/types/dtos/registration-invoice-dto';
 
 export type InvoicesDataTableProps = {
   invoices: RegistrationInvoiceDto[];
+  organizationName: string;
 };
 
 // Status badge variant mapping
@@ -86,16 +79,17 @@ const formatDate = (date: Date) => {
 };
 
 export function InvoicesDataTable({
-  invoices
+  invoices,
+  organizationName
 }: InvoicesDataTableProps): React.JSX.Element {
   // Safety check - ensure we have data
-  if (!invoices || invoices.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No invoices found</p>
-      </div>
-    );
-  }
+  // if (!invoices || invoices.length === 0) {
+  //   return (
+  //     <div className="text-center py-8">
+  //       <p className="text-muted-foreground">No invoices found</p>
+  //     </div>
+  //   );
+  // }
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'totalAmount', desc: true } // Default to highest amount first
   ]);
@@ -231,53 +225,33 @@ export function InvoicesDataTable({
         const invoice = row.original;
 
         return (
-          <div className="text-right">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreHorizontalIcon className="size-4" />
-                  <span className="sr-only">Open actions menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[160px]">
-                <DropdownMenuItem
-                  onClick={() => {
-                    NiceModal.show(InvoiceDetailsModal, { invoice });
-                  }}
-                >
-                  <EyeIcon className="mr-2 size-4" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={async () => {
-                    try {
-                      await downloadInvoicePDF(invoice);
-                      toast.success('Invoice PDF downloaded successfully');
-                    } catch (error) {
-                      console.error('Error downloading PDF:', error);
-                      toast.error('Failed to download invoice PDF');
-                    }
-                  }}
-                >
-                  <DownloadIcon className="mr-2 size-4" />
-                  Download PDF
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(invoice.invoiceNumber);
-                      toast.success('Invoice number copied to clipboard');
-                    } catch (error) {
-                      console.error('Error copying to clipboard:', error);
-                      toast.error('Failed to copy invoice number');
-                    }
-                  }}
-                >
-                  Copy Invoice #
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="text-right flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                NiceModal.show(InvoiceDetailsModal, { invoice });
+              }}
+            >
+              <EyeIcon className="size-4" />
+              <span className="sr-only">View Details</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await generateInvoicePDF(invoice, organizationName);
+                  toast.success('Invoice PDF downloaded successfully');
+                } catch (error) {
+                  console.error('Error downloading PDF:', error);
+                  toast.error('Failed to download invoice PDF');
+                }
+              }}
+            >
+              <DownloadIcon className="size-4" />
+              <span className="sr-only">Download PDF</span>
+            </Button>
           </div>
         );
       }

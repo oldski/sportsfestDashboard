@@ -3,11 +3,13 @@
 import { revalidatePath } from 'next/cache';
 import { getAuthOrganizationContext } from '@workspace/auth/context';
 import { db, eq, and, sql } from '@workspace/database/client';
-import { teamRosterTable, companyTeamTable, playerTable, eventYearTable } from '@workspace/database/schema';
+import { teamRosterTable, companyTeamTable, playerTable, eventYearTable, eventRosterTable } from '@workspace/database/schema';
+import { resolveAllTransferWarningsForPlayer } from '~/actions/teams/transfer-warning-actions';
 
 export interface RosterActionResult {
   success: boolean;
   error?: string;
+  eventRostersRemoved?: number;
 }
 
 export interface AutoGenerateRosterResult {
@@ -123,8 +125,21 @@ export async function removePlayerFromTeam(playerId: string, teamId: string): Pr
         )
       );
 
+    // Also remove player from all event rosters for this team
+    const eventRosterResult = await db
+      .delete(eventRosterTable)
+      .where(
+        and(
+          eq(eventRosterTable.playerId, playerId),
+          eq(eventRosterTable.companyTeamId, teamId)
+        )
+      );
+
     revalidatePath('/organizations/[slug]/teams', 'page');
-    return { success: true };
+    return {
+      success: true,
+      eventRostersRemoved: eventRosterResult.rowCount || 0
+    };
   } catch (error) {
     console.error('Error removing player from team:', error);
     return { success: false, error: 'Failed to remove player from team' };
@@ -189,8 +204,14 @@ export async function transferPlayerToTeam(playerId: string, newTeamId: string):
       });
     });
 
+    // Clean up any event roster assignments from the old team
+    const cleanupResult = await resolveAllTransferWarningsForPlayer(playerId);
+
     revalidatePath('/organizations/[slug]/teams', 'page');
-    return { success: true };
+    return {
+      success: true,
+      eventRostersRemoved: cleanupResult.resolved || 0
+    };
   } catch (error) {
     console.error('Error transferring player:', error);
     return { success: false, error: 'Failed to transfer player' };

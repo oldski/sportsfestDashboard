@@ -162,12 +162,15 @@ export async function resolveAllTransferWarningsForPlayer(
     }
 
     // Remove all conflicting event roster assignments
-    const eventRosterIds = conflicts.map(c => c.eventRosterId);
-    await db
-      .delete(eventRosterTable)
-      .where(sql`${eventRosterTable.id} = ANY(${eventRosterIds})`);
+    let deletedCount = 0;
+    for (const conflict of conflicts) {
+      const result = await db
+        .delete(eventRosterTable)
+        .where(eq(eventRosterTable.id, conflict.eventRosterId));
+      deletedCount++;
+    }
 
-    return { success: true, resolved: conflicts.length };
+    return { success: true, resolved: deletedCount };
   } catch (error) {
     console.error('Error resolving all transfer warnings for player:', error);
     return { success: false, error: 'Failed to resolve transfer warnings', resolved: 0 };

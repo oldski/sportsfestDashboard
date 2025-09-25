@@ -31,11 +31,12 @@ import {
   TSHIRT_SIZE_OPTIONS
 } from '~/components/team-signup';
 import { motion } from "motion/react";
+import Image from "next/image";
 
 // API functions
 const getOrganizationForSignup = async (slug?: string) => {
   if (!slug) return null;
-  
+
   try {
     const response = await fetch(`/api/organization/${encodeURIComponent(slug)}`);
     if (!response.ok) {
@@ -63,9 +64,9 @@ const submitTeamSignup = async (data: FormData) => {
         dateOfBirth: data.dateOfBirth?.toISOString(),
       }),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       return {
         success: false,
@@ -73,7 +74,7 @@ const submitTeamSignup = async (data: FormData) => {
         status: response.status
       };
     }
-    
+
     return {
       success: true,
       message: result.message,
@@ -232,19 +233,21 @@ export default function TeamMemberSignupPage() {
   return (
     <>
       <BackgroundSlideshow />
-      <div className="relative z-10 min-h-screen">
+      <div className="relative z-10">
         <div className="container mx-auto px-4 py-12 max-w-4xl">
-          <div className="text-center mb-8">
+          <div className="text-center min-h-[calc(100vh*2/3)] mb-8 flex flex-col justify-center">
             <motion.div
               initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.4 }}
+              className="flex flex-col items-center gap-8"
             >
+              <Image src="/assets/logo-sportsfest-full.png" alt="Corporate SportsFest" width={400} height={222} />
             <SiteHeading
               badge="📩 You're Invited"
               title={`Join ${organization.name}`}
               description="No Athletic Skill Necessary, Just Team Spirit and Company Pride!"
-              className="text-white"
+              className="text-blue-800"
             />
             </motion.div>
           </div>
@@ -333,7 +336,7 @@ export default function TeamMemberSignupPage() {
                           </TooltipTrigger>
                           <TooltipContent>
                             <p className="max-w-xs">
-                              Gender information helps us organize teams and ensure fair competition across events. 
+                              Gender information helps us organize teams and ensure fair competition across events.
                               This information is kept confidential and used solely for event planning purposes.
                             </p>
                           </TooltipContent>
@@ -603,8 +606,7 @@ export default function TeamMemberSignupPage() {
             <CardContent className="text-center space-y-4">
               <p>{successMessage}</p>
               <p className="text-sm text-muted-foreground">
-                You should receive a confirmation email shortly. If you need to make any changes, 
-                please contact your organization administrator.
+                Get ready to be part of your company team! An email notification was sent to your Team Organizer.
               </p>
             </CardContent>
           </Card>

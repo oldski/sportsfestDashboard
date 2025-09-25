@@ -43,14 +43,15 @@ export default async function TeamOverviewParallelRoute({
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <div className="text-2xl font-bold">{team.memberCount}/{team.maxMembers}</div>
+                <div className="hidden text-2xl font-bold">{team.memberCount}/{team.maxMembers}</div>
+                <div className="text-2xl font-bold">{team.memberCount}</div>
                 <div className="text-sm text-muted-foreground">Members</div>
               </div>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="mt-4">
+          <div className="hidden mt-4">
             <div className="flex justify-between text-sm mb-2">
               <span>Team Roster Progress</span>
               <span>{Math.round(completionPercentage)}% of suggested size</span>

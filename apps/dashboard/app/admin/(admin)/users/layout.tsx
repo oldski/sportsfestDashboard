@@ -35,7 +35,7 @@ export default async function AdminUsersLayout({ children }: AdminUsersLayoutPro
         </PageSecondaryBar>
       </PageHeader>
       <PageBody>
-        <div className="mx-auto space-y-2 p-2 sm:space-y-8 sm:p-6">
+        <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
           {children}
         </div>
       </PageBody>

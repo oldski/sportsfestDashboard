@@ -62,7 +62,7 @@ export default async function EventRegistrationOverviewLayout({
         </PageSecondaryBar>
       </PageHeader>
       <PageBody>
-        <div className="mx-auto space-y-2 p-2 sm:space-y-8 sm:p-6">
+        <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
             <div>
               {activeProducts}

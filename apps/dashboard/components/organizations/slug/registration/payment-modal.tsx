@@ -6,10 +6,10 @@ import {
   useStripe,
   useElements
 } from '@stripe/react-stripe-js';
-import { 
-  CreditCardIcon, 
-  LoaderIcon, 
-  CheckCircleIcon, 
+import {
+  CreditCardIcon,
+  LoaderIcon,
+  CheckCircleIcon,
   XCircleIcon,
   InfoIcon
 } from 'lucide-react';
@@ -46,6 +46,7 @@ export interface PaymentModalProps {
     paymentType: 'full' | 'deposit';
   };
   organizationName: string;
+  userEmail: string;
 }
 
 type PaymentState = 'idle' | 'processing' | 'succeeded' | 'failed';
@@ -58,16 +59,43 @@ export function PaymentModal({
   orderId,
   orderSummary,
   organizationName,
+  userEmail,
 }: PaymentModalProps) {
   const stripe = useStripe();
   const elements = useElements();
-  
+
   const [state, setState] = React.useState<PaymentState>('idle');
   const [error, setError] = React.useState<string | null>(null);
-  
+  const [isPaymentReady, setIsPaymentReady] = React.useState(false);
+
   const isLoading = state === 'processing';
   const isSucceeded = state === 'succeeded';
   const isFailed = state === 'failed';
+
+  // Listen for changes in the PaymentElement to enable/disable the pay button
+  React.useEffect(() => {
+    if (!elements) return;
+
+    const paymentElement = elements.getElement('payment');
+    if (!paymentElement) return;
+
+    const handleChange = (event: any) => {
+      // Check if the payment form is complete (email field is now disabled)
+      setIsPaymentReady(event.complete);
+
+      if (event.error) {
+        setError(event.error.message);
+      } else {
+        setError(null);
+      }
+    };
+
+    paymentElement.on('change', handleChange);
+
+    return () => {
+      paymentElement.off('change', handleChange);
+    };
+  }, [elements]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -85,7 +113,7 @@ export function PaymentModal({
     }
 
     const paymentElement = elements.getElement('payment');
-    
+
     console.log('🔍 Stripe Elements Debug:', {
       stripe: !!stripe,
       elements: !!elements,
@@ -104,28 +132,37 @@ export function PaymentModal({
       // URL encode the organization name for the return URL
       const encodedOrgName = encodeURIComponent(organizationName);
       const returnUrl = `${window.location.origin}/organizations/${encodedOrgName}/registration/orders?success=true&order_id=${orderId}`;
-      
+
       console.log('💳 Attempting payment confirmation with:', {
         orderId,
         organizationName,
         encodedOrgName,
         return_url: returnUrl
       });
-      
+
       const result = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: returnUrl,
+          payment_method_data: {
+            billing_details: {
+              email: userEmail,
+            },
+          },
         },
         redirect: 'if_required',
       });
 
       console.log('💳 Payment confirmation result:', result);
+      console.log('💳 Payment intent status:', result.paymentIntent?.status);
+      console.log('💳 Has error:', !!result.error);
 
       if (result.error) {
+        console.log('❌ Payment error:', result.error);
         setState('failed');
         setError(result.error.message || 'An unexpected error occurred.');
       } else if (result.paymentIntent?.status === 'succeeded') {
+        console.log('✅ Payment succeeded, calling confirm-payment API...');
         // Confirm payment on our backend
         const response = await fetch('/api/stripe/confirm-payment', {
           method: 'POST',
@@ -138,16 +175,25 @@ export function PaymentModal({
           }),
         });
 
+        console.log('📡 Confirm payment API response status:', response.status);
+        console.log('📡 Confirm payment API response ok:', response.ok);
+
         if (response.ok) {
+          const responseData = await response.json();
+          console.log('✅ Confirm payment API success:', responseData);
           setState('succeeded');
           setTimeout(() => {
             onSuccess(orderId);
             onClose();
           }, 2000);
         } else {
+          const errorData = await response.text();
+          console.error('❌ Confirm payment API failed:', response.status, errorData);
           setState('failed');
           setError('Payment succeeded but failed to update order. Please contact support.');
         }
+      } else {
+        console.log('⚠️ Payment intent status is not "succeeded":', result.paymentIntent?.status);
       }
     } catch (err) {
       setState('failed');
@@ -164,20 +210,22 @@ export function PaymentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCardIcon className="h-5 w-5" />
+      <DialogContent className="max-w-none w-screen h-screen max-h-none m-0 rounded-none overflow-y-auto">
+        <DialogHeader className="px-2 pt-8">
+          <DialogTitle className="flex items-center gap-2 text-2xl">
+            <CreditCardIcon className="h-6 w-6" />
             Complete Your Payment
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-lg">
             Review your order and complete the secure payment below.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Order Summary */}
-          <Card>
+        <div className="flex-1 px-2 pb-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:items-start h-full">
+              {/* Order Summary */}
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="text-lg">Order Summary</CardTitle>
               <CardDescription>
@@ -210,16 +258,17 @@ export function PaymentModal({
                   <span>Subtotal</span>
                   <span>{formatCurrency(orderSummary.subtotal)}</span>
                 </div>
-                
-                {orderSummary.paymentType === 'deposit' && orderSummary.depositAmount && (
+
+                {/* Show breakdown for items with deposits vs full payments */}
+                {orderSummary.futurePayments > 0 && (
                   <>
                     <div className="flex justify-between text-primary font-medium">
-                      <span>Deposit Payment</span>
-                      <span>{formatCurrency(orderSummary.depositAmount)}</span>
+                      <span>Due Today</span>
+                      <span>{formatCurrency(orderSummary.dueToday)}</span>
                     </div>
                     <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Remaining Balance</span>
-                      <span>{formatCurrency(orderSummary.totalAmount - orderSummary.depositAmount)}</span>
+                      <span>Future Payments</span>
+                      <span>{formatCurrency(orderSummary.futurePayments)}</span>
                     </div>
                   </>
                 )}
@@ -229,18 +278,14 @@ export function PaymentModal({
 
               <div className="flex justify-between items-center text-lg font-bold">
                 <span>
-                  {orderSummary.paymentType === 'deposit' ? 'Amount Due Today' : 'Total Amount'}
+                  {orderSummary.futurePayments > 0 ? 'Amount Due Today' : 'Total Amount'}
                 </span>
                 <span>
-                  {formatCurrency(
-                    orderSummary.paymentType === 'deposit' 
-                      ? orderSummary.depositAmount || 0 
-                      : orderSummary.totalAmount
-                  )}
+                  {formatCurrency(orderSummary.dueToday)}
                 </span>
               </div>
 
-              {orderSummary.paymentType === 'deposit' && (
+              {orderSummary.futurePayments > 0 && (
                 <Alert>
                   <InfoIcon className="h-4 w-4" />
                   <AlertDescription>
@@ -251,73 +296,83 @@ export function PaymentModal({
             </CardContent>
           </Card>
 
-          {/* Payment Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                Payment Information
-                <Badge variant="secondary">Secure</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Stripe Payment Element */}
-                <div className="space-y-4">
-                  <PaymentElement />
+              {/* Payment Form */}
+              <div className="h-full">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      Payment Information
+                      <Badge variant="secondary">Secure</Badge>
+                    </h3>
+                  </div>
+                  <div>
+                    <form id="payment-form" onSubmit={handleSubmit} className="space-y-6">
+                      {/* Stripe Payment Element */}
+                      <div className="space-y-4">
+                        <PaymentElement
+                          options={{
+                            fields: {
+                              billingDetails: {
+                                email: 'never'
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+
+                      {/* Error Display */}
+                      {error && (
+                        <Alert variant="destructive">
+                          <XCircleIcon className="h-4 w-4" />
+                          <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Success Display */}
+                      {isSucceeded && (
+                        <Alert className="border-green-200 bg-green-50">
+                          <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                          <AlertDescription className="text-green-700">
+                            Payment successful! Redirecting...
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </form>
+                  </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                {/* Error Display */}
-                {error && (
-                  <Alert variant="destructive">
-                    <XCircleIcon className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
+        {/* Dialog Footer with Buttons */}
+        <div className="flex flex-col gap-3 p-4 border-t">
+          <Button
+            type="submit"
+            form="payment-form"
+            disabled={!stripe || !elements || isLoading || isSucceeded || !isPaymentReady}
+            className="w-full"
+          >
+            {isLoading && (
+              <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            {isSucceeded && (
+              <CheckCircleIcon className="mr-2 h-4 w-4" />
+            )}
+            {isLoading ? 'Processing...' :
+             isSucceeded ? 'Payment Complete' :
+             `Pay ${formatCurrency(orderSummary.dueToday)}`}
+          </Button>
 
-                {/* Success Display */}
-                {isSucceeded && (
-                  <Alert className="border-green-200 bg-green-50">
-                    <CheckCircleIcon className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-700">
-                      Payment successful! Redirecting...
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Submit Button */}
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleClose}
-                    disabled={isLoading}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={!stripe || !elements || isLoading || isSucceeded}
-                    className="flex-1"
-                  >
-                    {isLoading && (
-                      <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    {isSucceeded && (
-                      <CheckCircleIcon className="mr-2 h-4 w-4" />
-                    )}
-                    {isLoading ? 'Processing...' : 
-                     isSucceeded ? 'Payment Complete' :
-                     `Pay ${formatCurrency(
-                       orderSummary.paymentType === 'deposit' 
-                         ? orderSummary.depositAmount || 0 
-                         : orderSummary.totalAmount
-                     )}`}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            disabled={isLoading}
+            className="w-full"
+          >
+            Cancel
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

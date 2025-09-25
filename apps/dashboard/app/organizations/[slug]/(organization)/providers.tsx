@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import NiceModal from '@ebay/nice-modal-react';
+import { SessionProvider } from 'next-auth/react';
 
 import { SidebarProvider } from '@workspace/ui/components/sidebar';
 
@@ -25,20 +26,22 @@ export function Providers({
   children
 }: ProvidersProps): React.JSX.Element {
   return (
-    <ActiveOrganizationProvider organization={organization}>
-      <StripeProvider>
-        <ShoppingCartProvider>
-          {/* Provide a second modal provider so we can use 'useActiveOrganization' in modals */}
-          <NiceModal.Provider>
-            <SidebarProvider
-              defaultOpen={defaultOpen}
-              defaultWidth={defaultWidth}
-            >
-              {children}
-            </SidebarProvider>
-          </NiceModal.Provider>
-        </ShoppingCartProvider>
-      </StripeProvider>
-    </ActiveOrganizationProvider>
+    <SessionProvider>
+      <ActiveOrganizationProvider organization={organization}>
+        <StripeProvider>
+          <ShoppingCartProvider>
+            {/* Provide a second modal provider so we can use 'useActiveOrganization' in modals */}
+            <NiceModal.Provider>
+              <SidebarProvider
+                defaultOpen={defaultOpen}
+                defaultWidth={defaultWidth}
+              >
+                {children}
+              </SidebarProvider>
+            </NiceModal.Provider>
+          </ShoppingCartProvider>
+        </StripeProvider>
+      </ActiveOrganizationProvider>
+    </SessionProvider>
   );
 }

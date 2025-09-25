@@ -24,7 +24,6 @@ export type RegistrationOverviewLayoutProps = {
   recentActivity: React.ReactNode;
 };
 
-
 export default function RegistrationOverviewLayout({
   snapshot,
   shopProducts,
@@ -42,9 +41,8 @@ export default function RegistrationOverviewLayout({
         </PagePrimaryBar>
       </PageHeader>
       <PageBody>
-        <div className="mx-auto space-y-2 p-2 sm:space-y-8 sm:p-6">
+        <div className="mx-auto w-full space-y-6 p-2 py-4 sm:space-y-8 sm:p-6">
           {snapshot}
-
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div>
               {shopProducts}
@@ -56,7 +54,6 @@ export default function RegistrationOverviewLayout({
               {invoices}
             </div>
           </div>
-
           {recentActivity}
         </div>
       </PageBody>

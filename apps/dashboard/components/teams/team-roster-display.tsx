@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Users, Crown, Search } from 'lucide-react';
+import { Users, Crown, Search, AlertTriangle } from 'lucide-react';
 import { toast } from '@workspace/ui/components/sonner';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
@@ -9,9 +9,19 @@ import { Button } from '@workspace/ui/components/button';
 import { Badge } from '@workspace/ui/components/badge';
 import { Avatar, AvatarFallback } from '@workspace/ui/components/avatar';
 import { Input } from '@workspace/ui/components/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@workspace/ui/components/alert-dialog';
 import { RosterManagementDialog } from './roster-management-dialog';
-import { 
-  togglePlayerCaptain, 
+import {
+  togglePlayerCaptain,
   removePlayerFromTeam,
   transferPlayerToTeam
 } from '~/actions/teams/roster-actions';
@@ -26,6 +36,15 @@ interface TeamRosterDisplayProps {
 export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isRosterDialogOpen, setIsRosterDialogOpen] = React.useState(false);
+  const [transferConfirmation, setTransferConfirmation] = React.useState<{
+    isOpen: boolean;
+    playerId: string | null;
+    playerName: string;
+  }>({
+    isOpen: false,
+    playerId: null,
+    playerName: ''
+  });
 
   // Sort members to show captains first
   const sortedMembers = React.useMemo(() => {
@@ -69,9 +88,38 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
   };
 
   const handleTransferPlayer = async (playerId: string) => {
-    const result = await transferPlayerToTeam(playerId, team.id);
+    // Find player details for confirmation dialog
+    const player = playersData.playersOnOtherTeams.find(p => p.id === playerId);
+    if (!player) {
+      toast.error('Player not found');
+      return;
+    }
+
+    // Show confirmation dialog
+    setTransferConfirmation({
+      isOpen: true,
+      playerId,
+      playerName: `${player.firstName} ${player.lastName}`
+    });
+  };
+
+  const handleConfirmTransfer = async () => {
+    if (!transferConfirmation.playerId) return;
+
+    const result = await transferPlayerToTeam(transferConfirmation.playerId, team.id);
+
+    // Close confirmation dialog
+    setTransferConfirmation({
+      isOpen: false,
+      playerId: null,
+      playerName: ''
+    });
+
     if (result.success) {
-      toast.success('Player transferred to team successfully');
+      const eventRostersMessage = result.eventRostersRemoved && result.eventRostersRemoved > 0
+        ? ` (${result.eventRostersRemoved} event roster${result.eventRostersRemoved > 1 ? 's' : ''} automatically updated)`
+        : '';
+      toast.success(`Player transferred to team successfully${eventRostersMessage}`);
     } else {
       toast.error(result.error || 'Failed to transfer player');
     }
@@ -192,6 +240,36 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
         onTransferPlayer={handleTransferPlayer}
         onToggleCaptain={handleEditPlayer}
       />
+
+      {/* Transfer Confirmation Dialog */}
+      <AlertDialog
+        open={transferConfirmation.isOpen}
+        onOpenChange={(open) => setTransferConfirmation(prev => ({ ...prev, isOpen: open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirm Player Transfer
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Are you sure you want to transfer <strong>{transferConfirmation.playerName}</strong> to <strong>{team.name || `Team ${team.teamNumber}`}</strong>?
+              </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-amber-800 text-sm">
+                <p className="font-medium">Important:</p>
+                <p>This player will be automatically removed from all event rosters on their current team. They will need to be manually re-assigned to event rosters on their new team.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmTransfer}>
+              Confirm Transfer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

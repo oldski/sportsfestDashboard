@@ -1,19 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@workspace/auth';
 import { db, eq, and } from '@workspace/database/client';
-import { 
-  orderTable, 
+import {
+  orderTable,
   orderPaymentTable,
   orderInvoiceTable,
   orderItemTable,
   productTable,
   companyTeamTable,
+  organizationTable,
+  userTable,
+  eventYearTable,
   OrderStatus,
   PaymentStatus,
   PaymentType,
   ProductType
 } from '@workspace/database/schema';
 import { stripe } from '~/lib/stripe';
+import { sendPurchaseConfirmationEmail } from '@workspace/email/send-purchase-confirmation-email';
+import { sendAdminPurchaseNotificationEmail } from '@workspace/email/send-admin-purchase-notification-email';
 
 export interface ConfirmPaymentRequest {
   paymentIntentId: string;
@@ -29,12 +34,6 @@ export interface ConfirmPaymentResponse {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
 
     const body: ConfirmPaymentRequest = await request.json();
     const { paymentIntentId, orderId } = body;
@@ -75,14 +74,6 @@ export async function POST(request: NextRequest) {
     const isOrderCompletionPayment = paymentIntent.metadata?.paymentType === 'balance_completion';
     const isOriginalPayment = order.stripePaymentIntentId === paymentIntentId;
     
-    console.log('🔍 Payment confirmation details:', {
-      orderId,
-      paymentIntentId,
-      orderPaymentIntentId: order.stripePaymentIntentId,
-      isOrderCompletionPayment,
-      isOriginalPayment,
-      paymentIntentMetadata: paymentIntent.metadata
-    });
     
     if (!isOriginalPayment && !isOrderCompletionPayment) {
       return NextResponse.json(
@@ -206,7 +197,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create company teams for team registration products 
+    // Create company teams for team registration products
     // Only create teams when the order becomes fully paid (either initial full payment or completion payment)
     if (newOrderStatus === OrderStatus.FULLY_PAID) {
       try {
@@ -218,6 +209,44 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Send email notifications
+    try {
+      // If no session, try to get user info from Stripe metadata
+      let userInfo: { email: string | null; name: string | null } | null = session?.user ? {
+        email: session.user.email || null,
+        name: session.user.name || null
+      } : null;
+
+      if (!userInfo && paymentIntent.metadata?.userId) {
+        // Try to get user from database using Stripe metadata
+        const [dbUser] = await db
+          .select({
+            email: userTable.email,
+            name: userTable.name
+          })
+          .from(userTable)
+          .where(eq(userTable.id, paymentIntent.metadata.userId))
+          .limit(1);
+
+        if (dbUser) {
+          userInfo = {
+            email: dbUser.email,
+            name: dbUser.name
+          };
+        }
+      }
+
+      await sendEmailNotifications({
+        orderId,
+        paymentAmount,
+        userInfo
+      });
+      console.log('✅ Email notifications completed successfully');
+    } catch (emailError) {
+      console.error('❌ Error sending email notifications:', emailError);
+      // Don't fail the payment confirmation if email sending fails
+    }
+
     const response: ConfirmPaymentResponse = {
       success: true,
       orderId,
@@ -227,9 +256,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response);
 
   } catch (error) {
-    console.error('Error confirming payment:', error);
+    console.error('🚨 CRITICAL ERROR in confirm-payment route:', error);
+    console.error('🚨 Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('🚨 Error message:', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json(
-      { error: 'Failed to confirm payment' },
+      { error: 'Failed to confirm payment', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -319,8 +350,110 @@ async function createCompanyTeamsForOrder(
   if (teamsToCreate.length > 0) {
     await db.insert(companyTeamTable).values(teamsToCreate);
     
-    console.log(`✅ Created ${teamsToCreate.length} company team(s) for organization ${organizationId}:`, 
+    console.log(`✅ Created ${teamsToCreate.length} company team(s) for organization ${organizationId}:`,
       teamsToCreate.map(t => t.name).join(', ')
     );
+  }
+}
+
+/**
+ * Sends email notifications for completed payments
+ */
+async function sendEmailNotifications({
+  orderId,
+  paymentAmount,
+  userInfo
+}: {
+  orderId: string;
+  paymentAmount: number;
+  userInfo: { email: string | null; name: string | null } | null;
+}): Promise<void> {
+  // Get order details with related data
+  const [orderData] = await db
+    .select({
+      orderNumber: orderTable.orderNumber,
+      totalAmount: orderTable.totalAmount,
+      organizationId: orderTable.organizationId,
+      organizationName: organizationTable.name,
+      eventYearName: eventYearTable.name,
+      eventYearYear: eventYearTable.year,
+    })
+    .from(orderTable)
+    .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
+    .innerJoin(eventYearTable, eq(orderTable.eventYearId, eventYearTable.id))
+    .where(eq(orderTable.id, orderId));
+
+  if (!orderData) {
+    console.error('❌ Could not find order data for email notifications for orderId:', orderId);
+    return;
+  }
+
+  // Add customer info from userInfo
+  const customerEmail = userInfo?.email || 'unknown@example.com';
+  const customerName = userInfo?.name || 'Unknown User';
+
+  // Get order items
+  const orderItems = await db
+    .select({
+      productName: productTable.name,
+      quantity: orderItemTable.quantity,
+      unitPrice: orderItemTable.unitPrice,
+      totalPrice: orderItemTable.totalPrice,
+    })
+    .from(orderItemTable)
+    .innerJoin(productTable, eq(orderItemTable.productId, productTable.id))
+    .where(eq(orderItemTable.orderId, orderId));
+
+  // Calculate remaining balance
+  const remainingBalance = orderData.totalAmount - paymentAmount;
+  const isFullPayment = remainingBalance <= 0;
+
+  const emailData = {
+    customerName: customerName,
+    customerEmail: customerEmail,
+    organizationName: orderData.organizationName,
+    orderNumber: orderData.orderNumber,
+    totalAmount: orderData.totalAmount,
+    paymentAmount,
+    remainingBalance: Math.max(0, remainingBalance),
+    orderItems: orderItems.map(item => ({
+      name: item.productName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      totalPrice: item.totalPrice
+    })),
+    eventYear: {
+      name: orderData.eventYearName,
+      year: orderData.eventYearYear
+    },
+    isFullPayment,
+    orderUrl: `${process.env.NEXT_PUBLIC_APP_URL}/organizations/${orderData.organizationId}/registration/orders?openOrder=${orderId}`
+  };
+
+  // Send customer confirmation email
+  await sendPurchaseConfirmationEmail({
+    ...emailData,
+    recipient: customerEmail
+  });
+  console.log('✅ Customer confirmation email sent successfully');
+
+  // Get super admin emails
+  const superAdmins = await db
+    .select({
+      email: userTable.email,
+    })
+    .from(userTable)
+    .where(eq(userTable.isSportsFestAdmin, true));
+
+  const validAdminEmails = superAdmins.map(admin => admin.email).filter((email): email is string => email !== null);
+
+  if (validAdminEmails.length > 0) {
+    // Send admin notification emails
+    await sendAdminPurchaseNotificationEmail({
+      ...emailData,
+      adminDashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin`,
+      recipients: validAdminEmails
+    });
+    console.log('✅ Admin notification emails sent successfully');
   }
 }
