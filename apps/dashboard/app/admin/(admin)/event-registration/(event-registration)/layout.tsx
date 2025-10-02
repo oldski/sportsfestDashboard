@@ -27,7 +27,6 @@ export type EventRegistrationOverviewLayoutProps = {
   productManagement: React.ReactNode;
   quickActions: React.ReactNode;
   systemAlerts: React.ReactNode;
-  tentPurchases: React.ReactNode;
   tentTracking: React.ReactNode;
   totalRevenue: React.ReactNode;
 };
@@ -41,7 +40,6 @@ export default async function EventRegistrationOverviewLayout({
   productManagement,
   quickActions,
   systemAlerts,
-  tentPurchases,
   tentTracking,
   totalRevenue,
 }: EventRegistrationOverviewLayoutProps & NextPageProps): Promise<React.JSX.Element> {
@@ -53,9 +51,6 @@ export default async function EventRegistrationOverviewLayout({
           <AdminPageTitle
             title="Event Registration Management"
           />
-          <PageActions>
-            actions area. see org / home for reference
-          </PageActions>
         </PagePrimaryBar>
         <PageSecondaryBar>
           <EventRegistrationNav />
@@ -63,21 +58,18 @@ export default async function EventRegistrationOverviewLayout({
       </PageHeader>
       <PageBody>
         <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
-            <div>
-              {activeProducts}
-            </div>
-            <div>
-              {tentPurchases}
-            </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-6">
             <div>
               {pendingPayments}
             </div>
             <div>
               {totalRevenue}
             </div>
+            <div>
+              {activeProducts}
+            </div>
           </div>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-6">
             <div>
               {productManagement}
             </div>

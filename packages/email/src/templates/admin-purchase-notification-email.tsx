@@ -21,6 +21,7 @@ export interface AdminPurchaseNotificationEmailProps {
   organizationName: string;
   orderNumber: string;
   totalAmount: number;
+  originalTotal?: number;
   paymentAmount: number;
   remainingBalance: number;
   orderItems: Array<{
@@ -35,6 +36,14 @@ export interface AdminPurchaseNotificationEmailProps {
   };
   isFullPayment: boolean;
   adminDashboardUrl: string;
+  appliedCoupon?: {
+    id: string;
+    code: string;
+    discountType: 'percentage' | 'fixed_amount';
+    discountValue: number;
+    calculatedDiscount: number;
+  };
+  couponDiscount?: number;
 }
 
 const formatCurrency = (amount: number) => {

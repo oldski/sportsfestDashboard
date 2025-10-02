@@ -9,7 +9,8 @@ import {
   TentIcon,
   CreditCardIcon,
   FileTextIcon,
-  BarChart3Icon
+  BarChart3Icon,
+  TagIcon
 } from 'lucide-react';
 
 import { Button } from '@workspace/ui/components/button';
@@ -27,6 +28,12 @@ const navigationItems = [
     href: '/admin/event-registration/products',
     icon: PackageIcon,
     description: 'Manage product catalog'
+  },
+  {
+    label: 'Coupons',
+    href: '/admin/event-registration/coupons',
+    icon: TagIcon,
+    description: 'Manage discount coupons'
   },
   {
     label: 'Event Years',

@@ -1753,6 +1753,7 @@ export const productTable = pgTable(
       }),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
+    image: varchar('image', { length: 2048 }),
     type: productTypeEnum('type').notNull(),
     status: productStatusEnum('status').default(ProductStatus.ACTIVE).notNull(),
     basePrice: doublePrecision('basePrice').notNull(),
@@ -1760,6 +1761,8 @@ export const productTable = pgTable(
     depositAmount: doublePrecision('depositAmount'),
     maxQuantityPerOrg: integer('maxQuantityPerOrg'),
     totalInventory: integer('totalInventory'),
+    soldCount: integer('soldcount').default(0).notNull(),
+    reservedCount: integer('reservedcount').default(0).notNull(),
     displayOrder: integer('displayOrder').default(0),
     metadata: jsonb('metadata'),
     createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
@@ -1782,6 +1785,28 @@ export const productTable = pgTable(
     index('IX_product_status').using(
       'btree',
       table.status.asc().nullsLast()
+    )
+  ]
+);
+
+export const productImageTable = pgTable(
+  'productImage',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    productId: uuid('productId')
+      .notNull()
+      .references(() => productTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    data: bytea('data'),
+    contentType: varchar('contentType', { length: 255 }),
+    hash: varchar('hash', { length: 64 })
+  },
+  (table) => [
+    index('IX_productImage_productId').using(
+      'btree',
+      table.productId.asc().nullsLast().op('uuid_ops')
     )
   ]
 );
@@ -2139,7 +2164,11 @@ export const productRelations = relations(productTable, ({ one, many }) => ({
   }),
   organizationPricing: many(organizationPricingTable),
   orderItems: many(orderItemTable),
-  tentPurchases: many(tentPurchaseTrackingTable)
+  tentPurchases: many(tentPurchaseTrackingTable),
+  productImage: one(productImageTable, {
+    fields: [productTable.id],
+    references: [productImageTable.productId]
+  })
 }));
 
 export const organizationPricingRelations = relations(organizationPricingTable, ({ one }) => ({
@@ -2152,6 +2181,16 @@ export const organizationPricingRelations = relations(organizationPricingTable, 
     references: [organizationTable.id]
   })
 }));
+
+export const productImageRelations = relations(
+  productImageTable,
+  ({ one }) => ({
+    product: one(productTable, {
+      fields: [productImageTable.productId],
+      references: [productTable.id]
+    })
+  })
+);
 
 export const orderRelations = relations(orderTable, ({ one, many }) => ({
   organization: one(organizationTable, {
@@ -2264,14 +2303,71 @@ export const cartSessionRelations = relations(cartSessionTable, ({ one }) => ({
   })
 }));
 
+export const couponTable = pgTable(
+  'coupon',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    code: varchar('code', { length: 50 }).notNull().unique(),
+    eventYearId: uuid('eventYearId')
+      .notNull()
+      .references(() => eventYearTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    discountType: varchar('discountType', { length: 20 }).notNull(), // 'percentage' | 'fixed_amount'
+    discountValue: doublePrecision('discountValue').notNull(),
+    organizationRestriction: varchar('organizationRestriction', { length: 20 }).default('anyone').notNull(), // 'anyone' | 'specific'
+    restrictedOrganizations: jsonb('restrictedOrganizations'), // Array of organization IDs when restriction is 'specific'
+    maxUses: integer('maxUses').default(1).notNull(),
+    currentUses: integer('currentUses').default(0).notNull(),
+    minimumOrderAmount: doublePrecision('minimumOrderAmount').default(0).notNull(),
+    isActive: boolean('isActive').default(true).notNull(),
+    expiresAt: timestamp('expiresAt', { precision: 3, mode: 'date' }),
+    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  (table) => [
+    index('IX_coupon_code').using(
+      'btree',
+      table.code.asc().nullsLast().op('text_ops')
+    ),
+    index('IX_coupon_eventYearId').using(
+      'btree',
+      table.eventYearId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_coupon_isActive').using(
+      'btree',
+      table.isActive.asc().nullsLast()
+    ),
+    index('IX_coupon_expiresAt').using(
+      'btree',
+      table.expiresAt.asc().nullsLast()
+    )
+  ]
+);
+
+export const couponRelations = relations(couponTable, ({ one }) => ({
+  eventYear: one(eventYearTable, {
+    fields: [couponTable.eventYearId],
+    references: [eventYearTable.id]
+  })
+}));
+
 // Table aliases for imports
 export const cartSession = cartSessionTable;
+export const coupon = couponTable;
 export const order = orderTable;
 export const orderItem = orderItemTable;
 export const orderPayment = orderPaymentTable;
 export const orderInvoice = orderInvoiceTable;
 export const product = productTable;
 export const productCategory = productCategoryTable;
+export const productImage = productImageTable;
 export const organizationPricing = organizationPricingTable;
 export const tentPurchaseTracking = tentPurchaseTrackingTable;
 

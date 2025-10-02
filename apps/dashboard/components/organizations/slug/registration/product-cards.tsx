@@ -96,11 +96,11 @@ function ProductCard({ product }: ProductCardProps) {
     setQuantity(newQuantity);
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (isUnavailable) return;
 
     const useDeposit = paymentOption === 'deposit' && product.requiresDeposit;
-    addItem(product, quantity, useDeposit);
+    await addItem(product, quantity, useDeposit);
 
     // Reset quantity to 1 after adding
     setQuantity(1);
@@ -108,15 +108,15 @@ function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Card className={cn(
-      "h-full flex flex-col transition-shadow duration-200 hover:shadow-md", 
+      "h-full flex flex-col transition-shadow duration-200 hover:shadow-md",
       isUnavailable && "opacity-60"
     )}>
       <CardHeader className="pb-3">
         {/* Product Image */}
         <div className="aspect-video relative bg-muted rounded-lg overflow-hidden mb-3">
-          {product.imageUrl ? (
+          {product.image ? (
             <Image
-              src={product.imageUrl}
+              src={product.image}
               alt={product.name}
               fill
               className="object-cover"

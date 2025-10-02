@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@workspace/auth';
-import { db, eq, and } from '@workspace/database/client';
+import { db, eq, and, sql } from '@workspace/database/client';
 import {
   orderTable,
   orderPaymentTable,
@@ -11,6 +11,7 @@ import {
   organizationTable,
   userTable,
   eventYearTable,
+  couponTable,
   OrderStatus,
   PaymentStatus,
   PaymentType,
@@ -19,10 +20,12 @@ import {
 import { stripe } from '~/lib/stripe';
 import { sendPurchaseConfirmationEmail } from '@workspace/email/send-purchase-confirmation-email';
 import { sendAdminPurchaseNotificationEmail } from '@workspace/email/send-admin-purchase-notification-email';
+import { confirmInventorySale, confirmTentSale } from '~/lib/inventory-management';
 
 export interface ConfirmPaymentRequest {
   paymentIntentId: string;
   orderId: string;
+  isFreeOrder?: boolean;
 }
 
 export interface ConfirmPaymentResponse {
@@ -33,70 +36,95 @@ export interface ConfirmPaymentResponse {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔍 Starting confirm-payment route');
     const session = await auth();
 
     const body: ConfirmPaymentRequest = await request.json();
-    const { paymentIntentId, orderId } = body;
+    const { paymentIntentId, orderId, isFreeOrder } = body;
+
+    console.log('📋 Confirm payment request:', { paymentIntentId, orderId, isFreeOrder });
 
     // Validate input
     if (!paymentIntentId || !orderId) {
+      console.error('❌ Missing required fields:', { paymentIntentId, orderId });
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Retrieve the payment intent from Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    let paymentIntent: any = null;
+    let paymentAmount = 0;
 
-    if (paymentIntent.status !== 'succeeded') {
-      return NextResponse.json(
-        { error: 'Payment not successful' },
-        { status: 400 }
-      );
+    // Handle free orders differently
+    if (isFreeOrder && paymentIntentId === 'free_order') {
+      console.log('🆓 Processing free order completion');
+      paymentAmount = 0;
+    } else {
+      // Retrieve the payment intent from Stripe for paid orders
+      paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      if (paymentIntent.status !== 'succeeded') {
+        return NextResponse.json(
+          { error: 'Payment not successful' },
+          { status: 400 }
+        );
+      }
+
+      paymentAmount = paymentIntent.amount / 100; // Convert from cents
     }
 
     // Get the order
+    console.log('🔍 Fetching order with ID:', orderId);
     const [order] = await db
       .select()
       .from(orderTable)
       .where(eq(orderTable.id, orderId));
 
     if (!order) {
+      console.error('❌ Order not found for ID:', orderId);
       return NextResponse.json(
         { error: 'Order not found' },
         { status: 404 }
       );
     }
 
-    // Verify the payment intent belongs to this order
-    // For order completion payments, we may have a different payment intent ID
-    const isOrderCompletionPayment = paymentIntent.metadata?.paymentType === 'balance_completion';
-    const isOriginalPayment = order.stripePaymentIntentId === paymentIntentId;
-    
-    
-    if (!isOriginalPayment && !isOrderCompletionPayment) {
-      return NextResponse.json(
-        { error: 'Payment intent does not belong to this order' },
-        { status: 400 }
-      );
-    }
-    
-    // For order completion payments, verify the order ID in metadata matches
-    if (isOrderCompletionPayment && paymentIntent.metadata?.orderId !== orderId) {
-      return NextResponse.json(
-        { error: 'Payment intent order mismatch' },
-        { status: 400 }
-      );
+    console.log('✅ Found order:', { id: order.id, status: order.status, totalAmount: order.totalAmount });
+
+    // Skip payment verification for free orders
+    if (!isFreeOrder) {
+      // Verify the payment intent belongs to this order
+      // For order completion payments, we may have a different payment intent ID
+      const isOrderCompletionPayment = paymentIntent.metadata?.paymentType === 'balance_completion';
+      const isOriginalPayment = order.stripePaymentIntentId === paymentIntentId;
+
+
+      if (!isOriginalPayment && !isOrderCompletionPayment) {
+        return NextResponse.json(
+          { error: 'Payment intent does not belong to this order' },
+          { status: 400 }
+        );
+      }
+
+      // For order completion payments, verify the order ID in metadata matches
+      if (isOrderCompletionPayment && paymentIntent.metadata?.orderId !== orderId) {
+        return NextResponse.json(
+          { error: 'Payment intent order mismatch' },
+          { status: 400 }
+        );
+      }
     }
 
     // Determine payment type and new order status
-    const paymentAmount = paymentIntent.amount / 100; // Convert from cents
     
     let paymentType: PaymentType;
     let newOrderStatus: OrderStatus;
-    
-    if (isOrderCompletionPayment) {
+
+    if (isFreeOrder) {
+      // Free order with 100% coupon discount
+      paymentType = PaymentType.BALANCE_PAYMENT;
+      newOrderStatus = OrderStatus.FULLY_PAID;
+    } else if (paymentIntent.metadata?.paymentType === 'balance_completion') {
       // This is a balance completion payment
       paymentType = PaymentType.BALANCE_PAYMENT;
       newOrderStatus = OrderStatus.FULLY_PAID;
@@ -104,7 +132,7 @@ export async function POST(request: NextRequest) {
       // This is an original payment (could be deposit or full)
       const isDepositPayment = paymentAmount < order.totalAmount;
       paymentType = isDepositPayment ? PaymentType.DEPOSIT_PAYMENT : PaymentType.BALANCE_PAYMENT;
-      
+
       if (isDepositPayment) {
         newOrderStatus = OrderStatus.DEPOSIT_PAID;
       } else if (paymentAmount === order.totalAmount) {
@@ -115,23 +143,48 @@ export async function POST(request: NextRequest) {
     }
 
     // Create payment record
-    await db.insert(orderPaymentTable).values({
-      orderId,
-      type: paymentType,
-      status: PaymentStatus.COMPLETED,
-      amount: paymentAmount,
-      stripePaymentIntentId: paymentIntentId,
-      stripeChargeId: paymentIntent.latest_charge as string,
-      paymentMethodType: paymentIntent.payment_method_types[0],
-      processedAt: new Date(),
-      metadata: {
-        stripePaymentIntent: {
-          id: paymentIntent.id,
-          status: paymentIntent.status,
-          amount: paymentIntent.amount,
+    console.log('💳 Creating payment record for orderId:', orderId);
+    if (isFreeOrder) {
+      const couponData = order.metadata && typeof order.metadata === 'object'
+        ? (order.metadata as any).appliedCoupon
+        : null;
+
+      console.log('🆓 Free order coupon data:', couponData);
+
+      await db.insert(orderPaymentTable).values({
+        orderId,
+        type: paymentType,
+        status: PaymentStatus.COMPLETED,
+        amount: paymentAmount,
+        stripePaymentIntentId: 'free_order',
+        stripeChargeId: 'coupon_discount',
+        paymentMethodType: 'coupon',
+        processedAt: new Date(),
+        metadata: {
+          freeOrder: true,
+          couponApplied: couponData,
         }
-      }
-    });
+      });
+      console.log('✅ Payment record created for free order');
+    } else {
+      await db.insert(orderPaymentTable).values({
+        orderId,
+        type: paymentType,
+        status: PaymentStatus.COMPLETED,
+        amount: paymentAmount,
+        stripePaymentIntentId: paymentIntentId,
+        stripeChargeId: paymentIntent.latest_charge as string,
+        paymentMethodType: paymentIntent.payment_method_types[0],
+        processedAt: new Date(),
+        metadata: {
+          stripePaymentIntent: {
+            id: paymentIntent.id,
+            status: paymentIntent.status,
+            amount: paymentIntent.amount,
+          }
+        }
+      });
+    }
 
     // Update order status and payment info
     // For completion payments, also update the payment intent ID
@@ -139,20 +192,27 @@ export async function POST(request: NextRequest) {
       status: newOrderStatus,
       updatedAt: new Date(),
     };
-    
-    if (isOrderCompletionPayment) {
+
+    if (isFreeOrder) {
+      updateFields.stripePaymentIntentId = 'free_order';
+    } else if (paymentIntent.metadata?.paymentType === 'balance_completion') {
       updateFields.stripePaymentIntentId = paymentIntentId;
     }
-    
+
+    console.log('📝 Updating order with fields:', updateFields);
     await db
       .update(orderTable)
       .set(updateFields)
       .where(eq(orderTable.id, orderId));
+    console.log('✅ Order updated successfully');
 
     // Create or update invoice
+    console.log('📄 Creating invoice for order:', { orderId, paymentAmount, orderTotal: order.totalAmount, isFreeOrder });
     const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
     const currentPaidAmount = paymentAmount;
-    const balanceOwed = order.totalAmount - currentPaidAmount;
+
+    // For free orders, the balance owed should be 0 since the order total is already discounted
+    const balanceOwed = isFreeOrder ? 0 : (order.totalAmount - currentPaidAmount);
     
     // Check if invoice already exists for this order
     const [existingInvoice] = await db
@@ -182,6 +242,8 @@ export async function POST(request: NextRequest) {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 30); // 30 days from now
 
+      console.log('📄 Creating new invoice with status:', invoiceStatus, 'balanceOwed:', balanceOwed);
+
       await db.insert(orderInvoiceTable).values({
         orderId,
         invoiceNumber,
@@ -192,9 +254,61 @@ export async function POST(request: NextRequest) {
         dueDate: balanceOwed > 0 ? dueDate : undefined,
         paidAt: balanceOwed <= 0 ? new Date() : undefined,
         sentAt: new Date(),
-        stripeInvoiceId: paymentIntentId, // Using payment intent ID as reference
-        notes: `Payment of ${paymentAmount.toFixed(2)} received via ${paymentIntent.payment_method_types[0]}`
+        stripeInvoiceId: isFreeOrder ? 'free_order' : paymentIntentId,
+        notes: isFreeOrder
+          ? `Free order completed with 100% coupon discount (${order.metadata?.appliedCoupon?.code || 'Unknown coupon'})`
+          : `Payment of ${paymentAmount.toFixed(2)} received via ${paymentIntent.payment_method_types[0]}`
       });
+
+      console.log('✅ Invoice created successfully');
+    }
+
+    // Confirm inventory sales - move from reserved to sold
+    // Only confirm sales when payment is fully completed
+    if (newOrderStatus === OrderStatus.FULLY_PAID || newOrderStatus === OrderStatus.DEPOSIT_PAID) {
+      try {
+        // Get order items with product details to confirm their inventory
+        const orderItems = await db
+          .select({
+            productId: orderItemTable.productId,
+            quantity: orderItemTable.quantity,
+            productType: productTable.type
+          })
+          .from(orderItemTable)
+          .innerJoin(productTable, eq(orderItemTable.productId, productTable.id))
+          .where(eq(orderItemTable.orderId, orderId));
+
+        // Confirm inventory sale for each item
+        for (const item of orderItems) {
+          if (item.productType === ProductType.TENT_RENTAL) {
+            // Handle tent sales with quota tracking
+            const tentResult = await confirmTentSale(
+              item.productId,
+              order.organizationId,
+              order.eventYearId,
+              item.quantity
+            );
+            if (!tentResult.success) {
+              console.warn(`Failed to confirm tent sale for product ${item.productId}:`, tentResult.error);
+              // Continue with other items even if one fails
+            } else {
+              console.log(`✅ Tent sale confirmed: ${item.quantity} tents, ${tentResult.remainingAllowed} remaining for org`);
+            }
+          } else {
+            // Handle regular inventory confirmation
+            const result = await confirmInventorySale(item.productId, item.quantity);
+            if (!result.success) {
+              console.warn(`Failed to confirm inventory sale for product ${item.productId}:`, result.error);
+              // Continue with other items even if one fails
+            }
+          }
+        }
+        console.log('✅ Inventory sales confirmed successfully');
+      } catch (inventoryError) {
+        console.error('Error confirming inventory sales:', inventoryError);
+        // Don't fail the payment confirmation if inventory confirmation fails
+        // The cron job will eventually clean up any remaining reservations
+      }
     }
 
     // Create company teams for team registration products
@@ -206,6 +320,27 @@ export async function POST(request: NextRequest) {
         console.error('Error creating company teams:', teamError);
         // Don't fail the payment confirmation if team creation fails
         // This can be handled manually later if needed
+      }
+    }
+
+    // Mark coupon as used if this was a coupon order
+    if (order.metadata?.appliedCoupon?.id) {
+      try {
+        const couponId = order.metadata.appliedCoupon.id;
+        console.log('🎟️ Marking coupon as used:', couponId);
+
+        await db
+          .update(couponTable)
+          .set({
+            currentUses: sql`${couponTable.currentUses} + 1`,
+            updatedAt: new Date()
+          })
+          .where(eq(couponTable.id, couponId));
+
+        console.log('✅ Coupon usage incremented successfully');
+      } catch (couponError) {
+        console.error('❌ Error updating coupon usage:', couponError);
+        // Don't fail the payment confirmation if coupon update fails
       }
     }
 
@@ -253,6 +388,7 @@ export async function POST(request: NextRequest) {
       orderStatus: newOrderStatus,
     };
 
+    console.log('✅ Confirm payment completed successfully:', response);
     return NextResponse.json(response);
 
   } catch (error) {
@@ -377,6 +513,7 @@ async function sendEmailNotifications({
       organizationName: organizationTable.name,
       eventYearName: eventYearTable.name,
       eventYearYear: eventYearTable.year,
+      metadata: orderTable.metadata,
     })
     .from(orderTable)
     .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
@@ -408,12 +545,21 @@ async function sendEmailNotifications({
   const remainingBalance = orderData.totalAmount - paymentAmount;
   const isFullPayment = remainingBalance <= 0;
 
+  // Get coupon information from order metadata
+  const appliedCoupon = orderData.metadata?.appliedCoupon;
+  const couponDiscount = orderData.metadata?.couponDiscount || 0;
+  const originalTotal = orderData.metadata?.originalTotal || orderData.totalAmount;
+
+  console.log('📧 Email coupon data:', { appliedCoupon, couponDiscount, originalTotal });
+  console.log('📧 Full metadata:', JSON.stringify(orderData.metadata, null, 2));
+
   const emailData = {
     customerName: customerName,
     customerEmail: customerEmail,
     organizationName: orderData.organizationName,
     orderNumber: orderData.orderNumber,
     totalAmount: orderData.totalAmount,
+    originalTotal,
     paymentAmount,
     remainingBalance: Math.max(0, remainingBalance),
     orderItems: orderItems.map(item => ({
@@ -427,14 +573,24 @@ async function sendEmailNotifications({
       year: orderData.eventYearYear
     },
     isFullPayment,
+    appliedCoupon,
+    couponDiscount,
     orderUrl: `${process.env.NEXT_PUBLIC_APP_URL}/organizations/${orderData.organizationId}/registration/orders?openOrder=${orderId}`
   };
 
   // Send customer confirmation email
-  await sendPurchaseConfirmationEmail({
+  const finalEmailData = {
     ...emailData,
     recipient: customerEmail
+  };
+  console.log('📧 Final email data being sent:', {
+    appliedCoupon: finalEmailData.appliedCoupon,
+    couponDiscount: finalEmailData.couponDiscount,
+    originalTotal: finalEmailData.originalTotal,
+    totalAmount: finalEmailData.totalAmount
   });
+
+  await sendPurchaseConfirmationEmail(finalEmailData);
   console.log('✅ Customer confirmation email sent successfully');
 
   // Get super admin emails

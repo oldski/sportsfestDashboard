@@ -218,6 +218,26 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
 
         <Separator />
 
+        {/* Coupon Applied Alert */}
+        {order.appliedCoupon && order.couponDiscount && order.couponDiscount > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <span className="text-lg">🎟️</span>
+              <div className="flex-1">
+                <h4 className="font-medium text-green-900 mb-1">Coupon Applied</h4>
+                <p className="text-sm text-green-700">
+                  Coupon <span className="font-medium">"{order.appliedCoupon.code}"</span> saved you{' '}
+                  <span className="font-medium">{formatCurrency(order.couponDiscount)}</span>
+                  {order.appliedCoupon.discountType === 'percentage'
+                    ? ` (${order.appliedCoupon.discountValue}% off)`
+                    : ' (fixed discount)'
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Payment Completion Alert */}
         {canCompletePayment && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -255,10 +275,28 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
                   <span className="text-sm">Created:</span>
                   <span className="text-sm">{formatDate(order.createdAt)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Total Amount:</span>
-                  <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
-                </div>
+                {/* Show original total and coupon discount if coupon was applied */}
+                {order.appliedCoupon && order.couponDiscount && order.couponDiscount > 0 ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Subtotal:</span>
+                      <span className="text-sm">{formatCurrency(order.originalTotal || (order.totalAmount + order.couponDiscount))}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-green-600">Coupon Discount ({order.appliedCoupon.code}):</span>
+                      <span className="text-green-600 font-medium">-{formatCurrency(order.couponDiscount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Total Amount:</span>
+                      <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between">
+                    <span className="text-sm">Total Amount:</span>
+                    <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
+                  </div>
+                )}
               </div>
             </div>
 

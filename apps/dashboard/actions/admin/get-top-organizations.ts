@@ -1,62 +1,85 @@
 'use server';
 
-import { ForbiddenError } from '@workspace/common/errors';
-import { db, sql, desc } from '@workspace/database/client';
-import { organizationTable, membershipTable, orderTable } from '@workspace/database/schema';
-
-import { getAuthContext } from '@workspace/auth/context';
+import { auth } from '@workspace/auth';
 import { isSuperAdmin } from '~/lib/admin-utils';
+import { getActiveEventYear } from './get-event-year';
+import { db, sql, desc, eq, and } from '@workspace/database/client';
+import { organizationTable, membershipTable, orderTable, playerTable, companyTeamTable, OrderStatus } from '@workspace/database/schema';
 
 export interface TopOrganizationData {
   id: string;
   name: string;
   memberCount: number;
   revenue: number;
+  teamCount: number;
+  playerCount: number;
 }
 
-export async function getTopOrganizations(limit: number = 8): Promise<TopOrganizationData[]> {
-  const { session } = await getAuthContext();
-  
+export type RankingType = 'members' | 'revenue' | 'teams' | 'players';
+
+export async function getTopOrganizations(rankingType: RankingType = 'members', limit: number = 10): Promise<TopOrganizationData[]> {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Unauthorized');
+  }
+
   if (!isSuperAdmin(session.user)) {
-    throw new ForbiddenError('Unauthorized: Only super admins can access top organizations data');
+    throw new Error('Unauthorized: Only super admins can access top organizations data');
   }
 
   try {
-    // Get organizations with member counts and revenue
+    const activeEvent = await getActiveEventYear();
+
+    if (!activeEvent?.id) {
+      return [];
+    }
+
+    // Get comprehensive organization data
     const topOrgs = await db
       .select({
         id: organizationTable.id,
         name: organizationTable.name,
         memberCount: sql<number>`COUNT(DISTINCT ${membershipTable.id})`,
-        revenue: sql<number>`COALESCE(SUM(${orderTable.totalAmount}), 0)`
+        revenue: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.eventYearId} = ${activeEvent.id} AND ${orderTable.status} IN ('fully_paid', 'deposit_paid') THEN ${orderTable.totalAmount} ELSE 0 END), 0)`,
+        teamCount: sql<number>`COALESCE(SUM(CASE WHEN ${companyTeamTable.eventYearId} = ${activeEvent.id} THEN 1 ELSE 0 END), 0)`,
+        playerCount: sql<number>`COALESCE(SUM(CASE WHEN ${playerTable.eventYearId} = ${activeEvent.id} THEN 1 ELSE 0 END), 0)`
       })
       .from(organizationTable)
-      .leftJoin(membershipTable, sql`${membershipTable.organizationId} = ${organizationTable.id}`)
-      .leftJoin(orderTable, sql`${orderTable.organizationId} = ${organizationTable.id} AND ${orderTable.status} != 'cancelled'`)
+      .leftJoin(membershipTable, eq(membershipTable.organizationId, organizationTable.id))
+      .leftJoin(orderTable, eq(orderTable.organizationId, organizationTable.id))
+      .leftJoin(companyTeamTable, eq(companyTeamTable.organizationId, organizationTable.id))
+      .leftJoin(playerTable, eq(playerTable.organizationId, organizationTable.id))
       .groupBy(organizationTable.id, organizationTable.name)
-      .orderBy(desc(sql`COUNT(DISTINCT ${membershipTable.id})`)) // Order by member count
+      .orderBy(getOrderByClause(rankingType))
       .limit(limit);
+
 
     return topOrgs.map(org => ({
       id: org.id,
       name: org.name,
       memberCount: Number(org.memberCount),
-      revenue: Number(org.revenue)
+      revenue: Number(org.revenue),
+      teamCount: Number(org.teamCount),
+      playerCount: Number(org.playerCount)
     }));
 
   } catch (error) {
     console.error('Failed to get top organizations:', error);
-    
-    // Fallback to realistic mock data
-    return [
-      { id: '1', name: 'Acme Corporation', memberCount: 45, revenue: 6750 },
-      { id: '2', name: 'TechStart Innovations', memberCount: 32, revenue: 4800 },
-      { id: '3', name: 'Global Solutions Inc', memberCount: 28, revenue: 4200 },
-      { id: '4', name: 'BlueSky Enterprises', memberCount: 25, revenue: 3750 },
-      { id: '5', name: 'Metro Financial Group', memberCount: 22, revenue: 3300 },
-      { id: '6', name: 'Coastal Marketing', memberCount: 18, revenue: 2700 },
-      { id: '7', name: 'Peak Performance', memberCount: 15, revenue: 2250 },
-      { id: '8', name: 'Digital Dynamics', memberCount: 12, revenue: 1800 }
-    ].slice(0, limit);
+    return [];
+  }
+}
+
+function getOrderByClause(rankingType: RankingType) {
+  switch (rankingType) {
+    case 'members':
+      return desc(sql`COUNT(DISTINCT membership.id)`);
+    case 'revenue':
+      return desc(sql`COALESCE(SUM(CASE WHEN "order"."eventYearId" = (SELECT id FROM "eventYear" WHERE "isActive" = true AND "isDeleted" = false LIMIT 1) AND "order"."status" IN ('fully_paid', 'deposit_paid') THEN "order"."totalAmount" ELSE 0 END), 0)`);
+    case 'teams':
+      return desc(sql`COALESCE(SUM(CASE WHEN "companyTeam"."eventYearId" = (SELECT id FROM "eventYear" WHERE "isActive" = true AND "isDeleted" = false LIMIT 1) THEN 1 ELSE 0 END), 0)`);
+    case 'players':
+      return desc(sql`COALESCE(SUM(CASE WHEN "player"."eventYearId" = (SELECT id FROM "eventYear" WHERE "isActive" = true AND "isDeleted" = false LIMIT 1) THEN 1 ELSE 0 END), 0)`);
+    default:
+      return desc(sql`COUNT(DISTINCT membership.id)`);
   }
 }

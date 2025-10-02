@@ -24,8 +24,18 @@ export type RegistrationInvoiceDto = {
     id: string;
     orderNumber: string;
     totalAmount: number;
+    originalTotal?: number;
     status: string;
     createdAt: Date;
+    // Coupon information
+    appliedCoupon?: {
+      id: string;
+      code: string;
+      discountType: 'percentage' | 'fixed_amount';
+      discountValue: number;
+      calculatedDiscount: number;
+    };
+    couponDiscount?: number;
     // Order items for invoice details
     items: {
       id: string;

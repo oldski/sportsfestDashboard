@@ -48,7 +48,8 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
             orderNumber: orderTable.orderNumber,
             totalAmount: orderTable.totalAmount,
             status: orderTable.status,
-            createdAt: orderTable.createdAt
+            createdAt: orderTable.createdAt,
+            metadata: orderTable.metadata
           },
           eventYear: {
             id: eventYearTable.id,
@@ -136,8 +137,11 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
           id: item.order.id,
           orderNumber: item.order.orderNumber,
           totalAmount: item.order.totalAmount,
+          originalTotal: (item.order.metadata as any)?.originalTotal,
           status: item.order.status,
           createdAt: item.order.createdAt,
+          appliedCoupon: (item.order.metadata as any)?.appliedCoupon,
+          couponDiscount: (item.order.metadata as any)?.couponDiscount || 0,
           items: (orderItemsMap.get(item.order.id) || []).map(orderItem => ({
             id: orderItem.id,
             productName: orderItem.productName,

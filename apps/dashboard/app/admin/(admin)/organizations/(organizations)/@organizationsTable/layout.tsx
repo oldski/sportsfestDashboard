@@ -1,4 +1,4 @@
-export default function TotalRevenueLayout({
+export default function EventYearsTableLayout({
   children
 }: {
   children: React.ReactNode;

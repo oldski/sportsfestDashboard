@@ -13,7 +13,9 @@
     "format:fix": "prettier --write \"**/*.{js,cjs,mjs,ts,tsx,mdx}\" --ignore-path=\"../../.prettierignore\"",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint --fix .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "backfill-tent-tracking": "npx tsx scripts/backfill-tent-tracking.ts",
+    "backfill-tent-tracking-simple": "npx tsx scripts/backfill-tent-tracking-simple.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

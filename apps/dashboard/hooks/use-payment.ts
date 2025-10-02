@@ -22,6 +22,14 @@ export interface CartItem {
   fullPrice: number;
 }
 
+export interface AppliedCoupon {
+  id: string;
+  code: string;
+  discountType: 'percentage' | 'fixed_amount';
+  discountValue: number;
+  calculatedDiscount: number;
+}
+
 export interface OrderSummary {
   items: Array<{
     name: string;
@@ -37,6 +45,10 @@ export interface OrderSummary {
   dueToday: number;
   futurePayments: number;
   paymentType: 'full' | 'deposit';
+  appliedCoupon?: AppliedCoupon;
+  couponDiscount: number;
+  discountedSubtotal: number;
+  discountedTotal: number;
 }
 
 export function usePayment({ organizationSlug, onSuccess, onError }: PaymentHookOptions) {
@@ -47,7 +59,8 @@ export function usePayment({ organizationSlug, onSuccess, onError }: PaymentHook
 
   const createPaymentIntent = React.useCallback(async (
     cartItems: CartItem[],
-    paymentType: 'full' | 'deposit'
+    paymentType: 'full' | 'deposit',
+    appliedCoupon?: AppliedCoupon
   ) => {
     setIsLoading(true);
     try {
@@ -67,6 +80,10 @@ export function usePayment({ organizationSlug, onSuccess, onError }: PaymentHook
 
       const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
+      // Calculate coupon discount
+      const couponDiscount = appliedCoupon?.calculatedDiscount || 0;
+      const discountedSubtotal = Math.max(0, subtotal - couponDiscount);
+
       // Calculate future payments for deposit items
       const futurePayments = items.reduce((sum, item) => {
         if (item.isDeposit && item.fullPrice) {
@@ -83,19 +100,90 @@ export function usePayment({ organizationSlug, onSuccess, onError }: PaymentHook
         return sum + item.totalPrice;
       }, 0);
 
+      const discountedTotal = Math.max(0, totalOrderValue - couponDiscount);
+      const discountedDueToday = Math.max(0, subtotal - couponDiscount);
+
       const summary: OrderSummary = {
         items,
         subtotal,
-        depositAmount: paymentType === 'deposit' ? subtotal : undefined,
+        depositAmount: paymentType === 'deposit' ? discountedDueToday : undefined,
         totalAmount: totalOrderValue,
-        dueToday: subtotal,
+        dueToday: discountedDueToday,
         futurePayments,
         paymentType,
+        appliedCoupon,
+        couponDiscount,
+        discountedSubtotal,
+        discountedTotal,
       };
 
       setOrderSummary(summary);
 
-      // Create payment intent
+      // For 100% off coupons, skip payment processing entirely
+      if (discountedDueToday <= 0) {
+        // Create order without payment intent
+        const request = {
+          organizationSlug,
+          cartItems: cartItems.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+          })),
+          paymentType,
+          appliedCoupon,
+          skipPayment: true, // Flag to indicate no payment needed
+        };
+
+        const response = await fetch('/api/stripe/create-payment-intent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(request),
+        });
+
+        if (!response.ok) {
+          const responseText = await response.text();
+          throw new Error(responseText || 'Failed to create order');
+        }
+
+        const data = await response.json();
+
+        // For free orders, complete them immediately via the confirm-payment endpoint
+        try {
+          const confirmResponse = await fetch('/api/stripe/confirm-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              orderId: data.orderId,
+              paymentIntentId: 'free_order',
+              isFreeOrder: true,
+            }),
+          });
+
+          if (!confirmResponse.ok) {
+            const errorText = await confirmResponse.text();
+            console.error('Failed to confirm free order:', errorText);
+            throw new Error('Failed to complete free order');
+          }
+
+          // Set order ID and call success callback
+          setOrderId(data.orderId);
+
+          // Call success callback after a brief delay for UX
+          setTimeout(() => {
+            onSuccess?.(data.orderId);
+          }, 1000);
+
+          return;
+        } catch (confirmError) {
+          console.error('Error confirming free order:', confirmError);
+          throw new Error('Failed to complete free order');
+        }
+      }
+
+      // Create payment intent for non-free orders
       const request: CreatePaymentIntentRequest = {
         organizationSlug,
         cartItems: cartItems.map(item => ({
@@ -103,6 +191,7 @@ export function usePayment({ organizationSlug, onSuccess, onError }: PaymentHook
           quantity: item.quantity,
         })),
         paymentType,
+        appliedCoupon,
       };
 
       const response = await fetch('/api/stripe/create-payment-intent', {

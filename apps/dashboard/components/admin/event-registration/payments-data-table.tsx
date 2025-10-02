@@ -13,7 +13,7 @@ import {
   type SortingState,
   type VisibilityState
 } from '@tanstack/react-table';
-import { CreditCardIcon, ExternalLinkIcon, MoreHorizontalIcon, RefreshCwIcon, PlayIcon } from 'lucide-react';
+import { CreditCardIcon, ExternalLinkIcon, DownloadIcon } from 'lucide-react';
 
 import { replaceOrgSlug, routes } from '@workspace/routes';
 import { Badge } from '@workspace/ui/components/badge';
@@ -22,7 +22,6 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableColumnOptionsHeader,
-  DataTableExport,
   DataTablePagination
 } from '@workspace/ui/components/data-table';
 import {
@@ -30,18 +29,78 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@workspace/ui/components/dropdown-menu';
 import { Input } from '@workspace/ui/components/input';
 
 import { formatCurrency, formatDate } from '~/lib/formatters';
 import type { PaymentData } from '~/actions/admin/get-payments';
+import { generateAdminPaymentsReactPDF } from '~/components/admin/generate-payments-pdf';
+import { exportToCSV, exportToExcel } from '@workspace/ui/lib/data-table-utils';
 
 const columnHelper = createColumnHelper<PaymentData>();
 
+const exportPaymentsToPDF = async (payments: PaymentData[], status: 'pending' | 'completed' | 'failed' | 'refunded') => {
+  await generateAdminPaymentsReactPDF(payments, status);
+};
+
+// Custom DataTableExport component for admin payments
+function AdminPaymentsDataTableExport({
+  payments,
+  table,
+  status,
+}: {
+  payments: PaymentData[];
+  table: any;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+}): React.JSX.Element {
+  const filename = `sportsfest-${status}-payments-${new Date().toISOString().slice(0, 10)}`;
+  const statusConfig = {
+    pending: 'SportsFest Dashboard Pending Payments',
+    failed: 'SportsFest Dashboard Failed Payments',
+    completed: 'SportsFest Dashboard Completed Payments',
+    refunded: 'SportsFest Dashboard Refunded Payments'
+  };
+  const title = statusConfig[status];
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 text-sm">
+          <DownloadIcon className="size-4 shrink-0" />
+          Export
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Export data</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => exportToCSV(table, filename, title)}
+          className="cursor-pointer"
+        >
+          Export as CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => exportToExcel(table, filename, title)}
+          className="cursor-pointer"
+        >
+          Export as Excel
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => exportPaymentsToPDF(payments, status)}
+          className="cursor-pointer"
+        >
+          Export as PDF
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 interface PaymentsDataTableProps {
   data: PaymentData[];
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
 }
 
 export function PaymentsDataTable({ data, status }: PaymentsDataTableProps): React.JSX.Element {
@@ -56,11 +115,12 @@ export function PaymentsDataTable({ data, status }: PaymentsDataTableProps): Rea
   const columns = React.useMemo(() => {
     const baseColumns = [
       columnHelper.accessor('organizationName', {
-        id: 'organization',
+        id: 'organizationName',
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title="Organization" />
         ),
         cell: ({ row }) => (
+
           <Link
             href={replaceOrgSlug(
               routes.dashboard.organizations.slug.Home,
@@ -75,6 +135,20 @@ export function PaymentsDataTable({ data, status }: PaymentsDataTableProps): Rea
         ),
         meta: {
           title: 'Organization'
+        }
+      }),
+      columnHelper.accessor('orderNumber', {
+        id: 'orderNumber',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Order #" />
+        ),
+        cell: ({ row }) => (
+          <div className="font-mono text-sm">
+            {row.getValue('orderNumber') || 'N/A'}
+          </div>
+        ),
+        meta: {
+          title: 'Order Number'
         }
       }),
       columnHelper.accessor('paymentType', {
@@ -137,7 +211,7 @@ export function PaymentsDataTable({ data, status }: PaymentsDataTableProps): Rea
           title: 'Failure Reason'
         }
       } as any;
-      
+
       baseColumns.splice(3, 0, failureReasonColumn);
     }
 
@@ -162,7 +236,7 @@ export function PaymentsDataTable({ data, status }: PaymentsDataTableProps): Rea
       } as any;
 
       const stripeColumn = {
-        id: 'stripeId',
+        id: 'stripePaymentIntentId',
         accessorKey: 'stripePaymentIntentId',
         header: ({ column }: any) => (
           <DataTableColumnHeader column={column} title="Stripe ID" />
@@ -181,54 +255,32 @@ export function PaymentsDataTable({ data, status }: PaymentsDataTableProps): Rea
     }
 
     // Add actions column
-    const actionsColumn = {
+    const actionsColumn = columnHelper.display({
       id: 'actions',
-      cell: ({ row }: any) => {
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Actions" />
+      ),
+      cell: ({ row }) => {
         const payment = row.original;
-
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="size-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontalIcon className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem asChild>
-                <Link
-                  href={replaceOrgSlug(
-                    routes.dashboard.organizations.slug.Home,
-                    payment.organizationSlug
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="cursor-pointer"
-                >
-                  <ExternalLinkIcon className="mr-2 size-4" />
-                  View organization
-                </Link>
-              </DropdownMenuItem>
-              {status === 'pending' && (
-                <DropdownMenuItem>
-                  <PlayIcon className="mr-2 size-4" />
-                  Process payment
-                </DropdownMenuItem>
-              )}
-              {status === 'failed' && (
-                <DropdownMenuItem>
-                  <RefreshCwIcon className="mr-2 size-4" />
-                  Retry payment
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Link
+            href={replaceOrgSlug(
+              routes.dashboard.organizations.slug.Home,
+              payment.organizationSlug
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center size-8 rounded-md hover:bg-muted transition-colors"
+            title="View Organization"
+          >
+            <ExternalLinkIcon className="size-4 text-muted-foreground hover:text-foreground" />
+            <span className="sr-only">View Organization</span>
+          </Link>
         );
       }
-    } as any;
+    });
 
-    baseColumns.push(actionsColumn);
+    baseColumns.push(actionsColumn as any);
 
     return baseColumns;
   }, [status]);
@@ -255,7 +307,8 @@ export function PaymentsDataTable({ data, status }: PaymentsDataTableProps): Rea
   const statusConfig = {
     pending: { title: 'Pending Payments', description: 'Payments awaiting processing or customer action' },
     failed: { title: 'Failed Payments', description: 'Payments that failed processing and require attention' },
-    completed: { title: 'Completed Payments', description: 'Successfully processed transactions' }
+    completed: { title: 'Completed Payments', description: 'Successfully processed transactions' },
+    refunded: { title: 'Refunded Payments', description: 'Payments that have been refunded to customers' }
   };
 
   const config = statusConfig[status];
@@ -269,6 +322,7 @@ export function PaymentsDataTable({ data, status }: PaymentsDataTableProps): Rea
           {status === 'pending' && 'All payments are up to date.'}
           {status === 'failed' && 'No failed payments to review.'}
           {status === 'completed' && 'No completed payments found.'}
+          {status === 'refunded' && 'No refunded payments found.'}
         </p>
       </div>
     );
@@ -277,21 +331,17 @@ export function PaymentsDataTable({ data, status }: PaymentsDataTableProps): Rea
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="ml-5">
-          <h3 className="text-lg font-semibold">{config.title}</h3>
-          <p className="text-sm text-muted-foreground">{config.description}</p>
-        </div>
+        <Input
+          placeholder={`Search ${status} payments...`}
+          value={globalFilter}
+          onChange={(event) => setGlobalFilter(event.target.value)}
+          className="max-w-sm"
+        />
         <div className="flex items-center space-x-2">
-          <Input
-            placeholder={`Search ${status} payments...`}
-            value={globalFilter}
-            onChange={(event) => setGlobalFilter(event.target.value)}
-            className="max-w-sm"
-          />
-          <DataTableExport
+          <AdminPaymentsDataTableExport
+            payments={data}
             table={table}
-            filename={`${status}-payments`}
-            title={`SportsFest ${config.title}`}
+            status={status}
           />
           <DataTableColumnOptionsHeader table={table} />
         </div>

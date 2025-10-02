@@ -5,6 +5,6 @@ import { ProductsDataTable } from '~/components/admin/event-registration/product
 
 export default async function ProductTablePage(): Promise<React.JSX.Element> {
   const products = await getProducts();
-
+  console.log(products)
   return <ProductsDataTable products={products} />;
 }

@@ -10,6 +10,13 @@ export type OrganizationData = {
   name: string;
   slug: string;
   memberCount: number;
+  phone: string | null;
+  address: string | null;
+  address2: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  createdAt: Date | null;
   isActive: boolean;
 };
 
@@ -20,33 +27,66 @@ export async function getOrganizations(): Promise<OrganizationData[]> {
     throw new Error('Unauthorized: Super admin access required');
   }
 
-  // First, get all organizations
+  // Get organizations with member counts and earliest membership date
   const organizations = await db
     .select({
       id: organizationTable.id,
       name: organizationTable.name,
-      slug: organizationTable.slug
+      slug: organizationTable.slug,
+      phone: organizationTable.phone,
+      address: organizationTable.address,
+      address2: organizationTable.address2,
+      city: organizationTable.city,
+      state: organizationTable.state,
+      zip: organizationTable.zip,
+      memberCount: sql<number>`COUNT(${membershipTable.id})`.mapWith(Number),
+      createdAt: sql<Date>`MIN(${membershipTable.createdAt})`
     })
     .from(organizationTable)
+    .leftJoin(membershipTable, sql`${membershipTable.organizationId} = ${organizationTable.id}`)
+    .groupBy(
+      organizationTable.id,
+      organizationTable.name,
+      organizationTable.slug,
+      organizationTable.phone,
+      organizationTable.address,
+      organizationTable.address2,
+      organizationTable.city,
+      organizationTable.state,
+      organizationTable.zip
+    )
     .orderBy(organizationTable.name);
-
-  // Then get member counts separately
-  const memberCounts = await db
-    .select({
-      organizationId: membershipTable.organizationId,
-      count: sql<number>`count(*)`.mapWith(Number)
-    })
-    .from(membershipTable)
-    .groupBy(membershipTable.organizationId);
-
-  // Combine the data
-  const memberCountMap = new Map(
-    memberCounts.map(mc => [mc.organizationId, mc.count])
-  );
 
   return organizations.map(org => ({
     ...org,
-    memberCount: memberCountMap.get(org.id) || 0,
     isActive: true
   }));
+}
+
+export type OrganizationOption = {
+  id: string;
+  name: string;
+};
+
+export async function getOrganizationsForSelect(): Promise<OrganizationOption[]> {
+  const { session } = await getAuthContext();
+
+  if (!isSuperAdmin(session.user)) {
+    throw new Error('Unauthorized: Super admin access required');
+  }
+
+  try {
+    const organizations = await db
+      .select({
+        id: organizationTable.id,
+        name: organizationTable.name,
+      })
+      .from(organizationTable)
+      .orderBy(organizationTable.name);
+
+    return organizations;
+  } catch (error) {
+    console.error('Error fetching organizations for select:', error);
+    throw new Error('Failed to fetch organizations');
+  }
 }

@@ -12,7 +12,7 @@ import {
   type SortingState,
   type VisibilityState
 } from '@tanstack/react-table';
-import { ExternalLinkIcon, MoreHorizontalIcon, ShieldIcon, UserIcon } from 'lucide-react';
+import { ExternalLinkIcon, ShieldIcon, UserIcon, DownloadIcon } from 'lucide-react';
 import Link from 'next/link';
 
 import { replaceOrgSlug, routes } from '@workspace/routes';
@@ -23,7 +23,6 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableColumnOptionsHeader,
-  DataTableExport,
   DataTablePagination
 } from '@workspace/ui/components/data-table';
 import {
@@ -31,13 +30,65 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuTrigger
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@workspace/ui/components/dropdown-menu';
 import { Input } from '@workspace/ui/components/input';
 
 import type { UserData } from '~/actions/admin/get-users';
+import { generateAdminUsersReactPDF } from './generate-users-pdf';
+import { exportToCSV, exportToExcel } from '@workspace/ui/lib/data-table-utils';
 
 const columnHelper = createColumnHelper<UserData>();
+
+const exportUsersToPDF = async (users: UserData[]) => {
+  await generateAdminUsersReactPDF(users);
+};
+
+// Custom DataTableExport component for admin users
+function AdminUsersDataTableExport({
+  users,
+  table,
+}: {
+  users: UserData[];
+  table: any;
+}): React.JSX.Element {
+  const filename = `sportsfest-admin-users-${new Date().toISOString().slice(0, 10)}`;
+  const title = 'SportsFest Admin Users';
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 text-sm">
+          <DownloadIcon className="size-4 shrink-0" />
+          Export
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Export data</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => exportToCSV(table, filename, title)}
+          className="cursor-pointer"
+        >
+          Export as CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => exportToExcel(table, filename, title)}
+          className="cursor-pointer"
+        >
+          Export as Excel
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => exportUsersToPDF(users)}
+          className="cursor-pointer"
+        >
+          Export as PDF
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 const columns = [
   columnHelper.accessor('name', {
@@ -167,36 +218,32 @@ const columns = [
   }),
   columnHelper.display({
     id: 'actions',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Actions" />
+    ),
     cell: ({ row }) => {
       const user = row.original;
+
+      if (!user.organizationSlug) {
+        return (
+          <span className="text-muted-foreground text-sm">No organization</span>
+        );
+      }
+
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="size-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontalIcon className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            {user.organizationSlug && (
-              <DropdownMenuItem asChild>
-                <Link
-                  href={replaceOrgSlug(
-                    routes.dashboard.organizations.slug.Home,
-                    user.organizationSlug
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="cursor-pointer"
-                >
-                  <ExternalLinkIcon className="mr-2 size-4" />
-                  View organization
-                </Link>
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Link
+          href={replaceOrgSlug(
+            routes.dashboard.organizations.slug.Home,
+            user.organizationSlug
+          )}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center size-8 rounded-md hover:bg-muted transition-colors"
+          title="View Organization"
+        >
+          <ExternalLinkIcon className="size-4 text-muted-foreground hover:text-foreground" />
+          <span className="sr-only">View Organization</span>
+        </Link>
       );
     }
   })
@@ -241,10 +288,9 @@ export function UsersDataTable({ data }: UsersDataTableProps): React.JSX.Element
           className="max-w-sm"
         />
         <div className="flex items-center space-x-2">
-          <DataTableExport
+          <AdminUsersDataTableExport
+            users={data}
             table={table}
-            filename="users"
-            title="SportsFest Users"
           />
           <DataTableColumnOptionsHeader table={table} />
         </div>

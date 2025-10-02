@@ -27,11 +27,12 @@ export type TentTrackingData = {
   totalAmount: number;
   depositPaid: number;
   balanceOwed: number;
-  status: 'confirmed' | 'pending_payment' | 'cancelled';
+  status: 'confirmed' | 'pending_payment' | 'partial_payment';
   purchaseDate: string;
   createdAt: string;
   updatedAt: string;
   isAtLimit: boolean;
+  orderNumber: string;
 };
 
 export type TentAvailabilityData = {

@@ -1,135 +1,12 @@
 'use server';
 
 import { auth } from '@workspace/auth';
+import { db, eq, and, sql, desc } from '@workspace/database/client';
+import { orderPaymentTable, orderTable, organizationTable, eventYearTable, PaymentStatus } from '@workspace/database/schema';
 import { isSuperAdmin } from '~/lib/admin-utils';
-import { getActiveEventYear } from './get-tent-tracking';
+import { getCurrentEventYear } from '~/data/event-years/get-current-event-year';
 import type { PaymentData } from './get-payments';
 
-// Temporary mock data until the payment tables are properly set up
-const mockPayments: PaymentData[] = [
-  {
-    id: '1',
-    organizationId: 'org-1',
-    organizationName: 'Acme Corporation',
-    organizationSlug: 'acme-corp',
-    orderId: 'order-1',
-    eventYearId: 'event-2025',
-    eventYear: 2025,
-    eventYearName: 'SportsFest 2025',
-    paymentType: 'deposit_payment',
-    amount: 150.00,
-    status: 'completed',
-    stripePaymentIntentId: 'pi_1234567890',
-    processedAt: '2025-01-15',
-    createdAt: '2025-01-15',
-    updatedAt: '2025-01-15',
-    source: 'order_payment',
-  },
-  {
-    id: '2',
-    organizationId: 'org-2',
-    organizationName: 'TechStart Innovations',
-    organizationSlug: 'techstart',
-    orderId: 'order-2',
-    eventYearId: 'event-2025',
-    eventYear: 2025,
-    eventYearName: 'SportsFest 2025',
-    paymentType: 'deposit_payment',
-    amount: 75.00,
-    status: 'pending',
-    createdAt: '2025-01-14',
-    updatedAt: '2025-01-14',
-    source: 'order_payment',
-  },
-  {
-    id: '3',
-    organizationId: 'org-1',
-    organizationName: 'Acme Corporation',
-    organizationSlug: 'acme-corp',
-    orderId: 'order-1',
-    eventYearId: 'event-2025',
-    eventYear: 2025,
-    eventYearName: 'SportsFest 2025',
-    paymentType: 'balance_payment',
-    amount: 250.00,
-    status: 'pending',
-    createdAt: '2025-01-13',
-    updatedAt: '2025-01-13',
-    source: 'order_payment',
-  },
-  {
-    id: '4',
-    organizationId: 'org-3',
-    organizationName: 'Global Solutions Inc',
-    organizationSlug: 'global-solutions',
-    orderId: 'order-3',
-    eventYearId: 'event-2025',
-    eventYear: 2025,
-    eventYearName: 'SportsFest 2025',
-    paymentType: 'team_registration',
-    amount: 300.00,
-    status: 'failed',
-    stripePaymentIntentId: 'pi_failed_1234',
-    failureReason: 'insufficient_funds',
-    createdAt: '2025-01-12',
-    updatedAt: '2025-01-12',
-    source: 'payment',
-  },
-  {
-    id: '5',
-    organizationId: 'org-4',
-    organizationName: 'BlueSky Enterprises',
-    organizationSlug: 'bluesky',
-    orderId: 'order-4',
-    eventYearId: 'event-2025',
-    eventYear: 2025,
-    eventYearName: 'SportsFest 2025',
-    paymentType: 'balance_payment',
-    amount: 200.00,
-    status: 'completed',
-    stripePaymentIntentId: 'pi_completed_5678',
-    processedAt: '2025-01-11',
-    createdAt: '2025-01-11',
-    updatedAt: '2025-01-11',
-    source: 'order_payment',
-  },
-  {
-    id: '6',
-    organizationId: 'org-5',
-    organizationName: 'Innovation Labs',
-    organizationSlug: 'innovation-labs',
-    orderId: 'order-5',
-    eventYearId: 'event-2025',
-    eventYear: 2025,
-    eventYearName: 'SportsFest 2025',
-    paymentType: 'tent_rental',
-    amount: 400.00,
-    status: 'completed',
-    stripePaymentIntentId: 'pi_tent_rental_789',
-    processedAt: '2025-01-10',
-    createdAt: '2025-01-10',
-    updatedAt: '2025-01-10',
-    source: 'order_payment',
-  },
-  {
-    id: '7',
-    organizationId: 'org-6',
-    organizationName: 'Digital Dynamics',
-    organizationSlug: 'digital-dynamics',
-    orderId: 'order-6',
-    eventYearId: 'event-2025',
-    eventYear: 2025,
-    eventYearName: 'SportsFest 2025',
-    paymentType: 'product_purchase',
-    amount: 125.00,
-    status: 'failed',
-    stripePaymentIntentId: 'pi_failed_product_456',
-    failureReason: 'card_declined',
-    createdAt: '2025-01-09',
-    updatedAt: '2025-01-09',
-    source: 'order_payment',
-  }
-];
 
 export async function getPendingPaymentsSimple(): Promise<PaymentData[]> {
   const session = await auth();
@@ -141,8 +18,71 @@ export async function getPendingPaymentsSimple(): Promise<PaymentData[]> {
     throw new Error('Unauthorized: Only super admins can access payment data');
   }
 
-  // Return mock pending payments
-  return mockPayments.filter(payment => payment.status === 'pending');
+  try {
+    const currentEventYear = await getCurrentEventYear();
+    if (!currentEventYear) {
+      console.log('No active event year found, returning empty array');
+      return [];
+    }
+
+    // Simplified query for debugging
+    console.log('Attempting to query pending payments for event year:', currentEventYear.id);
+
+    const result = await db
+      .select({
+        id: orderPaymentTable.id,
+        organizationId: orderTable.organizationId,
+        organizationName: organizationTable.name,
+        organizationSlug: organizationTable.slug,
+        orderId: orderPaymentTable.orderId,
+        orderNumber: orderTable.orderNumber,
+        eventYearId: orderTable.eventYearId,
+        eventYear: eventYearTable.year,
+        eventYearName: eventYearTable.name,
+        paymentType: orderPaymentTable.type,
+        amount: orderPaymentTable.amount,
+        status: orderPaymentTable.status,
+        stripePaymentIntentId: orderPaymentTable.stripePaymentIntentId,
+        processedAt: orderPaymentTable.processedAt,
+        createdAt: orderPaymentTable.createdAt,
+        updatedAt: orderPaymentTable.updatedAt,
+      })
+      .from(orderPaymentTable)
+      .innerJoin(orderTable, eq(orderPaymentTable.orderId, orderTable.id))
+      .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
+      .innerJoin(eventYearTable, eq(orderTable.eventYearId, eventYearTable.id))
+      .where(and(
+        eq(orderPaymentTable.status, PaymentStatus.PENDING),
+        eq(orderTable.eventYearId, currentEventYear.id as string)
+      ))
+      .limit(10);
+
+    console.log('Query executed successfully, found', result.length, 'records');
+
+    return result.map(row => ({
+      id: row.id,
+      organizationId: row.organizationId,
+      organizationName: row.organizationName,
+      organizationSlug: row.organizationSlug,
+      orderId: row.orderId,
+      orderNumber: row.orderNumber,
+      eventYearId: row.eventYearId,
+      eventYear: row.eventYear,
+      eventYearName: row.eventYearName,
+      paymentType: row.paymentType,
+      amount: row.amount,
+      status: row.status as 'pending' | 'completed' | 'failed' | 'refunded',
+      stripePaymentIntentId: row.stripePaymentIntentId || undefined,
+      processedAt: row.processedAt ? row.processedAt.toISOString().split('T')[0] : undefined,
+      createdAt: row.createdAt.toISOString().split('T')[0],
+      updatedAt: row.updatedAt.toISOString().split('T')[0],
+      source: 'order_payment',
+    }));
+  } catch (error) {
+    console.error('Error fetching pending payments:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    return [];
+  }
 }
 
 export async function getCompletedPaymentsSimple(): Promise<PaymentData[]> {
@@ -155,10 +95,71 @@ export async function getCompletedPaymentsSimple(): Promise<PaymentData[]> {
     throw new Error('Unauthorized: Only super admins can access payment data');
   }
 
-  // Return mock completed payments (sorted by completion date, newest first)
-  return mockPayments
-    .filter(payment => payment.status === 'completed')
-    .sort((a, b) => new Date(b.processedAt || b.createdAt).getTime() - new Date(a.processedAt || a.createdAt).getTime());
+  try {
+    const currentEventYear = await getCurrentEventYear();
+    if (!currentEventYear) {
+      console.log('No active event year found, returning empty array');
+      return [];
+    }
+
+    // Simplified query for debugging
+    console.log('Attempting to query completed payments for event year:', currentEventYear.id);
+
+    const result = await db
+      .select({
+        id: orderPaymentTable.id,
+        organizationId: orderTable.organizationId,
+        organizationName: organizationTable.name,
+        organizationSlug: organizationTable.slug,
+        orderId: orderPaymentTable.orderId,
+        orderNumber: orderTable.orderNumber,
+        eventYearId: orderTable.eventYearId,
+        eventYear: eventYearTable.year,
+        eventYearName: eventYearTable.name,
+        paymentType: orderPaymentTable.type,
+        amount: orderPaymentTable.amount,
+        status: orderPaymentTable.status,
+        stripePaymentIntentId: orderPaymentTable.stripePaymentIntentId,
+        processedAt: orderPaymentTable.processedAt,
+        createdAt: orderPaymentTable.createdAt,
+        updatedAt: orderPaymentTable.updatedAt,
+      })
+      .from(orderPaymentTable)
+      .innerJoin(orderTable, eq(orderPaymentTable.orderId, orderTable.id))
+      .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
+      .innerJoin(eventYearTable, eq(orderTable.eventYearId, eventYearTable.id))
+      .where(and(
+        eq(orderPaymentTable.status, PaymentStatus.COMPLETED),
+        eq(orderTable.eventYearId, currentEventYear.id as string)
+      ))
+      .limit(10);
+
+    console.log('Query executed successfully, found', result.length, 'records');
+
+    return result.map(row => ({
+      id: row.id,
+      organizationId: row.organizationId,
+      organizationName: row.organizationName,
+      organizationSlug: row.organizationSlug,
+      orderId: row.orderId,
+      orderNumber: row.orderNumber,
+      eventYearId: row.eventYearId,
+      eventYear: row.eventYear,
+      eventYearName: row.eventYearName,
+      paymentType: row.paymentType,
+      amount: row.amount,
+      status: row.status as 'pending' | 'completed' | 'failed' | 'refunded',
+      stripePaymentIntentId: row.stripePaymentIntentId || undefined,
+      processedAt: row.processedAt ? row.processedAt.toISOString().split('T')[0] : undefined,
+      createdAt: row.createdAt.toISOString().split('T')[0],
+      updatedAt: row.updatedAt.toISOString().split('T')[0],
+      source: 'order_payment',
+    }));
+  } catch (error) {
+    console.error('Error fetching completed payments:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    return [];
+  }
 }
 
 export async function getFailedPaymentsSimple(): Promise<PaymentData[]> {
@@ -171,8 +172,73 @@ export async function getFailedPaymentsSimple(): Promise<PaymentData[]> {
     throw new Error('Unauthorized: Only super admins can access payment data');
   }
 
-  // Return mock failed payments
-  return mockPayments.filter(payment => payment.status === 'failed');
+  try {
+    const currentEventYear = await getCurrentEventYear();
+    if (!currentEventYear) {
+      console.log('No active event year found, returning empty array');
+      return [];
+    }
+
+    // Simplified query for debugging
+    console.log('Attempting to query failed payments for event year:', currentEventYear.id);
+
+    const result = await db
+      .select({
+        id: orderPaymentTable.id,
+        organizationId: orderTable.organizationId,
+        organizationName: organizationTable.name,
+        organizationSlug: organizationTable.slug,
+        orderId: orderPaymentTable.orderId,
+        orderNumber: orderTable.orderNumber,
+        eventYearId: orderTable.eventYearId,
+        eventYear: eventYearTable.year,
+        eventYearName: eventYearTable.name,
+        paymentType: orderPaymentTable.type,
+        amount: orderPaymentTable.amount,
+        status: orderPaymentTable.status,
+        stripePaymentIntentId: orderPaymentTable.stripePaymentIntentId,
+        failureReason: orderPaymentTable.failureReason,
+        processedAt: orderPaymentTable.processedAt,
+        createdAt: orderPaymentTable.createdAt,
+        updatedAt: orderPaymentTable.updatedAt,
+      })
+      .from(orderPaymentTable)
+      .innerJoin(orderTable, eq(orderPaymentTable.orderId, orderTable.id))
+      .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
+      .innerJoin(eventYearTable, eq(orderTable.eventYearId, eventYearTable.id))
+      .where(and(
+        eq(orderPaymentTable.status, PaymentStatus.FAILED),
+        eq(orderTable.eventYearId, currentEventYear.id as string)
+      ))
+      .limit(10);
+
+    console.log('Query executed successfully, found', result.length, 'records');
+
+    return result.map(row => ({
+      id: row.id,
+      organizationId: row.organizationId,
+      organizationName: row.organizationName,
+      organizationSlug: row.organizationSlug,
+      orderId: row.orderId,
+      orderNumber: row.orderNumber,
+      eventYearId: row.eventYearId,
+      eventYear: row.eventYear,
+      eventYearName: row.eventYearName,
+      paymentType: row.paymentType,
+      amount: row.amount,
+      status: row.status as 'pending' | 'completed' | 'failed' | 'refunded',
+      stripePaymentIntentId: row.stripePaymentIntentId || undefined,
+      failureReason: row.failureReason || undefined,
+      processedAt: row.processedAt ? row.processedAt.toISOString().split('T')[0] : undefined,
+      createdAt: row.createdAt.toISOString().split('T')[0],
+      updatedAt: row.updatedAt.toISOString().split('T')[0],
+      source: 'order_payment',
+    }));
+  } catch (error) {
+    console.error('Error fetching failed payments:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    return [];
+  }
 }
 
 export async function getAllPaymentsSimple(): Promise<PaymentData[]> {
@@ -185,6 +251,68 @@ export async function getAllPaymentsSimple(): Promise<PaymentData[]> {
     throw new Error('Unauthorized: Only super admins can access payment data');
   }
 
-  // Return all mock payments sorted by creation date
-  return mockPayments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  try {
+    const currentEventYear = await getCurrentEventYear();
+    if (!currentEventYear) {
+      console.log('No active event year found, returning empty array');
+      return [];
+    }
+
+    // Simplified query for debugging
+    console.log('Attempting to query all payments for event year:', currentEventYear.id);
+
+    const result = await db
+      .select({
+        id: orderPaymentTable.id,
+        organizationId: orderTable.organizationId,
+        organizationName: organizationTable.name,
+        organizationSlug: organizationTable.slug,
+        orderId: orderPaymentTable.orderId,
+        orderNumber: orderTable.orderNumber,
+        eventYearId: orderTable.eventYearId,
+        eventYear: eventYearTable.year,
+        eventYearName: eventYearTable.name,
+        paymentType: orderPaymentTable.type,
+        amount: orderPaymentTable.amount,
+        status: orderPaymentTable.status,
+        stripePaymentIntentId: orderPaymentTable.stripePaymentIntentId,
+        failureReason: orderPaymentTable.failureReason,
+        processedAt: orderPaymentTable.processedAt,
+        createdAt: orderPaymentTable.createdAt,
+        updatedAt: orderPaymentTable.updatedAt,
+      })
+      .from(orderPaymentTable)
+      .innerJoin(orderTable, eq(orderPaymentTable.orderId, orderTable.id))
+      .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
+      .innerJoin(eventYearTable, eq(orderTable.eventYearId, eventYearTable.id))
+      .where(eq(orderTable.eventYearId, currentEventYear.id as string))
+      .limit(50);
+
+    console.log('Query executed successfully, found', result.length, 'records');
+
+    return result.map(row => ({
+      id: row.id,
+      organizationId: row.organizationId,
+      organizationName: row.organizationName,
+      organizationSlug: row.organizationSlug,
+      orderId: row.orderId,
+      orderNumber: row.orderNumber,
+      eventYearId: row.eventYearId,
+      eventYear: row.eventYear,
+      eventYearName: row.eventYearName,
+      paymentType: row.paymentType,
+      amount: row.amount,
+      status: row.status as 'pending' | 'completed' | 'failed' | 'refunded',
+      stripePaymentIntentId: row.stripePaymentIntentId || undefined,
+      failureReason: row.failureReason || undefined,
+      processedAt: row.processedAt ? row.processedAt.toISOString().split('T')[0] : undefined,
+      createdAt: row.createdAt.toISOString().split('T')[0],
+      updatedAt: row.updatedAt.toISOString().split('T')[0],
+      source: 'order_payment',
+    }));
+  } catch (error) {
+    console.error('Error fetching all payments:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    return [];
+  }
 }

@@ -10,7 +10,8 @@ import {
   SettingsIcon,
   UsersIcon,
   ChevronRightIcon,
-  ShoppingCartIcon
+  ShoppingCartIcon,
+  UserCheckIcon
 } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
@@ -41,6 +42,12 @@ const adminNavItems = [
     href: '/admin/users',
     icon: UsersIcon,
     description: 'Global user administration'
+  },
+  {
+    title: 'Players',
+    href: '/admin/players',
+    icon: UserCheckIcon,
+    description: 'Player management and statistics'
   },
   {
     title: 'Reports',

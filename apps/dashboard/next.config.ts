@@ -32,6 +32,32 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: true,
   poweredByHeader: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3000',
+        pathname: '/api/**'
+      },
+      {
+        protocol: 'https',
+        hostname: 'localhost',
+        port: '3000',
+        pathname: '/api/**'
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        pathname: '/api/**'
+      },
+      {
+        protocol: 'https',
+        hostname: 'localhost',
+        pathname: '/api/**'
+      }
+    ]
+  },
   async headers() {
     return [
       {

@@ -22,6 +22,7 @@ export interface PurchaseConfirmationEmailProps {
   organizationName: string;
   orderNumber: string;
   totalAmount: number;
+  originalTotal?: number;
   paymentAmount: number;
   remainingBalance: number;
   orderItems: Array<{
@@ -36,6 +37,14 @@ export interface PurchaseConfirmationEmailProps {
   };
   isFullPayment: boolean;
   orderUrl: string;
+  appliedCoupon?: {
+    id: string;
+    code: string;
+    discountType: 'percentage' | 'fixed_amount';
+    discountValue: number;
+    calculatedDiscount: number;
+  };
+  couponDiscount?: number;
 }
 
 const formatCurrency = (amount: number) => {
@@ -50,6 +59,7 @@ export const PurchaseConfirmationEmail = ({
   organizationName = 'Acme Corp',
   orderNumber = 'ORD-12345',
   totalAmount = 150.00,
+  originalTotal,
   paymentAmount = 150.00,
   remainingBalance = 0,
   orderItems = [
@@ -58,7 +68,9 @@ export const PurchaseConfirmationEmail = ({
   ],
   eventYear = { name: 'Summer Sports Festival', year: 2025 },
   isFullPayment = true,
-  orderUrl = 'https://sportsfest.com/orders/12345'
+  orderUrl = 'https://sportsfest.com/orders/12345',
+  appliedCoupon,
+  couponDiscount = 0
 }: PurchaseConfirmationEmailProps) => (
   <Html>
     <Head />
@@ -82,7 +94,9 @@ export const PurchaseConfirmationEmail = ({
           </Text>
 
           <Text className="text-black text-[14px] leading-[24px]">
-            {isFullPayment
+            {appliedCoupon && couponDiscount > 0 && totalAmount === 0
+              ? `Fantastic! Your coupon "${appliedCoupon.code}" provided a 100% discount for ${eventYear.name} ${eventYear.year}. Your registration is complete at no cost!`
+              : isFullPayment
               ? `Great news! We've successfully processed your payment for ${eventYear.name} ${eventYear.year}.`
               : `Thank you! We've received your payment for ${eventYear.name} ${eventYear.year}.`
             }
@@ -120,10 +134,31 @@ export const PurchaseConfirmationEmail = ({
             <Hr className="my-[16px]" />
 
             {/* Payment Summary */}
-            <div className="flex justify-between mb-[8px]">
-              <div className="text-[14px] font-semibold text-black">Total Order:</div>
-              <div className="text-[14px] font-semibold text-black">{formatCurrency(totalAmount)}</div>
-            </div>
+            {appliedCoupon && couponDiscount > 0 ? (
+              <>
+                <div className="flex justify-between mb-[8px]">
+                  <div className="text-[14px] text-black">Subtotal:</div>
+                  <div className="text-[14px] text-black">{formatCurrency(originalTotal || (totalAmount + couponDiscount))}</div>
+                </div>
+                <div className="flex justify-between mb-[8px]">
+                  <div className="text-[14px] text-green-600">
+                    Coupon Discount ({appliedCoupon.code}):
+                  </div>
+                  <div className="text-[14px] text-green-600 font-medium">
+                    -{formatCurrency(couponDiscount)}
+                  </div>
+                </div>
+                <div className="flex justify-between mb-[8px]">
+                  <div className="text-[14px] font-semibold text-black">Total Order:</div>
+                  <div className="text-[14px] font-semibold text-black">{formatCurrency(totalAmount)}</div>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between mb-[8px]">
+                <div className="text-[14px] font-semibold text-black">Total Order:</div>
+                <div className="text-[14px] font-semibold text-black">{formatCurrency(totalAmount)}</div>
+              </div>
+            )}
             <div className="flex justify-between mb-[8px]">
               <div className="text-[14px] text-green-600">Payment Received:</div>
               <div className="text-[14px] text-green-600 font-medium">{formatCurrency(paymentAmount)}</div>

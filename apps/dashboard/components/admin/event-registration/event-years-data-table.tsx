@@ -13,7 +13,7 @@ import {
   type SortingState,
   type VisibilityState
 } from '@tanstack/react-table';
-import { BarChartIcon, MoreHorizontalIcon, PencilIcon, TrashIcon } from 'lucide-react';
+import { BarChartIcon, PencilIcon, TrashIcon } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
 import { Button } from '@workspace/ui/components/button';
@@ -21,16 +21,8 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableColumnOptionsHeader,
-  DataTableExport,
   DataTablePagination
 } from '@workspace/ui/components/data-table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger
-} from '@workspace/ui/components/dropdown-menu';
 import { Input } from '@workspace/ui/components/input';
 
 import { formatDate, formatCurrency } from '~/lib/formatters';
@@ -118,16 +110,16 @@ const columns = [
       title: 'Registration Status'
     }
   }),
-  columnHelper.accessor('organizationCount', {
-    id: 'organizationCount',
+  columnHelper.accessor('companyTeamsCount', {
+    id: 'companyTeamsCount',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Organizations" />
+      <DataTableColumnHeader column={column} title="Company Teams" />
     ),
     cell: ({ row }) => (
-      <span className="font-medium">{row.getValue('organizationCount')}</span>
+      <span className="font-medium">{row.getValue('companyTeamsCount')}</span>
     ),
     meta: {
-      title: 'Organization Count'
+      title: 'Company Teams Count'
     }
   }),
   columnHelper.accessor('productCount', {
@@ -156,39 +148,50 @@ const columns = [
   }),
   columnHelper.display({
     id: 'actions',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Actions" />
+    ),
     cell: ({ row }) => {
       const eventYear = row.original;
       const { openEditDialog, openDeleteDialog } = useEventYearDialog();
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="size-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontalIcon className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => openEditDialog(eventYear.id)}>
-              <PencilIcon className="mr-2 size-4" />
-              Edit event year
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => openDeleteDialog(eventYear)}
-              className="text-destructive focus:text-destructive"
+        <div className="flex items-center space-x-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => openEditDialog(eventYear.id)}
+            title="Edit event year"
+          >
+            <PencilIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            <span className="sr-only">Edit event year</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => openDeleteDialog(eventYear)}
+            title="Delete event year"
+          >
+            <TrashIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            <span className="sr-only">Delete event year</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className="h-8 w-8 p-0"
+          >
+            <Link
+              href="/admin/reports"
+              title="View analytics"
             >
-              <TrashIcon className="mr-2 size-4" />
-              Delete event year
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/admin/event-registration/event-years/${eventYear.id}/analytics`}>
-                <BarChartIcon className="mr-2 size-4" />
-                View analytics
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <BarChartIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+              <span className="sr-only">View analytics</span>
+            </Link>
+          </Button>
+        </div>
       );
     }
   })
@@ -235,11 +238,6 @@ export function EventYearsDataTable({ eventYears }: EventYearsDataTableProps): R
           className="max-w-sm ml-5"
         />
         <div className="flex items-center space-x-2">
-          <DataTableExport
-            table={table}
-            filename="event-years"
-            title="SportsFest Event Years"
-          />
           <DataTableColumnOptionsHeader table={table} />
         </div>
       </div>

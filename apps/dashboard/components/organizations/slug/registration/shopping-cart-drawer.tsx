@@ -7,7 +7,9 @@ import {
   PlusIcon,
   MinusIcon,
   CreditCardIcon,
-  XIcon
+  XIcon,
+  TicketIcon,
+  LoaderIcon
 } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
@@ -45,6 +47,7 @@ const formatCurrency = (amount: number) => {
 export function ShoppingCartDrawer() {
   const {
     items,
+    appliedCoupon,
     removeItem,
     updateQuantity,
     clearCart,
@@ -53,12 +56,21 @@ export function ShoppingCartDrawer() {
     getTotalDeposit,
     getDueToday,
     getFuturePayments,
-    getCartTotal
+    getCartTotal,
+    getCouponDiscount,
+    getDiscountedSubtotal,
+    getDiscountedTotal,
+    applyCoupon,
+    removeCoupon
   } = useShoppingCart();
 
   const params = useParams();
   const organizationSlug = params.slug as string;
   const organization = useActiveOrganization();
+
+  // Coupon state
+  const [couponCode, setCouponCode] = React.useState('');
+  const [isApplyingCoupon, setIsApplyingCoupon] = React.useState(false);
   const { data: session } = useSession();
 
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
@@ -104,9 +116,42 @@ export function ShoppingCartDrawer() {
     }));
   };
 
+  // Coupon handlers
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error('Please enter a coupon code');
+      return;
+    }
+
+    if (!organization?.id) {
+      toast.error('Organization not found');
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    try {
+      const result = await applyCoupon(couponCode.toUpperCase(), organization.id);
+      if (result.success) {
+        toast.success(`Coupon "${couponCode.toUpperCase()}" applied successfully!`);
+        setCouponCode('');
+      } else {
+        toast.error(result.error || 'Invalid coupon code');
+      }
+    } catch (error) {
+      toast.error('Failed to apply coupon. Please try again.');
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    removeCoupon();
+    toast.success('Coupon removed');
+  };
+
   const handleCheckout = async (paymentType: 'full' | 'deposit') => {
     const paymentItems = convertCartItemsForPayment();
-    await createPaymentIntent(paymentItems, paymentType);
+    await createPaymentIntent(paymentItems, paymentType, appliedCoupon || undefined);
     setIsDrawerOpen(false); // Close drawer
     setPaymentModalOpen(true); // Open payment modal
   };
@@ -253,6 +298,72 @@ export function ShoppingCartDrawer() {
 
             <Separator className="my-6" />
 
+            {/* Coupon Section */}
+            <div className="space-y-3">
+              {appliedCoupon ? (
+                // Applied coupon display
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <TicketIcon className="size-4 text-green-600 mr-2" />
+                      <div>
+                        <div className="text-sm font-medium text-green-800">
+                          Coupon Applied: {appliedCoupon.code}
+                        </div>
+                        <div className="text-xs text-green-600">
+                          {appliedCoupon.discountType === 'percentage'
+                            ? `${appliedCoupon.discountValue}% off`
+                            : `${formatCurrency(appliedCoupon.discountValue)} off`
+                          }
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveCoupon}
+                      className="text-green-600 hover:text-green-700 p-1"
+                    >
+                      <XIcon className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                // Coupon input form
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter coupon code"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleApplyCoupon();
+                        }
+                      }}
+                      className="flex-1 text-sm"
+                      disabled={isApplyingCoupon}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleApplyCoupon}
+                      disabled={isApplyingCoupon || !couponCode.trim()}
+                      className="px-3"
+                    >
+                      {isApplyingCoupon ? (
+                        <LoaderIcon className="size-4 animate-spin" />
+                      ) : (
+                        'Apply'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Separator className="my-4" />
+
             {/* Cart Summary */}
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
@@ -260,12 +371,22 @@ export function ShoppingCartDrawer() {
                 <span className="font-medium">{formatCurrency(subtotal)}</span>
               </div>
 
+              {/* Show coupon discount if applied */}
+              {appliedCoupon && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-green-600">Coupon Discount ({appliedCoupon.code}):</span>
+                  <span className="font-medium text-green-600">-{formatCurrency(getCouponDiscount())}</span>
+                </div>
+              )}
+
               {/* Show deposit breakdown if applicable */}
               {totalDeposit > 0 && (
                 <>
                   <div className="flex justify-between text-sm">
                     <span>Due Today:</span>
-                    <span className="font-medium text-blue-600">{formatCurrency(dueToday)}</span>
+                    <span className="font-medium text-blue-600">
+                      {formatCurrency(Math.max(0, dueToday - getCouponDiscount()))}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Future Payments:</span>
@@ -274,7 +395,7 @@ export function ShoppingCartDrawer() {
                   <Separator />
                   <div className="flex justify-between text-sm">
                     <span>Order Total:</span>
-                    <span className="font-bold">{formatCurrency(cartTotal)}</span>
+                    <span className="font-bold">{formatCurrency(getDiscountedTotal())}</span>
                   </div>
                 </>
               )}
@@ -282,7 +403,7 @@ export function ShoppingCartDrawer() {
               {totalDeposit === 0 && (
                 <div className="flex justify-between">
                   <span className="font-medium">Total:</span>
-                  <span className="font-bold text-lg">{formatCurrency(subtotal)}</span>
+                  <span className="font-bold text-lg">{formatCurrency(getDiscountedSubtotal())}</span>
                 </div>
               )}
             </div>
@@ -314,7 +435,14 @@ export function ShoppingCartDrawer() {
               disabled={items.length === 0 || isPaymentLoading}
             >
               <CreditCardIcon className="size-4 mr-2" />
-              {isPaymentLoading ? 'Processing...' : `Complete Purchase - ${formatCurrency(dueToday)}`}
+              {isPaymentLoading
+                ? 'Processing...'
+                : `Complete Purchase - ${formatCurrency(
+                    totalDeposit > 0
+                      ? Math.max(0, dueToday - getCouponDiscount())
+                      : getDiscountedSubtotal()
+                  )}`
+              }
             </Button>
             <DrawerClose asChild>
               <Button variant="outline" className="w-full">

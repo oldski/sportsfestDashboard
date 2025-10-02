@@ -19,12 +19,21 @@ export interface CreatePaymentIntentRequest {
     quantity: number;
   }>;
   paymentType: 'full' | 'deposit';
+  appliedCoupon?: {
+    id: string;
+    code: string;
+    discountType: 'percentage' | 'fixed_amount';
+    discountValue: number;
+    calculatedDiscount: number;
+  };
+  skipPayment?: boolean;
 }
 
 export interface CreatePaymentIntentResponse {
-  clientSecret: string;
+  clientSecret?: string;
   orderId: string;
   amount: number;
+  isFreeOrder?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -41,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CreatePaymentIntentRequest = await request.json();
-    const { organizationSlug, cartItems, paymentType } = body;
+    const { organizationSlug, cartItems, paymentType, appliedCoupon, skipPayment } = body;
 
     // Validate input
     if (!organizationSlug || !cartItems?.length || !paymentType) {
@@ -68,7 +77,8 @@ export async function POST(request: NextRequest) {
     const orderResult = await calculateAndCreateOrder(
       organization.id,
       cartItems,
-      paymentType
+      paymentType,
+      appliedCoupon
     );
 
     if (!orderResult.success) {
@@ -80,9 +90,24 @@ export async function POST(request: NextRequest) {
 
     const { orderId, amount } = orderResult;
 
-    // Create Stripe Payment Intent
+    // Handle free orders (100% off coupons)
+    if (skipPayment || amount <= 0) {
+      console.log('📋 Creating free order (no payment required), amount:', amount);
+
+      // For free orders, just return the order ID and let the client handle completion
+      // The payment modal won't show for free orders, and the success callback will be triggered immediately
+      const response: CreatePaymentIntentResponse = {
+        orderId,
+        amount: 0,
+        isFreeOrder: true,
+      };
+
+      return NextResponse.json(response);
+    }
+
+    // Create Stripe Payment Intent for paid orders
     console.log('💳 Creating payment intent with amount:', amount, 'cents:', Math.round(amount * 100));
-    
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency: STRIPE_CONFIG.currency,
@@ -95,6 +120,8 @@ export async function POST(request: NextRequest) {
         organizationSlug,
         paymentType,
         userId: session.user.id!,
+        couponCode: appliedCoupon?.code || '',
+        couponDiscount: appliedCoupon?.calculatedDiscount?.toString() || '0',
       },
     });
 
@@ -103,7 +130,7 @@ export async function POST(request: NextRequest) {
     // Update order with Stripe payment intent ID
     await db
       .update(orderTable)
-      .set({ 
+      .set({
         stripePaymentIntentId: paymentIntent.id,
         updatedAt: new Date()
       })
@@ -129,7 +156,14 @@ export async function POST(request: NextRequest) {
 async function calculateAndCreateOrder(
   organizationId: string,
   cartItems: Array<{ productId: string; quantity: number }>,
-  paymentType: 'full' | 'deposit'
+  paymentType: 'full' | 'deposit',
+  appliedCoupon?: {
+    id: string;
+    code: string;
+    discountType: 'percentage' | 'fixed_amount';
+    discountValue: number;
+    calculatedDiscount: number;
+  }
 ): Promise<{ success: true; orderId: string; amount: number } | { success: false; error: string }> {
   try {
     // Get the active event year
@@ -227,12 +261,20 @@ async function calculateAndCreateOrder(
       depositAmount += itemDeposit;
     }
 
-    // Determine payment amount based on type
-    const paymentAmount = paymentType === 'deposit' ? depositAmount : totalAmount;
-    const balanceOwed = totalAmount - (paymentType === 'deposit' ? depositAmount : totalAmount);
+    // Calculate coupon discount
+    const couponDiscount = appliedCoupon?.calculatedDiscount || 0;
 
-    if (paymentAmount <= 0) {
-      return { success: false, error: 'Payment amount must be greater than zero' };
+    // Apply coupon discount to the order total
+    const discountedTotalAmount = Math.max(0, totalAmount - couponDiscount);
+    const discountedDepositAmount = Math.max(0, depositAmount - couponDiscount);
+
+    // Determine payment amount based on type (with coupon applied)
+    const paymentAmount = paymentType === 'deposit' ? discountedDepositAmount : discountedTotalAmount;
+    const balanceOwed = discountedTotalAmount - paymentAmount;
+
+    // Allow $0 payments for 100% off coupons
+    if (paymentAmount < 0) {
+      return { success: false, error: 'Payment amount cannot be negative' };
     }
 
     // Generate order number
@@ -246,10 +288,16 @@ async function calculateAndCreateOrder(
         organizationId,
         eventYearId: activeEventYear[0].id,
         status: OrderStatus.PENDING,
-        totalAmount,
-        depositAmount,
+        totalAmount: discountedTotalAmount, // Store discounted amount as the actual order total
+        depositAmount: discountedDepositAmount,
         balanceOwed,
-        metadata: { cartItems, paymentType },
+        metadata: {
+          cartItems,
+          paymentType,
+          originalTotal: totalAmount,
+          couponDiscount: couponDiscount,
+          appliedCoupon: appliedCoupon || null,
+        },
       })
       .returning({ id: orderTable.id });
 

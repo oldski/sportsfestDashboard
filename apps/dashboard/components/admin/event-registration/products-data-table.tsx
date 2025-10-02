@@ -12,7 +12,7 @@ import {
   type SortingState,
   type VisibilityState
 } from '@tanstack/react-table';
-import { EditIcon, InfinityIcon, MoreHorizontalIcon, TrashIcon } from 'lucide-react';
+import { EditIcon, InfinityIcon, TrashIcon } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
 import { Button } from '@workspace/ui/components/button';
@@ -20,16 +20,8 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableColumnOptionsHeader,
-  DataTableExport,
   DataTablePagination
 } from '@workspace/ui/components/data-table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger
-} from '@workspace/ui/components/dropdown-menu';
 import { Input } from '@workspace/ui/components/input';
 
 import { formatCurrency } from '~/lib/formatters';
@@ -151,33 +143,36 @@ const columns = [
   }),
   columnHelper.display({
     id: 'actions',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Actions" />
+    ),
     cell: ({ row }) => {
       const product = row.original;
       const { openEditDialog, openDeleteDialog } = useProductDialog();
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="size-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontalIcon className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => openEditDialog(product.id)}>
-              <EditIcon className="mr-2 size-4" />
-              Edit product
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => openDeleteDialog(product)}
-              className="text-destructive focus:text-destructive"
-            >
-              <TrashIcon className="mr-2 size-4" />
-              Delete product
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center space-x-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => openEditDialog(product.id)}
+            title="Edit product"
+          >
+            <EditIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            <span className="sr-only">Edit product</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => openDeleteDialog(product)}
+            title="Delete product"
+          >
+            <TrashIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            <span className="sr-only">Delete product</span>
+          </Button>
+        </div>
       );
     }
   })
@@ -222,11 +217,6 @@ export function ProductsDataTable({ products }: ProductsDataTableProps): React.J
           className="max-w-sm"
         />
         <div className="flex items-center space-x-2">
-          <DataTableExport
-            table={table}
-            filename="products"
-            title="SportsFest Products"
-          />
           <DataTableColumnOptionsHeader table={table} />
         </div>
       </div>

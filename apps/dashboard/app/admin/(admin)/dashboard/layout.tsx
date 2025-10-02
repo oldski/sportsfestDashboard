@@ -18,24 +18,24 @@ export const metadata: Metadata = {
 export type DashboardLayoutProps = {
   totalCompanies: React.ReactNode;
   totalPlayers: React.ReactNode;
-  totalRevenue: React.ReactNode;
+  revenueStats: React.ReactNode;
   tentRentals: React.ReactNode;
   topOrganizations: React.ReactNode;
   systemHealth: React.ReactNode;
   organizationGrowthChart : React.ReactNode;
-  revenueByTypeChart : React.ReactNode;
   userGrowthChart : React.ReactNode;
+  accountGrowthCharts: React.ReactNode;
 };
 
 export default async function DashboardLayout({
   totalCompanies,
   totalPlayers,
-  totalRevenue,
+  revenueStats,
   tentRentals,
   topOrganizations,
   organizationGrowthChart,
-  revenueByTypeChart,
   userGrowthChart,
+  accountGrowthCharts,
   systemHealth
 }: DashboardLayoutProps & NextPageProps): Promise<React.JSX.Element> {
   return (
@@ -48,17 +48,19 @@ export default async function DashboardLayout({
       <PageBody>
         <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
           {/* Overview Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             {totalCompanies}
             {totalPlayers}
-            {totalRevenue}
             {tentRentals}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {revenueByTypeChart}
-            {userGrowthChart}
-            {organizationGrowthChart}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="col-span-1 lg:col-span-2">
+              {revenueStats}
+            </div>
+            <div className="col-span-1 lg:col-span-2">
+              {accountGrowthCharts}
+            </div>
           </div>
           {/* Analytics Section */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">

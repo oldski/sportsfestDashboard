@@ -19,12 +19,13 @@ export type PaymentData = {
   organizationName: string;
   organizationSlug: string;
   orderId?: string;
+  orderNumber?: string;
   eventYearId: string;
   eventYear: number;
   eventYearName: string;
   paymentType: string;
   amount: number;
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
   stripePaymentIntentId?: string;
   stripeChargeId?: string;
   paymentMethodType?: string;

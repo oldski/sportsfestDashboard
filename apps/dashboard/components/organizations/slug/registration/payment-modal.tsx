@@ -43,7 +43,19 @@ export interface PaymentModalProps {
     subtotal: number;
     depositAmount?: number;
     totalAmount: number;
+    dueToday: number;
+    futurePayments: number;
     paymentType: 'full' | 'deposit';
+    appliedCoupon?: {
+      id: string;
+      code: string;
+      discountType: 'percentage' | 'fixed_amount';
+      discountValue: number;
+      calculatedDiscount: number;
+    };
+    couponDiscount: number;
+    discountedSubtotal: number;
+    discountedTotal: number;
   };
   organizationName: string;
   userEmail: string;
@@ -258,6 +270,14 @@ export function PaymentModal({
                   <span>Subtotal</span>
                   <span>{formatCurrency(orderSummary.subtotal)}</span>
                 </div>
+
+                {/* Show coupon discount if applied */}
+                {orderSummary.appliedCoupon && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Coupon Discount ({orderSummary.appliedCoupon.code})</span>
+                    <span>-{formatCurrency(orderSummary.couponDiscount)}</span>
+                  </div>
+                )}
 
                 {/* Show breakdown for items with deposits vs full payments */}
                 {orderSummary.futurePayments > 0 && (

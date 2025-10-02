@@ -4,13 +4,21 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2Icon, PackageIcon } from 'lucide-react';
+import NiceModal from '@ebay/nice-modal-react';
+import { Loader2Icon, PackageIcon, TrashIcon, UploadIcon } from 'lucide-react';
 import { NumericFormat } from 'react-number-format';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@workspace/ui/components/avatar';
 import { Button } from '@workspace/ui/components/button';
 import { Input } from '@workspace/ui/components/input';
 import { Switch } from '@workspace/ui/components/switch';
 import { Textarea } from '@workspace/ui/components/textarea';
+import { ImageDropzone } from '@workspace/ui/components/image-dropzone';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@workspace/ui/components/tooltip';
 import {
   Select,
   SelectContent,
@@ -40,12 +48,16 @@ import { toast } from '@workspace/ui/components/sonner';
 import { ProductType, ProductStatus } from '@workspace/database/schema';
 import type { ProductFormData } from '~/actions/admin/product';
 import type { ProductFormSelectData } from '~/actions/admin/get-product-form-data';
+import { updateProductImage } from '~/actions/admin/update-product-image';
+import { CropPhotoModal } from '~/components/organizations/slug/settings/account/profile/crop-photo-modal';
+import { FileUploadAction, MAX_IMAGE_SIZE } from '~/lib/file-upload';
 
 const productFormSchema = z.object({
   categoryId: z.string().uuid('Category is required'),
   eventYearId: z.string().uuid('Event year is required'),
   name: z.string().min(1, 'Product name is required').max(255),
   description: z.string().optional(),
+  image: z.string().optional(),
   type: z.nativeEnum(ProductType, {
     required_error: 'Product type is required',
   }),
@@ -55,6 +67,7 @@ const productFormSchema = z.object({
   depositAmount: z.number().min(0, 'Deposit amount must be 0 or greater').optional(),
   maxQuantityPerOrg: z.number().int().min(1).optional(),
   totalInventory: z.number().int().min(0).optional(),
+  displayOrder: z.number().int().min(0, 'Display order must be 0 or greater').default(0),
 }).refine((data) => {
   if (data.requiresDeposit && (!data.depositAmount || data.depositAmount <= 0)) {
     return false;
@@ -97,6 +110,7 @@ export function ProductDialog({
       eventYearId: '',
       name: '',
       description: '',
+      image: '',
       type: ProductType.TEAM_REGISTRATION,
       status: ProductStatus.ACTIVE,
       basePrice: 0,
@@ -104,10 +118,42 @@ export function ProductDialog({
       depositAmount: undefined,
       maxQuantityPerOrg: undefined,
       totalInventory: undefined,
+      displayOrder: 0,
     },
   });
 
   const watchRequiresDeposit = form.watch('requiresDeposit');
+  const watchImage = form.watch('image');
+
+  const handleImageDrop = async (files: File[]): Promise<void> => {
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.size > MAX_IMAGE_SIZE) {
+        toast.error(
+          `Uploaded image shouldn't exceed ${MAX_IMAGE_SIZE / 1000000} MB size limit`
+        );
+      } else {
+        const base64Image: string = await NiceModal.show(CropPhotoModal, {
+          file,
+          aspectRatio: 16 / 9, // Product images typically wider aspect ratio
+          circularCrop: false
+        });
+        if (base64Image) {
+          form.setValue('image', base64Image, {
+            shouldValidate: true,
+            shouldDirty: true
+          });
+        }
+      }
+    }
+  };
+
+  const handleRemoveImage = (): void => {
+    form.setValue('image', '', {
+      shouldValidate: true,
+      shouldDirty: true
+    });
+  };
 
   React.useEffect(() => {
     if (open) {
@@ -119,6 +165,7 @@ export function ProductDialog({
           eventYearId: '',
           name: '',
           description: '',
+          image: '',
           type: ProductType.TEAM_REGISTRATION,
           status: ProductStatus.ACTIVE,
           basePrice: 0,
@@ -126,6 +173,7 @@ export function ProductDialog({
           depositAmount: undefined,
           maxQuantityPerOrg: undefined,
           totalInventory: undefined,
+          displayOrder: 0,
         });
       }
     }
@@ -138,6 +186,7 @@ export function ProductDialog({
         eventYearId: '',
         name: '',
         description: '',
+        image: '',
         type: ProductType.TEAM_REGISTRATION,
         status: ProductStatus.ACTIVE,
         basePrice: 0,
@@ -145,6 +194,7 @@ export function ProductDialog({
         depositAmount: undefined,
         maxQuantityPerOrg: undefined,
         totalInventory: undefined,
+        displayOrder: 0,
       });
     }
     onOpenChange(newOpen);
@@ -154,14 +204,35 @@ export function ProductDialog({
     setIsLoading(true);
 
     try {
+      const { image, ...productData } = data;
+      let productId = product?.id;
+
+      // Create or update the product first
       if (mode === 'create') {
         const { createProduct } = await import('~/actions/admin/product');
-        await createProduct(data);
-      } else if (product?.id) {
+        const result = await createProduct(productData);
+        productId = result.product.id;
+      } else if (productId) {
         const { updateProduct } = await import('~/actions/admin/product');
-        await updateProduct(product.id, data);
+        await updateProduct(productId, productData);
       } else {
         throw new Error('No product ID provided for update');
+      }
+
+      // Handle image upload/update separately if there's an image change
+      if (productId && image !== product?.image) {
+        if (image) {
+          // Upload new image
+          await updateProductImage(productId, {
+            action: FileUploadAction.Update,
+            image
+          });
+        } else if (product?.image) {
+          // Remove existing image
+          await updateProductImage(productId, {
+            action: FileUploadAction.Delete
+          });
+        }
       }
 
       toast.success(`Product ${mode === 'create' ? 'created' : 'updated'} successfully!`);
@@ -227,6 +298,76 @@ export function ProductDialog({
                           className="min-h-20"
                           {...field}
                         />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="image"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Product Image</FormLabel>
+                      <FormControl>
+                        <div className="space-y-3">
+                          {watchImage ? (
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-16 w-16 rounded-lg">
+                                <AvatarImage
+                                  src={watchImage}
+                                  alt="Product image"
+                                  className="rounded-lg object-cover"
+                                />
+                                <AvatarFallback className="rounded-lg">
+                                  <PackageIcon className="h-6 w-6" />
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <p className="text-sm text-muted-foreground">
+                                  Product image uploaded
+                                </p>
+                              </div>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={handleRemoveImage}
+                                  >
+                                    <TrashIcon className="h-4 w-4" />
+                                    <span className="sr-only">Remove image</span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Remove image</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          ) : (
+                            <ImageDropzone
+                              onDrop={handleImageDrop}
+                              accept={{
+                                'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp']
+                              }}
+                              maxFiles={1}
+                              className="h-32"
+                            >
+                              <div className="flex flex-col items-center justify-center space-y-2">
+                                <UploadIcon className="h-8 w-8 text-muted-foreground" />
+                                <div className="text-center">
+                                  <p className="text-sm font-medium">
+                                    Drop an image here or click to browse
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    PNG, JPG, GIF, WEBP up to {MAX_IMAGE_SIZE / 1000000}MB
+                                  </p>
+                                </div>
+                              </div>
+                            </ImageDropzone>
+                          )}
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -463,6 +604,30 @@ export function ProductDialog({
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="displayOrder"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Display Order</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          {...field}
+                          value={field.value || 0}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Lower numbers appear first in the customer-facing product list
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
           </form>

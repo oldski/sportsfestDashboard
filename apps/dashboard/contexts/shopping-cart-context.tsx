@@ -6,12 +6,23 @@ import { toast } from '@workspace/ui/components/sonner';
 import type { CartItem, RegistrationProductDto } from '~/types/dtos/registration-product-dto';
 import { saveCartSessionAction } from '~/actions/cart/save-cart-session';
 import { loadCartSessionAction } from '~/actions/cart/load-cart-session';
+import { reserveInventory, releaseInventory } from '~/lib/inventory-management';
+import { validateCouponCode } from '~/actions/admin/coupon-actions';
+
+type AppliedCoupon = {
+  id: string;
+  code: string;
+  discountType: 'percentage' | 'fixed_amount';
+  discountValue: number;
+  calculatedDiscount: number;
+};
 
 type ShoppingCartContextType = {
   items: CartItem[];
-  addItem: (product: RegistrationProductDto, quantity: number, useDeposit: boolean) => void;
-  removeItem: (productId: string, useDeposit?: boolean) => void;
-  updateQuantity: (productId: string, quantity: number, useDeposit?: boolean) => void;
+  appliedCoupon: AppliedCoupon | null;
+  addItem: (product: RegistrationProductDto, quantity: number, useDeposit: boolean) => Promise<void>;
+  removeItem: (productId: string, useDeposit?: boolean) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number, useDeposit?: boolean) => Promise<void>;
   clearCart: () => void;
   getItemCount: () => number;
   getSubtotal: () => number;
@@ -19,12 +30,18 @@ type ShoppingCartContextType = {
   getDueToday: () => number;
   getFuturePayments: () => number;
   getCartTotal: () => number;
+  getCouponDiscount: () => number;
+  getDiscountedSubtotal: () => number;
+  getDiscountedTotal: () => number;
+  applyCoupon: (code: string, organizationId: string) => Promise<{ success: boolean; error?: string }>;
+  removeCoupon: () => void;
 };
 
 const ShoppingCartContext = React.createContext<ShoppingCartContextType | undefined>(undefined);
 
 export function ShoppingCartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = React.useState<CartItem[]>([]);
+  const [appliedCoupon, setAppliedCoupon] = React.useState<AppliedCoupon | null>(null);
   const [sessionId, setSessionId] = React.useState<string>('');
   const [isLoaded, setIsLoaded] = React.useState(false);
   const params = useParams();
@@ -78,9 +95,17 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
     return () => clearTimeout(timeoutId);
   }, [items, sessionId, isLoaded]);
 
-  const addItem = React.useCallback((product: RegistrationProductDto, quantity: number, useDeposit: boolean) => {
+  const addItem = React.useCallback(async (product: RegistrationProductDto, quantity: number, useDeposit: boolean) => {
+    // Reserve inventory first
+    const reservationResult = await reserveInventory(product.id, quantity);
+
+    if (!reservationResult.success) {
+      toast.error(reservationResult.error || 'Unable to reserve inventory');
+      return;
+    }
+
     setItems(prev => {
-      const existingItemIndex = prev.findIndex(item => 
+      const existingItemIndex = prev.findIndex(item =>
         item.productId === product.id && item.useDeposit === useDeposit
       );
 
@@ -89,15 +114,19 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         const updatedItems = [...prev];
         const existingItem = updatedItems[existingItemIndex];
         const newQuantity = existingItem.quantity + quantity;
-        
+
         // Check available quantity first (takes precedence over max quantity)
         if (product.availableQuantity !== null && newQuantity > product.availableQuantity) {
           toast.error(`Only ${product.availableQuantity} available for your organization`);
+          // Release the inventory we just reserved since we can't add it
+          releaseInventory(product.id, quantity).catch(console.error);
           return prev;
         }
         // Fallback to max quantity constraint for products without availability system
         if (product.availableQuantity === null && product.maxQuantityPerOrg && newQuantity > product.maxQuantityPerOrg) {
           toast.error(`Maximum quantity for ${product.name} is ${product.maxQuantityPerOrg}`);
+          // Release the inventory we just reserved since we can't add it
+          releaseInventory(product.id, quantity).catch(console.error);
           return prev;
         }
 
@@ -106,7 +135,7 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
           quantity: newQuantity,
           totalPrice: newQuantity * existingItem.unitPrice
         };
-        
+
         toast.success(`Updated ${product.name} quantity to ${newQuantity}`);
         return updatedItems;
       } else {
@@ -114,20 +143,24 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         // Check available quantity first (takes precedence over max quantity)
         if (product.availableQuantity !== null && quantity > product.availableQuantity) {
           toast.error(`Only ${product.availableQuantity} available for your organization`);
+          // Release the inventory we just reserved since we can't add it
+          releaseInventory(product.id, quantity).catch(console.error);
           return prev;
         }
         // Fallback to max quantity constraint for products without availability system
         if (product.availableQuantity === null && product.maxQuantityPerOrg && quantity > product.maxQuantityPerOrg) {
           toast.error(`Maximum quantity for ${product.name} is ${product.maxQuantityPerOrg}`);
+          // Release the inventory we just reserved since we can't add it
+          releaseInventory(product.id, quantity).catch(console.error);
           return prev;
         }
 
-        const unitPrice = useDeposit && product.requiresDeposit && product.depositAmount 
-          ? product.depositAmount 
+        const unitPrice = useDeposit && product.requiresDeposit && product.depositAmount
+          ? product.depositAmount
           : (product.organizationPrice?.customPrice || product.basePrice);
-          
-        const depositPrice = product.requiresDeposit && product.depositAmount 
-          ? product.depositAmount 
+
+        const depositPrice = product.requiresDeposit && product.depositAmount
+          ? product.depositAmount
           : 0;
 
         const newItem: CartItem = {
@@ -146,7 +179,21 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
     });
   }, []);
 
-  const removeItem = React.useCallback((productId: string, useDeposit?: boolean) => {
+  const removeItem = React.useCallback(async (productId: string, useDeposit?: boolean) => {
+    // Get the item(s) to be removed first so we can release their inventory
+    const itemsToRemove = items.filter(item => {
+      if (useDeposit !== undefined) {
+        return item.productId === productId && item.useDeposit === useDeposit;
+      } else {
+        return item.productId === productId;
+      }
+    });
+
+    // Release inventory for removed items
+    for (const item of itemsToRemove) {
+      await releaseInventory(item.productId, item.quantity);
+    }
+
     setItems(prev => {
       let removedItem;
       if (useDeposit !== undefined) {
@@ -165,29 +212,62 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         return prev.filter(item => item.productId !== productId);
       }
     });
-  }, []);
+  }, [items]);
 
-  const updateQuantity = React.useCallback((productId: string, quantity: number, useDeposit?: boolean) => {
+  const updateQuantity = React.useCallback(async (productId: string, quantity: number, useDeposit?: boolean) => {
     if (quantity <= 0) {
-      removeItem(productId, useDeposit);
+      await removeItem(productId, useDeposit);
       return;
+    }
+
+    // Find the current item to determine quantity difference
+    const currentItem = items.find(item => {
+      return useDeposit !== undefined
+        ? (item.productId === productId && item.useDeposit === useDeposit)
+        : (item.productId === productId);
+    });
+
+    if (!currentItem) {
+      return;
+    }
+
+    const quantityDifference = quantity - currentItem.quantity;
+
+    if (quantityDifference > 0) {
+      // Need to reserve more inventory
+      const reservationResult = await reserveInventory(productId, quantityDifference);
+      if (!reservationResult.success) {
+        toast.error(reservationResult.error || 'Unable to reserve additional inventory');
+        return;
+      }
+    } else if (quantityDifference < 0) {
+      // Need to release some inventory
+      await releaseInventory(productId, Math.abs(quantityDifference));
     }
 
     setItems(prev => {
       return prev.map(item => {
-        const shouldUpdate = useDeposit !== undefined 
+        const shouldUpdate = useDeposit !== undefined
           ? (item.productId === productId && item.useDeposit === useDeposit)
           : (item.productId === productId);
-          
+
         if (shouldUpdate) {
           // Check available quantity first (takes precedence over max quantity)
           if (item.product.availableQuantity !== null && quantity > item.product.availableQuantity) {
             toast.error(`Only ${item.product.availableQuantity} available for your organization`);
+            // If we reserved inventory but can't use it, release it
+            if (quantityDifference > 0) {
+              releaseInventory(productId, quantityDifference).catch(console.error);
+            }
             return item;
           }
           // Fallback to max quantity constraint for products without availability system
           if (item.product.availableQuantity === null && item.product.maxQuantityPerOrg && quantity > item.product.maxQuantityPerOrg) {
             toast.error(`Maximum quantity for ${item.product.name} is ${item.product.maxQuantityPerOrg}`);
+            // If we reserved inventory but can't use it, release it
+            if (quantityDifference > 0) {
+              releaseInventory(productId, quantityDifference).catch(console.error);
+            }
             return item;
           }
 
@@ -200,11 +280,16 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         return item;
       });
     });
-  }, [removeItem]);
+  }, [removeItem, items]);
 
   const clearCart = React.useCallback(async () => {
+    // Release inventory for all items before clearing
+    for (const item of items) {
+      await releaseInventory(item.productId, item.quantity);
+    }
+
     setItems([]);
-    
+
     // Clear from database as well
     if (sessionId) {
       try {
@@ -213,9 +298,9 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         console.error('Error clearing cart session:', error);
       }
     }
-    
+
     toast.success('Shopping cart cleared');
-  }, [sessionId]);
+  }, [sessionId, items]);
 
   const getItemCount = React.useCallback(() => {
     return items.reduce((total, item) => total + item.quantity, 0);
@@ -264,8 +349,57 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
     }, 0);
   }, [items]);
 
+  // Coupon-related functions
+  const getCouponDiscount = React.useCallback(() => {
+    return appliedCoupon?.calculatedDiscount || 0;
+  }, [appliedCoupon]);
+
+  const getDiscountedSubtotal = React.useCallback(() => {
+    const subtotal = getSubtotal();
+    const discount = getCouponDiscount();
+    return Math.max(0, subtotal - discount);
+  }, [getSubtotal, getCouponDiscount]);
+
+  const getDiscountedTotal = React.useCallback(() => {
+    const total = getCartTotal();
+    const discount = getCouponDiscount();
+    return Math.max(0, total - discount);
+  }, [getCartTotal, getCouponDiscount]);
+
+  const applyCoupon = React.useCallback(async (code: string, organizationId: string) => {
+    try {
+      const subtotal = getSubtotal();
+      if (subtotal === 0) {
+        return { success: false, error: 'Add items to cart before applying a coupon' };
+      }
+
+      const result = await validateCouponCode(code, organizationId, subtotal);
+
+      if (result.success && result.data) {
+        setAppliedCoupon({
+          id: result.data.id,
+          code: code,
+          discountType: result.data.discountType,
+          discountValue: result.data.discountValue,
+          calculatedDiscount: result.data.calculatedDiscount
+        });
+        return { success: true };
+      } else {
+        return { success: false, error: result.error || 'Invalid coupon code' };
+      }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      return { success: false, error: 'Failed to apply coupon. Please try again.' };
+    }
+  }, [getSubtotal]);
+
+  const removeCoupon = React.useCallback(() => {
+    setAppliedCoupon(null);
+  }, []);
+
   const value = React.useMemo(() => ({
     items,
+    appliedCoupon,
     addItem,
     removeItem,
     updateQuantity,
@@ -275,9 +409,15 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
     getTotalDeposit,
     getDueToday,
     getFuturePayments,
-    getCartTotal
+    getCartTotal,
+    getCouponDiscount,
+    getDiscountedSubtotal,
+    getDiscountedTotal,
+    applyCoupon,
+    removeCoupon
   }), [
     items,
+    appliedCoupon,
     addItem,
     removeItem,
     updateQuantity,
@@ -287,7 +427,12 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
     getTotalDeposit,
     getDueToday,
     getFuturePayments,
-    getCartTotal
+    getCartTotal,
+    getCouponDiscount,
+    getDiscountedSubtotal,
+    getDiscountedTotal,
+    applyCoupon,
+    removeCoupon
   ]);
 
   return (

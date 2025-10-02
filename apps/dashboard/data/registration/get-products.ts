@@ -8,47 +8,39 @@ import { getProductAvailability } from '~/data/registration/get-product-availabi
 import type { RegistrationProductDto } from '~/types/dtos/registration-product-dto';
 
 export const getRegistrationProducts = cache(async (organizationSlug: string): Promise<RegistrationProductDto[]> => {
-  console.log('=== getRegistrationProducts STARTED ===');
-  console.log('getRegistrationProducts called with slug:', organizationSlug);
-  console.log('Function is executing...');
-  
+
   try {
-    console.log('About to call getCurrentEventYear...');
     const currentEventYear = await getCurrentEventYear();
-    console.log('currentEventYear call completed:', currentEventYear);
-    
     if (!currentEventYear) {
       console.log('No current event year, returning empty array');
       return [];
     }
 
-    console.log('Fetching products for current event year:', currentEventYear.id);
-
-    console.log('About to execute raw SQL query...');
-    
     // Use raw SQL to bypass Drizzle ORM issues
     const result = await db.execute(sql`
-      SELECT 
-        p.id, 
-        p.name, 
-        p.description, 
-        p.type, 
-        p.status, 
-        p."basePrice", 
-        p."requiresDeposit", 
+      SELECT
+        p.id,
+        p.name,
+        p.description,
+        p.type,
+        p.status,
+        p."basePrice",
+        p."requiresDeposit",
         p."depositAmount",
-        p."maxQuantityPerOrg", 
-        p."totalInventory", 
+        p."maxQuantityPerOrg",
+        p."totalInventory",
+        p."displayOrder",
         p."categoryId",
         pc.name as "categoryName",
         p."eventYearId",
-        p."createdAt", 
-        p."updatedAt"
+        p."createdAt",
+        p."updatedAt",
+        p."image"
       FROM "product" p
       LEFT JOIN "productCategory" pc ON p."categoryId" = pc.id
       WHERE p."eventYearId" = ${currentEventYear.id}
         AND p.status = 'active'
-      ORDER BY p."createdAt" DESC, p.name ASC
+      ORDER BY p."displayOrder" ASC, p.name ASC
     `);
 
     console.log('SQL query executed successfully!');
@@ -64,7 +56,7 @@ export const getRegistrationProducts = cache(async (organizationSlug: string): P
 
     return products.map((product: any) => {
       const availability = availabilityMap.get(product.id as string);
-      
+
       return {
         id: product.id as string,
         name: product.name as string,
@@ -76,7 +68,7 @@ export const getRegistrationProducts = cache(async (organizationSlug: string): P
         depositAmount: product.depositAmount as number | undefined,
         maxQuantityPerOrg: product.maxQuantityPerOrg as number | undefined,
         totalInventory: product.totalInventory as number | undefined,
-        imageUrl: undefined, // TODO: Add image support later
+        image: product.image as string | undefined,
         createdAt: product.createdAt as Date,
         updatedAt: product.updatedAt as Date,
         category: {

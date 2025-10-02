@@ -149,6 +149,10 @@ export function getUserImageUrl(userId: string, hash: string): string {
   return `${routes.dashboard.Api}/user-images/${userId}?v=${hash}`;
 }
 
+export function getProductImageUrl(productId: string, hash: string): string {
+  return `${routes.dashboard.Api}/product-images/${productId}?v=${hash}`;
+}
+
 export function getContactImageUrl(contactId: string, hash: string): string {
   return `${routes.dashboard.Api}/contact-images/${contactId}?v=${hash}`;
 }

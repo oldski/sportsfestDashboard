@@ -9,7 +9,7 @@ export type RegistrationProductDto = {
   depositAmount?: number;
   maxQuantityPerOrg?: number;
   totalInventory?: number;
-  imageUrl?: string;
+  image?: string;
   createdAt: Date;
   updatedAt: Date;
   // Category information

@@ -1,4 +1,4 @@
-export default function RevenueByTypeChartLayout({
+export default function CouponManagementTableLayout({
   children
 }: {
   children: React.ReactNode;

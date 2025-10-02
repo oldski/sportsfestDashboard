@@ -1,44 +1,17 @@
 import * as React from 'react';
-import { type Metadata } from 'next';
 
-import {
-  Page, PageActions,
-  PageBody,
-  PageHeader,
-  PagePrimaryBar, PageSecondaryBar
-} from '@workspace/ui/components/page';
+import {Page, PageActions, PageBody, PageHeader, PagePrimaryBar, PageSecondaryBar} from "@workspace/ui/components/page";
+import {AdminPageTitle} from "~/components/admin/admin-page-title";
+import { EventRegistrationNav } from '~/components/admin/event-registration/event-registration-nav';
 
-import { createTitle } from '~/lib/formatters';
-import { AdminPageTitle } from "~/components/admin/admin-page-title";
+interface UsersAdminLayoutProps {
+  children: React.ReactNode;
+}
 
-export const metadata: Metadata = {
-  title: createTitle('Users')
-};
-
-export type AdminUsersLayoutProps = {};
-
-export default async function AdminUsersLayout({ children }: AdminUsersLayoutProps & React.PropsWithChildren & NextPageProps): Promise<React.JSX.Element> {
-
-  return (
-    <Page>
-      <PageHeader>
-        <PagePrimaryBar>
-          <AdminPageTitle
-            title="Users"
-          />
-          <PageActions>
-            actions area. see org / home for reference
-          </PageActions>
-        </PagePrimaryBar>
-        <PageSecondaryBar>
-
-        </PageSecondaryBar>
-      </PageHeader>
-      <PageBody>
-        <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
-          {children}
-        </div>
-      </PageBody>
-    </Page>
-  );
+export default function UsersAdminLayout({ children }: UsersAdminLayoutProps): React.JSX.Element {
+  return(
+    <div className="flex h-screen flex-row overflow-hidden">
+      <div className="size-full">{children}</div>
+    </div>
+  )
 }

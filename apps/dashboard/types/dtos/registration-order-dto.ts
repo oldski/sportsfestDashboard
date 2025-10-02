@@ -3,6 +3,7 @@ export type RegistrationOrderDto = {
   orderNumber: string;
   organizationId: string;
   totalAmount: number;
+  originalTotal?: number;
   status: 'pending' | 'deposit_paid' | 'fully_paid' | 'cancelled' | 'refunded';
   createdAt: Date;
   updatedAt: Date;
@@ -11,6 +12,15 @@ export type RegistrationOrderDto = {
     name: string;
     year: number;
   };
+  // Coupon information
+  appliedCoupon?: {
+    id: string;
+    code: string;
+    discountType: 'percentage' | 'fixed_amount';
+    discountValue: number;
+    calculatedDiscount: number;
+  };
+  couponDiscount?: number;
   // Order items
   items: {
     id: string;

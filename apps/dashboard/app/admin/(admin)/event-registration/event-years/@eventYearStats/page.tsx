@@ -37,8 +37,8 @@ export default async function EventYearStatsPage(): Promise<React.JSX.Element> {
                 <p className="text-2xl font-bold">{activeEventYear.year}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Organizations</p>
-                <p className="text-2xl font-bold">{activeEventYear.organizationCount}</p>
+                <p className="text-sm font-medium text-muted-foreground">Company Teams</p>
+                <p className="text-2xl font-bold">{activeEventYear.companyTeamsCount}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Products</p>

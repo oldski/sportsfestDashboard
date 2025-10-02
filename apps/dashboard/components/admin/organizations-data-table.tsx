@@ -12,7 +12,7 @@ import {
   type SortingState,
   type VisibilityState
 } from '@tanstack/react-table';
-import { ExternalLinkIcon, MoreHorizontalIcon } from 'lucide-react';
+import { ExternalLinkIcon, CalendarIcon, MapPinIcon, PhoneIcon, DownloadIcon } from 'lucide-react';
 import Link from 'next/link';
 
 import { replaceOrgSlug, routes } from '@workspace/routes';
@@ -22,7 +22,6 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableColumnOptionsHeader,
-  DataTableExport,
   DataTablePagination
 } from '@workspace/ui/components/data-table';
 import {
@@ -30,13 +29,66 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuTrigger
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@workspace/ui/components/dropdown-menu';
 import { Input } from '@workspace/ui/components/input';
 
 import type { OrganizationData } from '~/actions/admin/get-organizations';
+import { generateAdminOrganizationsReactPDF } from './generate-organizations-pdf';
+import { exportToCSV, exportToExcel } from '@workspace/ui/lib/data-table-utils';
+import { formatPhoneNumber } from '~/lib/formatters';
 
 const columnHelper = createColumnHelper<OrganizationData>();
+
+const exportOrganizationsToPDF = async (organizations: OrganizationData[]) => {
+  await generateAdminOrganizationsReactPDF(organizations);
+};
+
+// Custom DataTableExport component for admin organizations
+function AdminOrganizationsDataTableExport({
+  organizations,
+  table,
+}: {
+  organizations: OrganizationData[];
+  table: any;
+}): React.JSX.Element {
+  const filename = `sportsfest-admin-organizations-${new Date().toISOString().slice(0, 10)}`;
+  const title = 'SportsFest Dashboard Companies';
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 text-sm">
+          <DownloadIcon className="size-4 shrink-0" />
+          Export
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Export data</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => exportToCSV(table, filename, title)}
+          className="cursor-pointer"
+        >
+          Export as CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => exportToExcel(table, filename, title)}
+          className="cursor-pointer"
+        >
+          Export as Excel
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => exportOrganizationsToPDF(organizations)}
+          className="cursor-pointer"
+        >
+          Export as PDF
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 const columns = [
   columnHelper.accessor('name', {
@@ -81,6 +133,138 @@ const columns = [
       title: 'Member Count'
     }
   }),
+  columnHelper.accessor('phone', {
+    id: 'phone',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Phone" />
+    ),
+    cell: ({ row }) => {
+      const phone = row.getValue('phone') as string | null;
+      const formattedPhone = formatPhoneNumber(phone);
+      return (
+        <div className="flex items-center space-x-1">
+          <span className="text-sm font-mono">{formattedPhone || 'Not provided'}</span>
+        </div>
+      );
+    },
+    meta: {
+      title: 'Phone'
+    }
+  }),
+  columnHelper.accessor('address', {
+    id: 'address',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Address" />
+    ),
+    cell: ({ row }) => {
+      const address = row.getValue('address') as string | null;
+      return (
+        <div className="text-sm">
+          <span className="truncate" title={address || ''}>
+            {address || '—'}
+          </span>
+        </div>
+      );
+    },
+    meta: {
+      title: 'Address'
+    }
+  }),
+  columnHelper.accessor('address2', {
+    id: 'address2',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Address 2" />
+    ),
+    cell: ({ row }) => {
+      const address2 = row.getValue('address2') as string | null;
+      return (
+        <div className="text-sm max-w-32">
+          <span className="truncate" title={address2 || ''}>
+            {address2 || '—'}
+          </span>
+        </div>
+      );
+    },
+    meta: {
+      title: 'Address 2'
+    }
+  }),
+  columnHelper.accessor('city', {
+    id: 'city',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="City" />
+    ),
+    cell: ({ row }) => {
+      const city = row.getValue('city') as string | null;
+      return (
+        <div className="text-sm max-w-28">
+          <span className="truncate" title={city || ''}>
+            {city || '—'}
+          </span>
+        </div>
+      );
+    },
+    meta: {
+      title: 'City'
+    }
+  }),
+  columnHelper.accessor('state', {
+    id: 'state',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="State" />
+    ),
+    cell: ({ row }) => {
+      const state = row.getValue('state') as string | null;
+      return (
+        <div className="text-sm max-w-20">
+          <span className="truncate" title={state || ''}>
+            {state || '—'}
+          </span>
+        </div>
+      );
+    },
+    meta: {
+      title: 'State'
+    }
+  }),
+  columnHelper.accessor('zip', {
+    id: 'zip',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="ZIP" />
+    ),
+    cell: ({ row }) => {
+      const zip = row.getValue('zip') as string | null;
+      return (
+        <div className="text-sm max-w-20">
+          <span className="font-mono" title={zip || ''}>
+            {zip || '—'}
+          </span>
+        </div>
+      );
+    },
+    meta: {
+      title: 'ZIP Code'
+    }
+  }),
+  columnHelper.accessor('createdAt', {
+    id: 'createdAt',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Created" />
+    ),
+    cell: ({ row }) => {
+      const createdAt = row.getValue('createdAt') as Date | null;
+      return (
+        <div className="flex items-center space-x-1">
+          <span className="text-sm">
+            {createdAt ? new Date(createdAt).toLocaleDateString() : 'Unknown'}
+          </span>
+        </div>
+      );
+    },
+    meta: {
+      title: 'Created Date'
+    }
+  }),
   // columnHelper.accessor('isActive', {
   //   id: 'isActive',
   //   header: ({ column }) => (
@@ -97,34 +281,25 @@ const columns = [
   // }),
   columnHelper.display({
     id: 'actions',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Actions" />
+    ),
     cell: ({ row }) => {
       const organization = row.original;
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="size-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontalIcon className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem asChild>
-              <Link
-                href={replaceOrgSlug(
-                  routes.dashboard.organizations.slug.Home,
-                  organization.slug
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="cursor-pointer"
-              >
-                <ExternalLinkIcon className="mr-2 size-4" />
-                View organization
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Link
+          href={replaceOrgSlug(
+            routes.dashboard.organizations.slug.Home,
+            organization.slug
+          )}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center size-8 rounded-md hover:bg-muted transition-colors"
+          title="View Organization"
+        >
+          <ExternalLinkIcon className="size-4 text-muted-foreground hover:text-foreground" />
+          <span className="sr-only">View Organization</span>
+        </Link>
       );
     }
   })
@@ -169,10 +344,9 @@ export function OrganizationsDataTable({ data }: OrganizationsDataTableProps): R
           className="max-w-sm"
         />
         <div className="flex items-center space-x-2">
-          <DataTableExport
+          <AdminOrganizationsDataTableExport
+            organizations={data}
             table={table}
-            filename="organizations"
-            title="SportsFest Organizations"
           />
           <DataTableColumnOptionsHeader table={table} />
         </div>

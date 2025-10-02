@@ -19,7 +19,8 @@ import {
   CalendarIcon,
   TentIcon,
   CreditCardIcon,
-  FileTextIcon, ActivityIcon, TrophyIcon
+  FileTextIcon, ActivityIcon, TrophyIcon,
+  UserCheckIcon, TagsIcon
 } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
@@ -79,16 +80,21 @@ const adminNavItems: NavItem[] = [
         icon: BarChart3Icon
       },
       {
+        title: 'Event Years',
+        href: '/admin/event-registration/event-years',
+        icon: CalendarIcon
+      },
+
+      {
         title: 'Products',
         href: '/admin/event-registration/products',
         icon: PackageIcon
       },
       {
-        title: 'Event Years',
-        href: '/admin/event-registration/event-years',
-        icon: CalendarIcon
-      },
-      {
+        title: 'Coupons',
+        href: '/admin/event-registration/coupons',
+        icon: TagsIcon
+      },{
         title: 'Tent Tracking',
         href: '/admin/event-registration/tent-tracking',
         icon: TentIcon
@@ -116,6 +122,12 @@ const adminNavItems: NavItem[] = [
     href: '/admin/users',
     icon: UsersIcon,
     description: 'Global user administration'
+  },
+  {
+    title: 'Players',
+    href: '/admin/players',
+    icon: UserCheckIcon,
+    description: 'Player management and statistics'
   },
   {
     title: 'Reports & Analytics',
