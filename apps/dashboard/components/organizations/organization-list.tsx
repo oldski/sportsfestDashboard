@@ -65,17 +65,17 @@ export function OrganizationList({
             value={searchQuery}
             onChange={handleSearchQueryChange}
           />
-          <Link
-            href={routes.dashboard.onboarding.Organization}
-            className={buttonVariants({
-              variant: 'default',
-              className: 'whitespace-nowrap'
-            })}
-          >
-            <PlusIcon className="size-4 shrink-0" />
-            <span className="hidden sm:inline">Add organization</span>
-            <span className="inline sm:hidden">Add</span>
-          </Link>
+          {/*<Link*/}
+          {/*  href={routes.dashboard.onboarding.Organization}*/}
+          {/*  className={buttonVariants({*/}
+          {/*    variant: 'default',*/}
+          {/*    className: 'whitespace-nowrap'*/}
+          {/*  })}*/}
+          {/*>*/}
+          {/*  <PlusIcon className="size-4 shrink-0" />*/}
+          {/*  <span className="hidden sm:inline">Add organization</span>*/}
+          {/*  <span className="inline sm:hidden">Add</span>*/}
+          {/*</Link>*/}
         </div>
         {filteredOrganizations.length === 0 ? (
           <EmptyState
@@ -92,7 +92,7 @@ export function OrganizationList({
             }
           />
         ) : (
-          <ScrollArea className="*:data-radix-scroll-area-viewport:max-h-[calc(100svh-18rem)]">
+          <ScrollArea verticalScrollBar={true} className="*:data-radix-scroll-area-viewport:max-h-[calc(100svh-24rem)]">
             <div className="flex flex-col items-stretch justify-start gap-3">
               {filteredOrganizations.map((organization) => (
                 <Link
@@ -137,7 +137,34 @@ export function OrganizationList({
                   </div>
                 </Link>
               ))}
+              <Link
+                key="0001"
+                href="/admin"
+                className="group relative flex flex-col rounded-lg border transition-all hover:bg-secondary/20 hover:shadow active:bg-secondary/50 active:shadow-lg dark:shadow-primary/20"
+              >
+                <div className="flex h-full flex-row items-center justify-between p-4">
+                  <div className="flex flex-row items-center gap-2 transition-colors group-hover:text-secondary-foreground">
+                    <Avatar className="aspect-square size-6 rounded-md">
+                      <AvatarFallback className="flex size-6 items-center justify-center rounded-md border border-neutral-200 bg-neutral-100 text-sm font-medium text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
+                        SF
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="text-sm font-medium">
+                        SportsFest Admin Dashboard
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        /admin
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-row items-center gap-2">
+                    <ChevronRightIcon className="size-4 text-muted-foreground transition-colors group-hover:text-secondary-foreground" />
+                  </div>
+                </div>
+              </Link>
             </div>
+
           </ScrollArea>
         )}
       </CardContent>

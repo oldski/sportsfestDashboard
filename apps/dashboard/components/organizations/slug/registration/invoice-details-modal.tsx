@@ -40,10 +40,12 @@ import { cn } from '@workspace/ui/lib/utils';
 import { useEnhancedModal } from '~/hooks/use-enhanced-modal';
 import { generateInvoicePDF } from '~/components/organizations/slug/registration/generate-invoice-pdf';
 import { useActiveOrganization } from '~/hooks/use-active-organization';
+import { getInvoiceDetails } from '~/actions/admin/get-invoice-details';
 import type { RegistrationInvoiceDto } from '~/types/dtos/registration-invoice-dto';
 
 export type InvoiceDetailsModalProps = NiceModalHocProps & {
-  invoice: RegistrationInvoiceDto;
+  invoiceId: string;
+  organizationName?: string;
 };
 
 // Status badge variant mapping
@@ -52,7 +54,7 @@ const getStatusVariant = (status: RegistrationInvoiceDto['status']) => {
     case 'paid':
       return 'default'; // Green
     case 'sent':
-      return 'secondary'; // Blue  
+      return 'secondary'; // Blue
     case 'overdue':
       return 'destructive'; // Red
     case 'draft':
@@ -106,24 +108,52 @@ const getPaymentTypeVariant = (paymentType: string) => {
 };
 
 export const InvoiceDetailsModal = NiceModal.create<InvoiceDetailsModalProps>(
-  ({ invoice }) => {
+  ({ invoiceId, organizationName }) => {
     const modal = useEnhancedModal();
     const mdUp = useMediaQuery(MediaQueries.MdUp, { ssr: false });
-    const organization = useActiveOrganization();
 
-    // Debug logging to check invoice structure
+    // Try to get organization from context, but don't require it (for admin context)
+    let organization: { name: string } | undefined;
+    try {
+      organization = useActiveOrganization();
+    } catch {
+      // Not in organization context, use the passed organizationName instead
+      organization = undefined;
+    }
+
+    const [invoice, setInvoice] = React.useState<RegistrationInvoiceDto | null>(null);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
+
+    // Fetch invoice details when modal opens
     React.useEffect(() => {
-      console.log('🔍 Invoice data structure:', {
-        hasOrder: !!invoice.order,
-        hasPayments: !!(invoice.order?.payments),
-        paymentsLength: invoice.order?.payments?.length,
-        invoiceData: invoice
-      });
-    }, [invoice]);
+      const fetchInvoice = async () => {
+        try {
+          setIsLoading(true);
+          setError(null);
+          const data = await getInvoiceDetails(invoiceId);
+          if (!data) {
+            setError('Invoice not found');
+          } else {
+            setInvoice(data);
+          }
+        } catch (err) {
+          console.error('Error fetching invoice:', err);
+          setError('Failed to load invoice details');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      if (invoiceId) {
+        fetchInvoice();
+      }
+    }, [invoiceId]);
 
     const handleDownload = async () => {
+      if (!invoice) return;
       try {
-        await generateInvoicePDF(invoice, organization?.name || 'Organization');
+        await generateInvoicePDF(invoice, invoice.organizationName);
         toast.success('Invoice PDF downloaded successfully');
       } catch (error) {
         console.error('Error downloading PDF:', error);
@@ -132,6 +162,7 @@ export const InvoiceDetailsModal = NiceModal.create<InvoiceDetailsModalProps>(
     };
 
     const handleCopyInvoiceNumber = async () => {
+      if (!invoice) return;
       try {
         await navigator.clipboard.writeText(invoice.invoiceNumber);
         toast.success('Invoice number copied to clipboard');
@@ -141,27 +172,47 @@ export const InvoiceDetailsModal = NiceModal.create<InvoiceDetailsModalProps>(
       }
     };
 
-    const title = `Invoice ${invoice.invoiceNumber}`;
-    
+    const title = invoice ? `Invoice ${invoice.invoiceNumber}` : 'Invoice Details';
+
     const renderContent = (
       <div className="space-y-6">
-        {/* Invoice Header */}
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center space-x-3">
-              <FileTextIcon className="size-5 text-muted-foreground" />
-              <h3 className="font-semibold">Invoice Details</h3>
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center space-y-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+              <p className="text-sm text-muted-foreground">Loading invoice details...</p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Complete invoice information and order details
-            </p>
           </div>
-          <Badge variant={getStatusVariant(invoice.status)} className="capitalize">
-            {invoice.status}
-          </Badge>
-        </div>
+        )}
 
-        <Separator />
+        {error && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center space-y-2">
+              <FileTextIcon className="size-12 text-muted-foreground/50 mx-auto" />
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {!isLoading && !error && invoice && (
+          <>
+            {/* Invoice Header */}
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center space-x-3">
+                  <FileTextIcon className="size-5 text-muted-foreground" />
+                  <h3 className="font-semibold">Invoice Details</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Complete invoice information and order details
+                </p>
+              </div>
+              <Badge variant={getStatusVariant(invoice.status)} className="capitalize">
+                {invoice.status}
+              </Badge>
+            </div>
+
+            <Separator />
 
         {/* Coupon Applied Alert */}
         {invoice.order.appliedCoupon && invoice.order.couponDiscount && invoice.order.couponDiscount > 0 && (
@@ -191,6 +242,10 @@ export const InvoiceDetailsModal = NiceModal.create<InvoiceDetailsModalProps>(
               <h4 className="font-medium text-sm text-muted-foreground mb-2">Invoice Information</h4>
               <div className="space-y-2">
                 <div className="flex justify-between">
+                  <span className="text-sm">Organization:</span>
+                  <span className="text-sm font-medium">{invoice.organizationName}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-sm">Invoice Number:</span>
                   <span className="font-mono text-sm">{invoice.invoiceNumber}</span>
                 </div>
@@ -207,8 +262,8 @@ export const InvoiceDetailsModal = NiceModal.create<InvoiceDetailsModalProps>(
                     <span className="text-sm">Due Date:</span>
                     <span className={cn(
                       "text-sm",
-                      invoice.dueDate < new Date() && invoice.status !== 'paid' 
-                        ? "text-red-600 font-medium" 
+                      invoice.dueDate < new Date() && invoice.status !== 'paid'
+                        ? "text-red-600 font-medium"
                         : ""
                     )}>
                       {formatDate(invoice.dueDate)}
@@ -408,14 +463,16 @@ export const InvoiceDetailsModal = NiceModal.create<InvoiceDetailsModalProps>(
           </div>
         </div>
 
-        {/* Notes */}
-        {invoice.notes && (
-          <>
-            <Separator />
-            <div>
-              <h4 className="font-medium text-sm text-muted-foreground mb-2">Notes</h4>
-              <p className="text-sm bg-muted/50 p-3 rounded-lg">{invoice.notes}</p>
-            </div>
+            {/* Notes */}
+            {invoice.notes && (
+              <>
+                <Separator />
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground mb-2">Notes</h4>
+                  <p className="text-sm bg-muted/50 p-3 rounded-lg">{invoice.notes}</p>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -427,14 +484,16 @@ export const InvoiceDetailsModal = NiceModal.create<InvoiceDetailsModalProps>(
           variant="outline"
           onClick={handleCopyInvoiceNumber}
           size="sm"
+          disabled={isLoading || !!error || !invoice}
         >
           Copy Invoice #
         </Button>
-        
+
         <div className="flex items-center space-x-2">
           <Button
             onClick={handleDownload}
             className="flex items-center space-x-2"
+            disabled={isLoading || !!error || !invoice}
           >
             <DownloadIcon className="size-4" />
             <span>Download PDF</span>

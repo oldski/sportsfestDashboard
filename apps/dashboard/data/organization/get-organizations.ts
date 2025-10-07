@@ -36,8 +36,9 @@ export async function getOrganizations(): Promise<OrganizationDto[]> {
         .leftJoin(
           membershipTable,
           eq(organizationTable.id, membershipTable.organizationId)
-        )
-        .where(eq(membershipTable.userId, ctx.session.user.id));
+        );
+      // all super admins (the only users that have access to this page can see all orgs)
+        // .where(eq(membershipTable.userId, ctx.session.user.id));
       // .groupBy(organizations.id, memberships.createdAt);
 
       const response: OrganizationDto[] = organizations

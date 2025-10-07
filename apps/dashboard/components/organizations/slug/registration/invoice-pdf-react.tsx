@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 9,
     fontWeight: 'bold',
-    width: 80,
+    width: 120,
     color: '#374151',
   },
   infoValue: {
@@ -299,6 +299,10 @@ export function InvoiceReactPDF({
           <View style={styles.infoColumn}>
             <Text style={styles.sectionTitle}>Invoice Information</Text>
             <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Organization:</Text>
+              <Text style={styles.infoValue}>{organizationName}</Text>
+            </View>
+            <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Invoice #:</Text>
               <Text style={styles.infoValue}>{invoice.invoiceNumber}</Text>
             </View>
@@ -330,6 +334,25 @@ export function InvoiceReactPDF({
 
           <View style={styles.infoColumn}>
             <Text style={styles.sectionTitle}>Payment Summary</Text>
+            {invoice.order.appliedCoupon && invoice.order.couponDiscount && invoice.order.couponDiscount > 0 && (
+              <>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>Subtotal:</Text>
+                  <Text style={styles.infoValue}>
+                    {formatCurrency(invoice.order.originalTotal || (invoice.totalAmount + invoice.order.couponDiscount))}
+                  </Text>
+                </View>
+                <View style={styles.infoItem}>
+                  <Text style={[styles.infoLabel, { color: '#16a34a' }]}>Discount:</Text>
+                  <Text style={[styles.infoValue, { color: '#16a34a' }]}>
+                    -{formatCurrency(invoice.order.couponDiscount)}
+                  </Text>
+                </View>
+                <View style={styles.infoItem}>
+                  <Text style={[styles.infoLabel, { color: '#16a34a' }]}>({invoice.order.appliedCoupon.code})</Text>
+                </View>
+              </>
+            )}
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Total Amount:</Text>
               <Text style={styles.infoValue}>{formatCurrency(invoice.totalAmount)}</Text>
@@ -393,6 +416,24 @@ export function InvoiceReactPDF({
 
         {/* Totals Section */}
         <View style={styles.totalsSection}>
+          {invoice.order.appliedCoupon && invoice.order.couponDiscount && invoice.order.couponDiscount > 0 && (
+            <>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Subtotal:</Text>
+                <Text style={styles.totalValue}>
+                  {formatCurrency(invoice.order.originalTotal || (invoice.totalAmount + invoice.order.couponDiscount))}
+                </Text>
+              </View>
+              <View style={styles.totalRow}>
+                <Text style={[styles.totalLabel, { color: '#16a34a' }]}>
+                  Discount ({invoice.order.appliedCoupon.code}):
+                </Text>
+                <Text style={[styles.totalValue, { color: '#16a34a' }]}>
+                  -{formatCurrency(invoice.order.couponDiscount)}
+                </Text>
+              </View>
+            </>
+          )}
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Amount:</Text>
             <Text style={styles.totalValue}>{formatCurrency(invoice.totalAmount)}</Text>

@@ -12,29 +12,39 @@ import Autoplay from 'embla-carousel-autoplay';
 // Background slideshow images
 const SLIDESHOW_IMAGES = [
   {
-    src: '/assets/team-member-signup/sportsfest-beach-volleyball.jpg',
-    alt: 'Beach volleyball game in action',
+    src: '/assets/team-member-signup/sportsfest-beach-volleyball.webp',
+    alt: 'Corporate SportsFest Beach volleyball game in action',
     title: 'Beach Volleyball'
   },
   {
-    src: '/assets/team-member-signup/sportsfest-corntoss.jpg',
-    alt: 'Team sports competition outdoors',
-    title: 'Team Sports'
+    src: '/assets/team-member-signup/sportsfest-corntoss.webp',
+    alt: 'Corporate SportsFest Corntoss',
+    title: 'Corntoss'
   },
   {
-    src: 'https://images.unsplash.com/photo-1530549387789-4c1017266635?w=1920&h=1080&fit=crop&crop=center',
-    alt: 'Corporate team building activities',
+    src: '/assets/team-member-signup/sportsfest-tug-of-war.webp',
+    alt: 'Corporate SportsFest Tug-of-war',
+    title: 'Tug-of-War'
+  },
+  {
+    src: '/assets/team-member-signup/sportsfest-team-building.webp',
+    alt: 'Corporate SportFest team building activities',
     title: 'Team Building'
   },
   {
-    src: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1920&h=1080&fit=crop&crop=center',
-    alt: 'Outdoor sporting event with teams',
-    title: 'Sports Festival'
+    src: '/assets/team-member-signup/sportsfest-beach-dodgeball.webp',
+    alt: 'Corporate SportsFest Beach Dodgeball',
+    title: 'Beach Dodgeball'
   },
   {
-    src: 'https://images.unsplash.com/photo-1544551763-77ef2d0cfc6c?w=1920&h=1080&fit=crop&crop=center',
-    alt: 'Beach games and activities',
-    title: 'Beach Games'
+    src: '/assets/team-member-signup/sportsfest-bote-beach-challenge.webp',
+    alt: 'Corporate SportsFest Bote Beach Challenge',
+    title: 'Bote Beach Challenge'
+  },
+  {
+    src: '/assets/team-member-signup/sportsfest-bote-beach-challenge.webp',
+    alt: 'Corporate SportsFest Team Spirit',
+    title: 'Team Spirit'
   }
 ];
 

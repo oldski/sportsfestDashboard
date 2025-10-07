@@ -48,6 +48,8 @@ import {
 
 import { NavUser } from '~/components/shared/nav-user';
 import type { AdminProfileDto } from '~/data/admin/get-admin-profile';
+import {replaceOrgSlug, routes} from "@workspace/routes";
+import {Logo} from "@workspace/ui/components/logo";
 
 type NavItem = {
   title: string;
@@ -145,41 +147,41 @@ const adminNavItems: NavItem[] = [
         href: '/admin/reports/game-day',
         icon: TrophyIcon
       },
-      {
-        title: 'Players',
-        href: '/admin/reports/players',
-        icon: UsersIcon
-      }
+      // {
+      //   title: 'Players',
+      //   href: '/admin/reports/players',
+      //   icon: UsersIcon
+      // }
     ]
   },
-  {
-    title: 'Settings',
-    href: '/admin/settings',
-    icon: SettingsIcon,
-    description: 'System configuration',
-    subItems: [
-      {
-        title: 'System Configuration',
-        href: '/admin/settings/system',
-        icon: CogIcon
-      },
-      {
-        title: 'Database Management',
-        href: '/admin/settings/database',
-        icon: DatabaseIcon
-      },
-      {
-        title: 'Security Settings',
-        href: '/admin/settings/security',
-        icon: ShieldIcon
-      },
-      {
-        title: 'Notifications',
-        href: '/admin/settings/notifications',
-        icon: BellIcon
-      }
-    ]
-  }
+  // {
+  //   title: 'Settings',
+  //   href: '/admin/settings',
+  //   icon: SettingsIcon,
+  //   description: 'System configuration',
+  //   subItems: [
+  //     {
+  //       title: 'System Configuration',
+  //       href: '/admin/settings/system',
+  //       icon: CogIcon
+  //     },
+  //     {
+  //       title: 'Database Management',
+  //       href: '/admin/settings/database',
+  //       icon: DatabaseIcon
+  //     },
+  //     {
+  //       title: 'Security Settings',
+  //       href: '/admin/settings/security',
+  //       icon: ShieldIcon
+  //     },
+  //     {
+  //       title: 'Notifications',
+  //       href: '/admin/settings/notifications',
+  //       icon: BellIcon
+  //     }
+  //   ]
+  // }
 ];
 
 const quickAccessItems = [
@@ -229,16 +231,8 @@ export function AdminAppSidebar({ profile }: AdminAppSidebarProps): React.JSX.El
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/admin">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <span className="text-sm font-bold">SF</span>
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">SportsFest</span>
-                  <Badge variant="secondary" className="w-fit text-xs">
-                    Admin
-                  </Badge>
-                </div>
+              <Link href="/admin/dashboard">
+                <Logo isBanner />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

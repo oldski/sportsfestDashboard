@@ -12,8 +12,10 @@ import {
   type SortingState,
   type VisibilityState
 } from '@tanstack/react-table';
-import { ExternalLinkIcon, ShieldIcon, UserIcon, DownloadIcon } from 'lucide-react';
+import { ExternalLinkIcon, ShieldIcon, UserIcon, DownloadIcon, UserPlusIcon, ShieldOffIcon } from 'lucide-react';
 import Link from 'next/link';
+import NiceModal from '@ebay/nice-modal-react';
+import { useRouter } from 'next/navigation';
 
 import { replaceOrgSlug, routes } from '@workspace/routes';
 import { Avatar, AvatarFallback, AvatarImage } from '@workspace/ui/components/avatar';
@@ -34,10 +36,20 @@ import {
   DropdownMenuTrigger,
 } from '@workspace/ui/components/dropdown-menu';
 import { Input } from '@workspace/ui/components/input';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@workspace/ui/components/tooltip';
+import { toast } from '@workspace/ui/components/sonner';
 
 import type { UserData } from '~/actions/admin/get-users';
 import { generateAdminUsersReactPDF } from './generate-users-pdf';
 import { exportToCSV, exportToExcel } from '@workspace/ui/lib/data-table-utils';
+import { CreateSuperAdminDialog } from './users/create-super-admin-dialog';
+import { revokeSuperAdmin } from '~/actions/admin/revoke-super-admin';
+import { grantSuperAdmin } from '~/actions/admin/grant-super-admin';
 
 const columnHelper = createColumnHelper<UserData>();
 
@@ -224,30 +236,104 @@ const columns = [
     cell: ({ row }) => {
       const user = row.original;
 
-      if (!user.organizationSlug) {
-        return (
-          <span className="text-muted-foreground text-sm">No organization</span>
-        );
-      }
-
       return (
-        <Link
-          href={replaceOrgSlug(
-            routes.dashboard.organizations.slug.Home,
-            user.organizationSlug
-          )}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center size-8 rounded-md hover:bg-muted transition-colors"
-          title="View Organization"
-        >
-          <ExternalLinkIcon className="size-4 text-muted-foreground hover:text-foreground" />
-          <span className="sr-only">View Organization</span>
-        </Link>
+        <UserActionsCell user={user} />
       );
     }
   })
 ];
+
+interface UserActionsCellProps {
+  user: UserData;
+}
+
+function UserActionsCell({ user }: UserActionsCellProps): React.JSX.Element {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const handleToggleSuperAdmin = async () => {
+    setIsLoading(true);
+    try {
+      if (user.isSportsFestAdmin) {
+        // Revoke super admin
+        const result = await revokeSuperAdmin({ targetUserId: user.id });
+        if (!result?.serverError && !result?.validationErrors) {
+          toast.success(`Super admin access revoked for ${user.name}`);
+          router.refresh();
+        } else {
+          toast.error(result?.serverError || 'Failed to revoke super admin access');
+        }
+      } else {
+        // Grant super admin
+        const result = await grantSuperAdmin({ targetUserId: user.id });
+        if (!result?.serverError && !result?.validationErrors) {
+          toast.success(`Super admin access granted to ${user.name}`);
+          router.refresh();
+        } else {
+          toast.error(result?.serverError || 'Failed to grant super admin access');
+        }
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <TooltipProvider>
+      <div className="flex items-center gap-1">
+        {user.organizationSlug && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                asChild
+              >
+                <Link
+                  href={replaceOrgSlug(
+                    routes.dashboard.organizations.slug.Home,
+                    user.organizationSlug
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLinkIcon className="h-4 w-4" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View Organization</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={handleToggleSuperAdmin}
+              disabled={isLoading}
+            >
+              {user.isSportsFestAdmin ? (
+                <ShieldOffIcon className="h-4 w-4 text-red-500" />
+              ) : (
+                <ShieldIcon className="h-4 w-4 text-green-600" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{user.isSportsFestAdmin ? 'Revoke Super Admin' : 'Grant Super Admin'}</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
+  );
+}
 
 export interface UsersDataTableProps {
   data: UserData[];
@@ -278,6 +364,10 @@ export function UsersDataTable({ data }: UsersDataTableProps): React.JSX.Element
     }
   });
 
+  const handleCreateSuperAdmin = () => {
+    NiceModal.show(CreateSuperAdminDialog);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -288,6 +378,15 @@ export function UsersDataTable({ data }: UsersDataTableProps): React.JSX.Element
           className="max-w-sm"
         />
         <div className="flex items-center space-x-2">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleCreateSuperAdmin}
+            className="h-9 text-sm"
+          >
+            <UserPlusIcon className="size-4 mr-2" />
+            Create Super Admin
+          </Button>
           <AdminUsersDataTableExport
             users={data}
             table={table}

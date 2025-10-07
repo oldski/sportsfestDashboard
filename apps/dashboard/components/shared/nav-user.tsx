@@ -106,15 +106,15 @@ export function NavUser({
   ...other
 }: NavUserProps): React.JSX.Element {
   const router = useRouter();
-  
+
   // Auto-detect mode based on current path and admin status
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-  const isAdminContext = mode === 'admin' || 
+  const isAdminContext = mode === 'admin' ||
     (mode === 'auto' && currentPath.startsWith('/admin'));
   const isAdmin = isSuperAdmin(profile);
-  
+
   // When in organization context but user is super admin, show admin options
-  const shouldShowAdminOptions = isAdminContext || 
+  const shouldShowAdminOptions = isAdminContext ||
     (mode === 'auto' && !isAdminContext && isAdmin);
 
   const handleNavigateToFirstOption = (): void => {
@@ -129,20 +129,13 @@ export function NavUser({
       );
     }
   };
-  
+
   const handleNavigateToSecondOption = (): void => {
     if (shouldShowAdminOptions) {
       router.push('/admin');
-    } else {
-      router.push(
-        replaceOrgSlug(
-          routes.dashboard.organizations.slug.settings.organization.Billing,
-          organizationSlug || ''
-        )
-      );
     }
   };
-  
+
   const handleShowCommandMenu = (): void => {
     if (shouldShowAdminOptions) {
       void NiceModal.show(AdminCommandMenu);
@@ -150,7 +143,7 @@ export function NavUser({
       void NiceModal.show(CommandMenu);
     }
   };
-  
+
   const handleSignOut = async (): Promise<void> => {
     const result = await signOut({ redirect: true });
     if (result?.serverError || result?.validationErrors) {
@@ -185,7 +178,7 @@ export function NavUser({
     return () => document.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldShowAdminOptions]);
-  
+
   return (
     <SidebarGroup {...other}>
       <SidebarMenu>
@@ -234,13 +227,17 @@ export function NavUser({
                   {shouldShowAdminOptions ? 'Admin Settings' : 'Profile'}
                   <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={handleNavigateToSecondOption}
-                >
-                  {shouldShowAdminOptions ? 'Admin Dashboard' : 'Billing'}
-                  <DropdownMenuShortcut>⇧⌘{shouldShowAdminOptions ? 'O' : 'B'}</DropdownMenuShortcut>
-                </DropdownMenuItem>
+                { shouldShowAdminOptions && (
+                  <>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={handleNavigateToSecondOption}
+                    >
+                      {'Admin Dashboard'}
+                      <DropdownMenuShortcut>⇧⌘{shouldShowAdminOptions && 'O'}</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="cursor-pointer"

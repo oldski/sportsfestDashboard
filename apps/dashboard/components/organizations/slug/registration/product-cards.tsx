@@ -2,11 +2,12 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { PlusIcon, MinusIcon, ShoppingCartIcon, PackageIcon } from 'lucide-react';
+import { PlusIcon, MinusIcon, ShoppingCartIcon, PackageIcon, ChevronDown, ChevronUp } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
 import { Button } from '@workspace/ui/components/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@workspace/ui/components/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@workspace/ui/components/collapsible';
 import { Input } from '@workspace/ui/components/input';
 import { Label } from '@workspace/ui/components/label';
 import { RadioGroup, RadioGroupItem } from '@workspace/ui/components/radio-group';
@@ -50,7 +51,6 @@ function ProductCard({ product }: ProductCardProps) {
   const { addItem, items } = useShoppingCart();
   const [quantity, setQuantity] = React.useState(1);
   const [paymentOption, setPaymentOption] = React.useState<'full' | 'deposit'>('full');
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
 
   // Calculate quantities already in cart for this product
   const cartQuantity = React.useMemo(() => {
@@ -108,12 +108,51 @@ function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Card className={cn(
-      "h-full flex flex-col transition-shadow duration-200 hover:shadow-md",
+      "h-full flex flex-col transition-shadow duration-200 hover:shadow-md p-4",
       isUnavailable && "opacity-60"
     )}>
-      <CardHeader className="pb-3">
+      <CardHeader className="px-0">
         {/* Product Image */}
-        <div className="aspect-video relative bg-muted rounded-lg overflow-hidden mb-3">
+        <div className="flex items-start justify-between gap-3 h-full">
+          <div className="aspect-square relative bg-muted rounded-lg w-1/3 overflow-hidden mb-2">
+            {product.image ? (
+              <Image
+                src={product.image}
+                alt={product.name}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <PackageIcon className="size-12 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-between h-full w-2/3 py-2">
+            <div className="flex-1">
+              <CardTitle className="text-lg leading-tight">{product.name}</CardTitle>
+              <div className="flex items-center space-x-2 mt-1">
+                <Badge variant={getStatusVariant(product.status)} className="text-xs">
+                  {product.status.replace('_', ' ')}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {product.category.name}
+                </Badge>
+              </div>
+            </div>
+            <div>
+              <div className="font-bold text-lg">{formatCurrency(effectivePrice)}</div>
+              {product.requiresDeposit && effectiveDepositAmount && (
+                <div className="text-sm text-muted-foreground">
+                  Deposit: {formatCurrency(effectiveDepositAmount)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+
+        <div className="hidden aspect-square relative bg-muted rounded-lg overflow-hidden mb-2">
           {product.image ? (
             <Image
               src={product.image}
@@ -127,8 +166,7 @@ function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
         </div>
-
-        <div className="flex items-start justify-between">
+        <div className="hidden flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="text-lg leading-tight">{product.name}</CardTitle>
             <div className="flex items-center space-x-2 mt-1">
@@ -151,27 +189,28 @@ function ProductCard({ product }: ProductCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="flex flex-col space-y-4 justify-between h-full">
+      <CardContent className="flex flex-col space-y-3 justify-between h-full px-0">
         {product.description && (
-          <div className="space-y-2">
-            <CardDescription className="text-sm leading-relaxed">
-              {isDescriptionExpanded
-                ? product.description
-                : `${product.description.substring(0, 120)}${product.description.length > 120 ? '...' : ''}`
-              }
-            </CardDescription>
-            {product.description.length > 120 && (
-              <button
-                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
-              >
-                {isDescriptionExpanded ? 'Show Less' : 'Read More'}
-              </button>
-            )}
-          </div>
+          <Collapsible className="relative">
+            <div className="flex items-center justify-between gap-2 bg-muted/50 p-2 rounded-lg">
+              <h4 className="text-sm font-semibold">Description</h4>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-6 group">
+                  <ChevronDown className="h-3 w-3 group-data-[state=open]:hidden" />
+                  <ChevronUp className="h-3 w-3 group-data-[state=closed]:hidden" />
+                  <span className="sr-only">Toggle description</span>
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+            <CollapsibleContent className="absolute top-full left-0 right-0 z-10 mt-2 bg-background border border-border rounded-md shadow-lg p-3">
+              <CardDescription className="text-sm leading-relaxed">
+                {product.description}
+              </CardDescription>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Payment Options */}
           {product.requiresDeposit && effectiveDepositAmount && (
             <div>
@@ -268,7 +307,7 @@ function ProductCard({ product }: ProductCardProps) {
           </div>
 
           {/* Price Summary */}
-          <div className="bg-muted/50 p-3 rounded-lg">
+          <div className="bg-muted/50 p-2 rounded-lg">
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium">Total:</span>
               <span className="font-bold">
@@ -284,7 +323,7 @@ function ProductCard({ product }: ProductCardProps) {
         </div>
       </CardContent>
 
-      <CardFooter>
+      <CardFooter className="px-0">
         <Button
           onClick={handleAddToCart}
           disabled={isUnavailable}
@@ -314,7 +353,7 @@ export function ProductCards({ products }: ProductCardsProps) {
       {/* Active Products */}
       {activeProducts.length > 0 && (
         <div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {activeProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -328,7 +367,7 @@ export function ProductCards({ products }: ProductCardsProps) {
           <h3 className="text-lg font-semibold text-muted-foreground mb-4">
             Unavailable Products
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {unavailableProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

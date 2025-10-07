@@ -31,7 +31,7 @@ import {
   TSHIRT_SIZE_OPTIONS
 } from '~/components/team-signup';
 import { motion } from "motion/react";
-import Image from "next/image";
+import {Logo} from "@workspace/ui/components/logo";
 
 // API functions
 const getOrganizationForSignup = async (slug?: string) => {
@@ -233,7 +233,7 @@ export default function TeamMemberSignupPage() {
   return (
     <>
       <BackgroundSlideshow />
-      <div className="relative z-10">
+      <div className="relative z-10 pb-24">
         <div className="container mx-auto px-4 py-12 max-w-4xl">
           <div className="text-center min-h-[calc(100vh*2/3)] mb-8 flex flex-col justify-center">
             <motion.div
@@ -242,12 +242,11 @@ export default function TeamMemberSignupPage() {
               transition={{ delay: 0.2, duration: 0.4 }}
               className="flex flex-col items-center gap-8"
             >
-              <Image src="/assets/logo-sportsfest-full.png" alt="Corporate SportsFest" width={400} height={222} />
+              <Logo isFull={false} width={400} height={222} />
             <SiteHeading
               badge="📩 You're Invited"
               title={`Join ${organization.name}`}
               description="No Athletic Skill Necessary, Just Team Spirit and Company Pride!"
-              className="text-blue-800"
             />
             </motion.div>
           </div>

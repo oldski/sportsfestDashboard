@@ -117,6 +117,7 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
         invoiceNumber: item.invoice.invoiceNumber,
         orderId: item.order.id,
         orderNumber: item.order.orderNumber,
+        organizationName: ctx.organization.name,
         totalAmount: item.invoice.totalAmount,
         paidAmount: item.invoice.paidAmount,
         balanceOwed: item.invoice.balanceOwed,

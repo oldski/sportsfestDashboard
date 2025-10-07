@@ -65,7 +65,7 @@ export default async function AuthLayout({
         <img
           src="/assets/team-photo.jpg"
           alt="Image"
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+          className="absolute inset-0 h-full w-full object-cover"
         />
 
         <ThemeToggle className="fixed bottom-2 right-2 rounded-full" />

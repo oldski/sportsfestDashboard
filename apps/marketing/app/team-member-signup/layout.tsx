@@ -1,4 +1,12 @@
 import * as React from 'react';
+import type {Metadata} from "next";
+import {APP_DESCRIPTION, APP_NAME} from "@workspace/common/app";
+import {Footer} from "~/components/footer";
+import {createTitle} from "~/lib/formatters";
+
+export const metadata: Metadata = {
+  title: createTitle('SportsFest Team Member Sign Up'),
+};
 
 // Special layout for team member signup - no header/footer
 export default function TeamSignupLayout({
@@ -7,6 +15,7 @@ export default function TeamSignupLayout({
   return (
     <div className="min-h-screen">
       {children}
+      <Footer />
     </div>
   );
 }

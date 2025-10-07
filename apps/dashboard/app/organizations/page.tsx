@@ -19,16 +19,25 @@ export const metadata: Metadata = {
 export default async function OrganizationsPage(): Promise<React.JSX.Element> {
   const organizations = await getOrganizations();
   return (
-    <div className="relative min-h-screen bg-background">
-      <div className="fixed inset-x-0 top-0 z-10 mx-auto flex min-w-80 items-center justify-center bg-background p-4">
-        <Link href={routes.marketing.Index}>
-          <Logo />
-        </Link>
-      </div>
-      <div className="relative mx-auto flex w-full min-w-80 max-w-lg flex-col items-stretch justify-start gap-6 pt-24">
+    <div className="flex min-h-svh">
+      <div className="relative flex w-full min-w-80 max-w-lg flex-col items-stretch justify-start gap-6 h-screen overflow-hidden">
+        <div className="p-4 mx-auto">
+          <Link href={routes.marketing.Index}>
+            <Logo />
+          </Link>
+        </div>
         <OrganizationList organizations={organizations} />
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-10 mx-auto mt-auto flex w-full min-w-80 max-w-lg flex-row items-center justify-center gap-4 bg-background p-4 text-xs text-muted-foreground">
+
+      <div className="hidden md:block w-full bg-muted relative block">
+        <img
+          src="/assets/team-photo.jpg"
+          alt="Image"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-10 mx-auto mt-auto flex w-full flex-row items-center justify-center gap-4 bg-background p-4 text-xs text-muted-foreground">
         <span>
           © {new Date().getFullYear()} {APP_NAME}
         </span>

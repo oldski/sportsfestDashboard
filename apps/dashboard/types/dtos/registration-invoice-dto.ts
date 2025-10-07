@@ -3,6 +3,7 @@ export type RegistrationInvoiceDto = {
   invoiceNumber: string;
   orderId: string;
   orderNumber: string;
+  organizationName: string;
   totalAmount: number;
   paidAmount: number;
   balanceOwed: number;

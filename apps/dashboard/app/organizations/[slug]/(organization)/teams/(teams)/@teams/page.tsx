@@ -77,7 +77,7 @@ export default async function TeamsParallelRoute({
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {teamsData.teams.map((team) => (
         <Card key={team.id} className="relative">
           <CardHeader>

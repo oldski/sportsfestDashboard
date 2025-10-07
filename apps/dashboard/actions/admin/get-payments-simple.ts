@@ -54,10 +54,17 @@ export async function getPendingPaymentsSimple(): Promise<PaymentData[]> {
       .where(and(
         eq(orderPaymentTable.status, PaymentStatus.PENDING),
         eq(orderTable.eventYearId, currentEventYear.id as string)
-      ))
-      .limit(10);
+      ));
 
     console.log('Query executed successfully, found', result.length, 'records');
+
+    // Helper function to format date in local timezone
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
     return result.map(row => ({
       id: row.id,
@@ -73,9 +80,9 @@ export async function getPendingPaymentsSimple(): Promise<PaymentData[]> {
       amount: row.amount,
       status: row.status as 'pending' | 'completed' | 'failed' | 'refunded',
       stripePaymentIntentId: row.stripePaymentIntentId || undefined,
-      processedAt: row.processedAt ? row.processedAt.toISOString().split('T')[0] : undefined,
-      createdAt: row.createdAt.toISOString().split('T')[0],
-      updatedAt: row.updatedAt.toISOString().split('T')[0],
+      processedAt: row.processedAt ? formatLocalDate(row.processedAt) : undefined,
+      createdAt: formatLocalDate(row.createdAt),
+      updatedAt: formatLocalDate(row.updatedAt),
       source: 'order_payment',
     }));
   } catch (error) {
@@ -131,10 +138,18 @@ export async function getCompletedPaymentsSimple(): Promise<PaymentData[]> {
       .where(and(
         eq(orderPaymentTable.status, PaymentStatus.COMPLETED),
         eq(orderTable.eventYearId, currentEventYear.id as string)
-      ))
-      .limit(10);
+      ));
 
     console.log('Query executed successfully, found', result.length, 'records');
+    console.log('Completed payments raw result:', JSON.stringify(result, null, 2));
+
+    // Helper function to format date in local timezone
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
     return result.map(row => ({
       id: row.id,
@@ -150,9 +165,9 @@ export async function getCompletedPaymentsSimple(): Promise<PaymentData[]> {
       amount: row.amount,
       status: row.status as 'pending' | 'completed' | 'failed' | 'refunded',
       stripePaymentIntentId: row.stripePaymentIntentId || undefined,
-      processedAt: row.processedAt ? row.processedAt.toISOString().split('T')[0] : undefined,
-      createdAt: row.createdAt.toISOString().split('T')[0],
-      updatedAt: row.updatedAt.toISOString().split('T')[0],
+      processedAt: row.processedAt ? formatLocalDate(row.processedAt) : undefined,
+      createdAt: formatLocalDate(row.createdAt),
+      updatedAt: formatLocalDate(row.updatedAt),
       source: 'order_payment',
     }));
   } catch (error) {
@@ -209,10 +224,17 @@ export async function getFailedPaymentsSimple(): Promise<PaymentData[]> {
       .where(and(
         eq(orderPaymentTable.status, PaymentStatus.FAILED),
         eq(orderTable.eventYearId, currentEventYear.id as string)
-      ))
-      .limit(10);
+      ));
 
     console.log('Query executed successfully, found', result.length, 'records');
+
+    // Helper function to format date in local timezone
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
     return result.map(row => ({
       id: row.id,
@@ -229,9 +251,9 @@ export async function getFailedPaymentsSimple(): Promise<PaymentData[]> {
       status: row.status as 'pending' | 'completed' | 'failed' | 'refunded',
       stripePaymentIntentId: row.stripePaymentIntentId || undefined,
       failureReason: row.failureReason || undefined,
-      processedAt: row.processedAt ? row.processedAt.toISOString().split('T')[0] : undefined,
-      createdAt: row.createdAt.toISOString().split('T')[0],
-      updatedAt: row.updatedAt.toISOString().split('T')[0],
+      processedAt: row.processedAt ? formatLocalDate(row.processedAt) : undefined,
+      createdAt: formatLocalDate(row.createdAt),
+      updatedAt: formatLocalDate(row.updatedAt),
       source: 'order_payment',
     }));
   } catch (error) {
@@ -290,6 +312,14 @@ export async function getAllPaymentsSimple(): Promise<PaymentData[]> {
 
     console.log('Query executed successfully, found', result.length, 'records');
 
+    // Helper function to format date in local timezone
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     return result.map(row => ({
       id: row.id,
       organizationId: row.organizationId,
@@ -305,9 +335,9 @@ export async function getAllPaymentsSimple(): Promise<PaymentData[]> {
       status: row.status as 'pending' | 'completed' | 'failed' | 'refunded',
       stripePaymentIntentId: row.stripePaymentIntentId || undefined,
       failureReason: row.failureReason || undefined,
-      processedAt: row.processedAt ? row.processedAt.toISOString().split('T')[0] : undefined,
-      createdAt: row.createdAt.toISOString().split('T')[0],
-      updatedAt: row.updatedAt.toISOString().split('T')[0],
+      processedAt: row.processedAt ? formatLocalDate(row.processedAt) : undefined,
+      createdAt: formatLocalDate(row.createdAt),
+      updatedAt: formatLocalDate(row.updatedAt),
       source: 'order_payment',
     }));
   } catch (error) {

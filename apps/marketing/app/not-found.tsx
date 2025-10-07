@@ -1,20 +1,55 @@
-import * as React from 'react';
+'use client';
 
-import { GridSection } from '~/components/fragments/grid-section';
+import * as React from 'react';
+import { useRouter } from 'next/navigation';
+
+import { routes } from '@workspace/routes';
+import { Button } from '@workspace/ui/components/button';
+import Image from "next/image";
 
 export default function NotFound(): React.JSX.Element {
+  const router = useRouter();
+  const handleGoBack = (): void => {
+    router.back();
+  };
+  const handleBackToHome = (): void => {
+    router.push(routes.marketing.Index);
+  };
   return (
-    <GridSection>
-      <div className="flex flex-col py-32 items-center justify-center text-center">
-        <span className="text-[10rem] font-semibold leading-none">404</span>
-        <h2 className="font-heading my-2 text-2xl font-bold">
-          Something&apos;s missing
-        </h2>
-        <p>
-          Sorry, the page you are looking for doesn&apos;t exist or has been
-          moved.
-        </p>
+    <>
+      <div className="fixed inset-0 z-0 ">
+        <Image src="/assets/graphic-404.webp" alt="404 Not Found" width="1800" height="1098" className="h-full w-full object-cover" />
       </div>
-    </GridSection>
+      <div className="relative z-0 ">
+        <div className="flex flex-col py-32 items-center justify-center text-center h-screen">
+          <span className="text-[10rem] font-semibold leading-none light:text-foreground">404</span>
+          <h2 className="font-heading my-2 text-2xl font-bold">
+            Something&apos;s missing
+          </h2>
+          <p>
+            Sorry, the page you are looking for doesn&apos;t exist or has been
+            moved.
+          </p>
+          <div className="mt-8 flex justify-center gap-2">
+            <Button
+              type="button"
+              variant="default"
+              size="lg"
+              onClick={handleGoBack}
+            >
+              Go back
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              onClick={handleBackToHome}
+            >
+              Back to Home
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

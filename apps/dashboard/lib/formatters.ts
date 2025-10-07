@@ -50,7 +50,10 @@ export function getTimeSlot(hours: number, minutes: number): Date {
 }
 
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
+  // Parse date as local time to avoid timezone shift
+  // Input format is YYYY-MM-DD
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
   return date.toLocaleDateString('en-US');
 }
 

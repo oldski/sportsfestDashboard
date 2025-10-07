@@ -12,8 +12,6 @@ export type EventTypeValue = typeof EventType[keyof typeof EventType];
 export const Gender = {
   MALE: 'male',
   FEMALE: 'female',
-  NON_BINARY: 'non_binary',
-  PREFER_NOT_TO_SAY: 'prefer_not_to_say'
 } as const;
 
 export const TShirtSize = {
@@ -39,8 +37,6 @@ export const EVENT_DETAILS: Record<EventTypeValue, { name: string; emoji: string
 export const GENDER_OPTIONS = {
   [Gender.MALE]: 'Male',
   [Gender.FEMALE]: 'Female',
-  [Gender.NON_BINARY]: 'Non-binary',
-  [Gender.PREFER_NOT_TO_SAY]: 'Prefer not to say'
 };
 
 // T-shirt size options

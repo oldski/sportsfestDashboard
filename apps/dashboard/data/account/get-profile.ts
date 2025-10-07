@@ -16,12 +16,25 @@ import type { ProfileDto } from '~/types/dtos/profile-dto';
 
 export async function getProfile(): Promise<ProfileDto> {
   const ctx = await getAuthOrganizationContext();
+
+  // Super admins don't need membership
+  const isSuperAdmin = ctx.session.user.isSportsFestAdmin === true;
+
   const activeMembership = ctx.session.user.memberships.find(
     (m) => m.organizationId === ctx.organization.id
   );
-  if (!activeMembership) {
+
+  if (!isSuperAdmin && !activeMembership) {
     throw new ForbiddenError('User is not a member of this organization');
   }
+
+  // For super admins without membership, create a virtual admin membership
+  const membershipToUse = activeMembership || {
+    organizationId: ctx.organization.id,
+    userId: ctx.session.user.id,
+    role: 'admin' as const,
+    isOwner: false
+  };
 
   return cache(
     async () => {
@@ -68,7 +81,7 @@ export async function getProfile(): Promise<ProfileDto> {
   )().then((profile) => ({
     ...profile,
     // We don't want to cache these two fields
-    isOwner: activeMembership.isOwner,
-    role: activeMembership.role
+    isOwner: membershipToUse.isOwner,
+    role: membershipToUse.role
   }));
 }

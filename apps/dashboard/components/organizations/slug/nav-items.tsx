@@ -142,14 +142,14 @@ export function createOrganizationNavItems(slug: string, profile?: ProfileDto): 
       ),
       icon: UserPlus2Icon
     },
-    {
-      title: 'Billing',
-      href: replaceOrgSlug(
-        routes.dashboard.organizations.slug.settings.organization.Billing,
-        slug
-      ),
-      icon: CreditCardIcon
-    },
+    // {
+    //   title: 'Billing',
+    //   href: replaceOrgSlug(
+    //     routes.dashboard.organizations.slug.settings.organization.Billing,
+    //     slug
+    //   ),
+    //   icon: CreditCardIcon
+    // },
   ];
 
   // Filter items based on access permissions

@@ -142,7 +142,15 @@ const dedupedGetUserInfo = cache(async function (userId: string) {
     return signOut({ redirectTo: routes.dashboard.auth.SignIn });
   }
 
-  return userInfo;
+  // Fix memberships - jsonAggBuildObject can return [null] when empty
+  const memberships = Array.isArray(userInfo.memberships)
+    ? userInfo.memberships.filter((m) => m !== null)
+    : [];
+
+  return {
+    ...userInfo,
+    memberships
+  };
 });
 
 export async function getAuthContext() {
@@ -173,11 +181,19 @@ export async function getAuthOrganizationContext() {
   const activeOrganization = await dedupedGetActiveOrganization();
   const userInfo = await dedupedGetUserInfo(session.user.id);
 
-  if (
-    !userInfo.memberships.some((m) => m.organizationId == activeOrganization.id)
-  ) {
-    // Instead of forbidden we can just redirect.
-    return redirect(routes.dashboard.organizations.Index);
+  // Super admins can access any organization
+  const isSuperAdmin = userInfo.isSportsFestAdmin === true;
+
+  // Only redirect if user is not a super admin AND not a member
+  if (!isSuperAdmin) {
+    // Safely check memberships - handle null/undefined/non-array cases
+    const memberships = Array.isArray(userInfo.memberships) ? userInfo.memberships : [];
+    const isMember = memberships.some((m) => m && m.organizationId == activeOrganization.id);
+
+    if (!isMember) {
+      // Instead of forbidden we can just redirect.
+      return redirect(routes.dashboard.organizations.Index);
+    }
   }
 
   const enrichedSession = {

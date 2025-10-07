@@ -54,6 +54,7 @@ import { getSettingsAccess } from '~/lib/super-admin-settings';
 import { isSuperAdmin } from "~/lib/admin-utils";
 import type { OrganizationDto } from '~/types/dtos/organization-dto';
 import type { ProfileDto } from '~/types/dtos/profile-dto';
+import {Logo} from "@workspace/ui/components/logo";
 
 type NavItem = {
   title: string;
@@ -112,11 +113,11 @@ function createCollapsibleNavItems(slug: string, profile?: ProfileDto): NavItem[
       href: replaceOrgSlug(routes.dashboard.organizations.slug.settings.organization.Members, slug),
       icon: UserPlus2Icon
     }] : []),
-    ...(access.canViewBilling ? [{
-      title: 'Billing',
-      href: replaceOrgSlug(routes.dashboard.organizations.slug.settings.organization.Billing, slug),
-      icon: CreditCardIcon
-    }] : [])
+    // ...(access.canViewBilling ? [{
+    //   title: 'Billing',
+    //   href: replaceOrgSlug(routes.dashboard.organizations.slug.settings.organization.Billing, slug),
+    //   icon: CreditCardIcon
+    // }] : [])
   ];
 
   return [
@@ -196,7 +197,10 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon" variant="inset" hasSuperAdminBanner={isSuperAdmin(profile)}>
-      <SidebarHeader className="flex h-14 flex-row items-center py-0">
+      <SidebarHeader className="flex flex-col items-center py-0">
+        <Link href={replaceOrgSlug(routes.dashboard.organizations.slug.Home, activeOrganization.slug)}>
+          <Logo isBanner />
+        </Link>
         {isSuperAdmin(profile) && (
           <OrganizationSwitcher organizations={organizations} profile={profile} />
         )}

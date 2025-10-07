@@ -17,6 +17,8 @@ import {
 
 import { GridSection } from '~/components/fragments/grid-section';
 import { SiteHeading } from '~/components/fragments/site-heading';
+import {Logo} from "@workspace/ui/components/logo";
+import {ContactCard} from "~/components/fragments/contact-card";
 
 const DATA_CARDS = [
   {
@@ -71,11 +73,14 @@ export function PrivacyPolicy(): React.JSX.Element {
   return (
     <GridSection>
       <div className="container space-y-16 py-20">
-        <SiteHeading
-          badge="Legal"
-          title="Privacy Policy"
-          description="Learn how we collect, use, and protect your data. Please read carefully to understand our practices."
-        />
+        <div className="flex flex-col items-center gap-8">
+          <Logo isFull={false} width={400} height={222} />
+          <SiteHeading
+            badge="Legal"
+            title="Privacy Policy"
+            description="Learn how we collect, use, and protect your data. Please read carefully to understand our practices."
+          />
+        </div>
         <Alert variant="warning">
           <AlertDescription className="ml-3 text-base inline">
             This policy provides a general framework. It should be reviewed and
@@ -124,21 +129,7 @@ export function PrivacyPolicy(): React.JSX.Element {
           ))}
         </Accordion>
 
-        <div>
-          <CardTitle className="text-lg text-primary">
-            Contact Information
-          </CardTitle>
-          <p className="text-sm leading-relaxed">
-            For questions or concerns, contact us at:
-            <br />
-            <a
-              href="mailto:support@yourdomain.com"
-              className="text-blue-500 hover:underline"
-            >
-              support@yourdomain.com
-            </a>
-          </p>
-        </div>
+        <ContactCard />
       </div>
     </GridSection>
   );

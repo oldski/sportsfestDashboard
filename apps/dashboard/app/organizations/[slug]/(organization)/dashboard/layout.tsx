@@ -29,7 +29,7 @@ export type HomeLayoutProps = {
   params: { slug: string };
 };
 
-export default function HomeLayout({
+export default async function HomeLayout({
   gameDayInformation,
   recruitmentTools,
   totalCompanyTeams,
@@ -38,7 +38,9 @@ export default function HomeLayout({
   welcomeMessage,
   yourRecruitmentTeam,
   params
-}: HomeLayoutProps): React.JSX.Element {
+}: HomeLayoutProps): Promise<React.JSX.Element> {
+  const { slug } = await params;
+
   return (
     <TransitionProvider>
       <Page>
@@ -47,7 +49,7 @@ export default function HomeLayout({
             <OrganizationPageTitle
               title="Dashboard"
             />
-            <PlayerSignUpButton organizationSlug={params.slug} />
+            <PlayerSignUpButton organizationSlug={slug} />
           </PagePrimaryBar>
         </PageHeader>
         <PageBody>

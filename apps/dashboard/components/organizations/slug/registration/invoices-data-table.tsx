@@ -230,7 +230,7 @@ export function InvoicesDataTable({
               variant="ghost"
               size="sm"
               onClick={() => {
-                NiceModal.show(InvoiceDetailsModal, { invoice });
+                NiceModal.show(InvoiceDetailsModal, { invoiceId: invoice.id });
               }}
             >
               <EyeIcon className="size-4" />

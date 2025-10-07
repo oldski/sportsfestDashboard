@@ -177,50 +177,50 @@ export function OrganizationSwitcher({
                 </Link>
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem
-              asChild
-              className="cursor-pointer gap-2 p-2"
-            >
-              <Link
-                href={replaceOrgSlug(
-                  routes.dashboard.organizations.slug.settings.account.Index,
-                  activeOrganization.slug
-                )}
-                onClick={handleCloseSidebar}
-              >
-                <UserIcon className="size-4 shrink-0 text-muted-foreground" />
-                Account settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              asChild
-              className="cursor-pointer gap-2 p-2"
-            >
-              <Link
-                href={replaceOrgSlug(
-                  routes.dashboard.organizations.slug.settings.organization
-                    .Index,
-                  activeOrganization.slug
-                )}
-                onClick={handleCloseSidebar}
-              >
-                <SettingsIcon className="size-4 shrink-0 text-muted-foreground" />
-                Organization settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              asChild
-              className="cursor-pointer gap-2 p-2"
-            >
-              <Link
-                href={routes.dashboard.onboarding.Organization}
-                onClick={handleCloseSidebar}
-              >
-                <PlusIcon className="size-4 shrink-0 text-muted-foreground" />
-                Add organization
-              </Link>
-            </DropdownMenuItem>
+            {/*<DropdownMenuItem*/}
+            {/*  asChild*/}
+            {/*  className="cursor-pointer gap-2 p-2"*/}
+            {/*>*/}
+            {/*  <Link*/}
+            {/*    href={replaceOrgSlug(*/}
+            {/*      routes.dashboard.organizations.slug.settings.account.Index,*/}
+            {/*      activeOrganization.slug*/}
+            {/*    )}*/}
+            {/*    onClick={handleCloseSidebar}*/}
+            {/*  >*/}
+            {/*    <UserIcon className="size-4 shrink-0 text-muted-foreground" />*/}
+            {/*    Account settings*/}
+            {/*  </Link>*/}
+            {/*</DropdownMenuItem>*/}
+            {/*<DropdownMenuItem*/}
+            {/*  asChild*/}
+            {/*  className="cursor-pointer gap-2 p-2"*/}
+            {/*>*/}
+            {/*  <Link*/}
+            {/*    href={replaceOrgSlug(*/}
+            {/*      routes.dashboard.organizations.slug.settings.organization*/}
+            {/*        .Index,*/}
+            {/*      activeOrganization.slug*/}
+            {/*    )}*/}
+            {/*    onClick={handleCloseSidebar}*/}
+            {/*  >*/}
+            {/*    <SettingsIcon className="size-4 shrink-0 text-muted-foreground" />*/}
+            {/*    Organization settings*/}
+            {/*  </Link>*/}
+            {/*</DropdownMenuItem>*/}
+            {/*<DropdownMenuSeparator />*/}
+            {/*<DropdownMenuItem*/}
+            {/*  asChild*/}
+            {/*  className="cursor-pointer gap-2 p-2"*/}
+            {/*>*/}
+            {/*  <Link*/}
+            {/*    href={routes.dashboard.onboarding.Organization}*/}
+            {/*    onClick={handleCloseSidebar}*/}
+            {/*  >*/}
+            {/*    <PlusIcon className="size-4 shrink-0 text-muted-foreground" />*/}
+            {/*    Add organization*/}
+            {/*  </Link>*/}
+            {/*</DropdownMenuItem>*/}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

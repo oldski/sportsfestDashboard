@@ -17,6 +17,7 @@ export type InvoiceData = {
   id: string;
   invoiceNumber: string;
   orderId: string;
+  orderNumber?: string;
   organizationId: string | null;
   organizationName: string;
   organizationSlug: string;

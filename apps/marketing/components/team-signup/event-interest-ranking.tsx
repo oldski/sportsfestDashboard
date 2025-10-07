@@ -75,7 +75,7 @@ function SortableEventItem({
       {...attributes}
       {...listeners}
       className={cn(
-        "flex items-center justify-between p-4 bg-white rounded-lg border cursor-grab active:cursor-grabbing",
+        "flex items-center justify-between p-4 bg-foregground rounded-lg border cursor-grab active:cursor-grabbing",
         "transition-all duration-200 hover:shadow-md hover:border-primary/50",
         isDragging && "shadow-lg ring-2 ring-primary/20 z-50"
       )}
@@ -155,7 +155,7 @@ export function EventInterestRanking({
           Drag and drop to reorder events by your interest level (1 = most interested)
         </p>
       </div>
-      
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -176,7 +176,7 @@ export function EventInterestRanking({
           </div>
         </SortableContext>
       </DndContext>
-      
+
       {error && <p className="text-sm text-destructive text-center mt-4">{error}</p>}
     </div>
   );

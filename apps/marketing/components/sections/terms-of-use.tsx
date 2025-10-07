@@ -17,6 +17,8 @@ import {
 
 import { GridSection } from '~/components/fragments/grid-section';
 import { SiteHeading } from '~/components/fragments/site-heading';
+import {Logo} from "@workspace/ui/components/logo";
+import {ContactCard} from "~/components/fragments/contact-card";
 
 const DATA_CARDS = [
   {
@@ -76,11 +78,14 @@ export function TermsOfUse(): React.JSX.Element {
   return (
     <GridSection>
       <div className="container space-y-16 py-20">
-        <SiteHeading
-          badge="Legal"
-          title="Terms of Use"
-          description="By accessing our platform, you agree to the terms outlined below. Please read them carefully to ensure you understand your rights and responsibilities."
-        />
+        <div className="flex flex-col items-center gap-8">
+          <Logo isFull={false} width={400} height={222} />
+          <SiteHeading
+            badge="Legal"
+            title="Terms of Use"
+            description="By accessing our platform, you agree to the terms outlined below. Please read them carefully to ensure you understand your rights and responsibilities."
+          />
+        </div>
         <Alert variant="warning">
           <AlertDescription className="ml-3 text-base inline">
             These terms provide a general framework. They should be reviewed and
@@ -129,21 +134,7 @@ export function TermsOfUse(): React.JSX.Element {
           ))}
         </Accordion>
 
-        <div>
-          <CardTitle className="text-lg text-primary">
-            Contact Information
-          </CardTitle>
-          <p className="text-sm leading-relaxed">
-            For questions or concerns, contact us at:
-            <br />
-            <a
-              href="mailto:support@yourdomain.com"
-              className="text-blue-500 hover:underline"
-            >
-              support@yourdomain.com
-            </a>
-          </p>
-        </div>
+        <ContactCard />
       </div>
     </GridSection>
   );

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import NiceModal from '@ebay/nice-modal-react';
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -27,12 +28,18 @@ import { replaceOrgSlug, routes } from '@workspace/routes';
 import { Badge } from '@workspace/ui/components/badge';
 import { Button } from '@workspace/ui/components/button';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@workspace/ui/components/tooltip';
+import {
   DataTable,
   DataTableColumnHeader,
   DataTableColumnOptionsHeader,
-  DataTableExport,
   DataTablePagination
 } from '@workspace/ui/components/data-table';
+import { exportToExcel } from '@workspace/ui/lib/data-table-utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,10 +49,12 @@ import {
 } from '@workspace/ui/components/dropdown-menu';
 import { Input } from '@workspace/ui/components/input';
 
+import { pdf } from '@react-pdf/renderer';
+import { toast } from '@workspace/ui/components/sonner';
 import { formatCurrency, formatDate } from '~/lib/formatters';
 import type { InvoiceData } from '~/actions/admin/get-invoices';
-import { RecordPaymentButton } from './record-payment-button';
-import { downloadInvoicePDF } from '~/lib/pdf-utils';
+import { InvoiceDetailsModal } from '~/components/organizations/slug/registration/invoice-details-modal';
+import { InvoiceListPDF } from './invoice-list-pdf';
 
 const columnHelper = createColumnHelper<InvoiceData>();
 
@@ -70,6 +79,82 @@ export function InvoiceDataTable({ data, status = 'all', showSearch = true }: In
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = React.useState('');
+
+  const handleExportPDF = async () => {
+    try {
+      const visibleRows = table.getFilteredRowModel().rows;
+      const visibleInvoices = visibleRows.map(row => row.original);
+
+      const pdfTitle = status === 'all'
+        ? 'SportsFest Invoices Report'
+        : `SportsFest ${status.charAt(0).toUpperCase() + status.slice(1)} Invoices Report`;
+
+      const blob = await pdf(
+        InvoiceListPDF({
+          invoices: visibleInvoices,
+          title: pdfTitle,
+        })
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const filename = status === 'all' ? 'invoices-report' : `${status}-invoices-report`;
+      link.download = `${filename}-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Invoice PDF exported successfully');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to export PDF');
+    }
+  };
+
+  const handleExportCSV = () => {
+    try {
+      const visibleRows = table.getFilteredRowModel().rows;
+      const visibleInvoices = visibleRows.map(row => row.original);
+
+      // Define headers matching PDF columns
+      const headers = ['Invoice #', 'Organization', 'Order #', 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Notes'];
+
+      // Map data to CSV rows
+      const csvRows = visibleInvoices.map(invoice => [
+        invoice.invoiceNumber,
+        invoice.organizationName,
+        invoice.orderNumber || 'N/A',
+        invoice.totalAmount.toString(),
+        invoice.paidAmount.toString(),
+        invoice.balanceOwed.toString(),
+        invoice.status,
+        invoice.notes || ''
+      ]);
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const filename = status === 'all' ? 'invoices' : `${status}-invoices`;
+      link.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Invoice CSV exported successfully');
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      toast.error('Failed to export CSV');
+    }
+  };
 
   const columns = React.useMemo(() => {
     const baseColumns = [
@@ -107,6 +192,20 @@ export function InvoiceDataTable({ data, status = 'all', showSearch = true }: In
         ),
         meta: {
           title: 'Organization'
+        }
+      }),
+      columnHelper.accessor('orderNumber', {
+        id: 'orderNumber',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Order #" />
+        ),
+        cell: ({ row }) => (
+          <div className="font-mono text-xs text-muted-foreground">
+            {row.getValue('orderNumber') || 'N/A'}
+          </div>
+        ),
+        meta: {
+          title: 'Order Number'
         }
       }),
       columnHelper.accessor('totalAmount', {
@@ -162,29 +261,6 @@ export function InvoiceDataTable({ data, status = 'all', showSearch = true }: In
           title: 'Balance Owed'
         }
       }),
-      columnHelper.accessor('dueDate', {
-        id: 'dueDate',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Due Date" />
-        ),
-        cell: ({ row }) => {
-          const dueDate = row.getValue('dueDate') as string;
-          const invoiceStatus = row.original.status;
-          return (
-            <div className="text-sm">
-              {dueDate ? formatDate(dueDate) : 'N/A'}
-              {invoiceStatus === 'overdue' && (
-                <div className="text-xs text-red-600 font-medium">
-                  Overdue
-                </div>
-              )}
-            </div>
-          );
-        },
-        meta: {
-          title: 'Due Date'
-        }
-      }),
       columnHelper.accessor('status', {
         id: 'status',
         header: ({ column }) => (
@@ -210,102 +286,81 @@ export function InvoiceDataTable({ data, status = 'all', showSearch = true }: In
           title: 'Status'
         }
       }),
+      columnHelper.accessor('notes', {
+        id: 'notes',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Notes" />
+        ),
+        cell: ({ row }) => {
+          const notes = row.getValue('notes') as string | undefined;
+          return (
+            <div className="text-xs text-muted-foreground max-w-[200px] truncate">
+              {notes || '—'}
+            </div>
+          );
+        },
+        meta: {
+          title: 'Notes'
+        }
+      }),
       columnHelper.display({
         id: 'actions',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Actions" />
+        ),
         cell: ({ row }) => {
           const invoice = row.original;
 
-          const handleDownloadPDF = async () => {
-            try {
-              // Transform InvoiceData to RegistrationInvoiceDto format
-              const invoiceForPDF = {
-                id: invoice.id,
-                invoiceNumber: invoice.invoiceNumber,
-                orderId: invoice.orderId,
-                orderNumber: `ORD-${invoice.orderId}`,
-                totalAmount: invoice.totalAmount,
-                paidAmount: invoice.paidAmount,
-                balanceOwed: invoice.balanceOwed,
-                status: invoice.status as 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled',
-                createdAt: new Date(invoice.createdAt || Date.now()),
-                updatedAt: new Date(invoice.updatedAt || Date.now()),
-                dueDate: invoice.dueDate ? new Date(invoice.dueDate) : undefined,
-                sentAt: invoice.sentAt ? new Date(invoice.sentAt) : undefined,
-                paidAt: invoice.paidAt ? new Date(invoice.paidAt) : undefined,
-                notes: invoice.notes || undefined,
-                downloadUrl: invoice.downloadUrl || undefined,
-                order: {
-                  id: invoice.orderId,
-                  orderNumber: `ORD-${invoice.orderId}`,
-                  totalAmount: invoice.totalAmount,
-                  status: 'pending',
-                  createdAt: new Date(),
-                  items: [
-                    // Mock order items since we don't have them in InvoiceData
-                    {
-                      id: '1',
-                      productName: 'SportsFest Registration',
-                      productCategory: 'Registration',
-                      quantity: 1,
-                      unitPrice: invoice.totalAmount,
-                      totalPrice: invoice.totalAmount
-                    }
-                  ]
-                }
-              };
-
-              await downloadInvoicePDF(invoiceForPDF);
-            } catch (error) {
-              console.error('Error downloading PDF:', error);
-              // TODO: Show error message to user
-            }
-          };
-
           return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="size-8 p-0">
-                  <span className="sr-only">Open menu</span>
-                  <MoreHorizontalIcon className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem asChild>
-                  <Link href={`/admin/event-registration/invoices/${invoice.id}`}>
-                    <EyeIcon className="mr-2 size-4" />
-                    View invoice
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDownloadPDF}>
-                  <DownloadIcon className="mr-2 size-4" />
-                  Download PDF
-                </DropdownMenuItem>
-                {invoice.status !== 'paid' && (
-                  <>
-                    <DropdownMenuItem>
-                      <SendIcon className="mr-2 size-4" />
-                      Send invoice
-                    </DropdownMenuItem>
-                    <RecordPaymentButton invoiceId={invoice.id} asChild />
-                  </>
-                )}
-                <DropdownMenuItem asChild>
-                  <Link
-                    href={replaceOrgSlug(
-                      routes.dashboard.organizations.slug.Home,
-                      invoice.organizationSlug
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="cursor-pointer"
-                  >
-                    <ExternalLinkIcon className="mr-2 size-4" />
-                    View organization
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <TooltipProvider>
+              <div className="flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => {
+                        NiceModal.show(InvoiceDetailsModal, {
+                          invoiceId: invoice.id,
+                          organizationName: invoice.organizationName
+                        });
+                      }}
+                    >
+                      <EyeIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>View Invoice</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      asChild
+                    >
+                      <Link
+                        href={replaceOrgSlug(
+                          routes.dashboard.organizations.slug.Home,
+                          invoice.organizationSlug
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLinkIcon className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>View Organization</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           );
         }
       })
@@ -363,11 +418,39 @@ export function InvoiceDataTable({ data, status = 'all', showSearch = true }: In
             className="max-w-sm ml-5"
           />
           <div className="flex items-center space-x-2">
-            <DataTableExport
-              table={table}
-              filename={status === 'all' ? 'invoices' : `${status}-invoices`}
-              title={`SportsFest ${status === 'all' ? 'Invoices' : `${status} Invoices`}`}
-            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 text-sm">
+                  <DownloadIcon className="size-4 shrink-0" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Export data</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={handleExportCSV}
+                  className="cursor-pointer"
+                >
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    const filename = status === 'all' ? 'invoices' : `${status}-invoices`;
+                    exportToExcel(table, `${filename}-${new Date().toISOString().split('T')[0]}`);
+                    toast.success('Invoice Excel exported successfully');
+                  }}
+                  className="cursor-pointer"
+                >
+                  Export as Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleExportPDF}
+                  className="cursor-pointer"
+                >
+                  Export as PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <DataTableColumnOptionsHeader table={table} />
           </div>
         </div>

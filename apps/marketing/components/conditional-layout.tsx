@@ -21,7 +21,7 @@ export function ConditionalLayout({
 
   return (
     <>
-      <Navbar />
+      {/*<Navbar />*/}
       {children}
       <Footer />
       <CookieBanner />
