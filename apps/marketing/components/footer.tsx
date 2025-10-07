@@ -5,16 +5,12 @@ import Link from 'next/link';
 
 import { APP_NAME } from '@workspace/common/app';
 import { Separator } from '@workspace/ui/components/separator';
-import { toast } from '@workspace/ui/components/sonner';
 import { ThemeSwitcher } from '@workspace/ui/components/theme-switcher';
 
 import { FOOTER_LINKS, SOCIAL_LINKS } from '~/components/marketing-links';
 import {ExternalIcon} from "next/dist/client/components/react-dev-overlay/ui/icons/external";
 
 export function Footer(): React.JSX.Element {
-  const handleSubscribe = (): void => {
-    toast.error("I'm not implemented yet.");
-  };
   return (
     <footer className="fixed bottom-0 w-full px-2 py-4 z-10 backdrop-blur-xs border-t border-foreground/20 backdrop-brightness-105 dark:backdrop-brightness-50">
       <h2 className="sr-only">Footer</h2>

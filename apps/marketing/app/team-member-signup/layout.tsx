@@ -1,6 +1,5 @@
 import * as React from 'react';
 import type {Metadata} from "next";
-import {APP_DESCRIPTION, APP_NAME} from "@workspace/common/app";
 import {Footer} from "~/components/footer";
 import {createTitle} from "~/lib/formatters";
 
