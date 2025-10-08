@@ -1,8 +1,12 @@
 import * as React from 'react';
 
-import { APP_DESCRIPTION, APP_NAME } from '@workspace/common/app';
+import { APP_NAME } from '@workspace/common/app';
 
-export function OgImage(): React.JSX.Element {
+export type OgImageProps = {
+  logoSrc?: string;
+};
+
+export function OgImage({ logoSrc }: OgImageProps): React.JSX.Element {
   return (
     <div
       style={{
@@ -12,7 +16,7 @@ export function OgImage(): React.JSX.Element {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#000000',
+        background: 'linear-gradient(135deg, #0a1628 0%, #1a2942 50%, #0f1f38 100%)',
         color: 'white',
         position: 'relative'
       }}
@@ -20,12 +24,12 @@ export function OgImage(): React.JSX.Element {
       <div
         style={{
           position: 'absolute',
-          top: '24px',
-          left: '24px',
-          right: '24px',
-          bottom: '24px',
+          top: 24,
+          left: 24,
+          right: 24,
+          bottom: 24,
           border: '2px solid rgba(255, 255, 255, 0.2)',
-          borderRadius: '16px'
+          borderRadius: 16
         }}
       />
 
@@ -36,16 +40,25 @@ export function OgImage(): React.JSX.Element {
           justifyContent: 'center',
           alignItems: 'center',
           textAlign: 'center',
-          padding: '48px',
-          maxWidth: '800px',
-          zIndex: '10'
+          padding: 48,
+          maxWidth: 800,
+          zIndex: 10
         }}
       >
+        {logoSrc && (
+          <img
+            src={logoSrc}
+            alt="Corporate SportsFest"
+            width={400}
+            height={222}
+            style={{ marginBottom: 24 }}
+          />
+        )}
         <div
           style={{
-            fontSize: '72px',
-            fontWeight: '800',
-            lineHeight: '1.2',
+            fontSize: 48,
+            fontWeight: 800,
+            lineHeight: 1.2,
             color: '#f8f8f8',
             textShadow: '0 4px 8px rgba(0, 0, 0, 0.5)'
           }}
@@ -55,35 +68,62 @@ export function OgImage(): React.JSX.Element {
 
         <div
           style={{
-            marginTop: '24px',
-            fontSize: '28px',
-            fontWeight: '400',
-            lineHeight: '1.6',
+            marginTop: 24,
+            fontSize: 28,
+            fontWeight: 400,
+            lineHeight: 1.6,
             color: 'rgba(255, 255, 255, 0.75)'
           }}
         >
-          {APP_DESCRIPTION}
+          Tampa Bay's Team Building Blast on the Beach.
+          No Athletic Skill is Necessary, just Team Spirit and Company Pride!
         </div>
       </div>
 
-      {[
-        { top: '24px', left: '24px' },
-        { top: '24px', right: '24px' },
-        { bottom: '24px', left: '24px' },
-        { bottom: '24px', right: '24px' }
-      ].map((position, index) => (
-        <div
-          key={index}
-          style={{
-            position: 'absolute',
-            width: '12px',
-            height: '12px',
-            borderRadius: '50%',
-            backgroundColor: '#f8f8f8',
-            ...position
-          }}
-        />
-      ))}
+      <div
+        style={{
+          position: 'absolute',
+          width: 12,
+          height: 12,
+          borderRadius: '50%',
+          backgroundColor: '#f8f8f8',
+          top: 24,
+          left: 24
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          width: 12,
+          height: 12,
+          borderRadius: '50%',
+          backgroundColor: '#f8f8f8',
+          top: 24,
+          right: 24
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          width: 12,
+          height: 12,
+          borderRadius: '50%',
+          backgroundColor: '#f8f8f8',
+          bottom: 24,
+          left: 24
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          width: 12,
+          height: 12,
+          borderRadius: '50%',
+          backgroundColor: '#f8f8f8',
+          bottom: 24,
+          right: 24
+        }}
+      />
     </div>
   );
 }
