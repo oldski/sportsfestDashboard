@@ -4,9 +4,10 @@ import { APP_NAME } from '@workspace/common/app';
 
 export type OgImageProps = {
   logoSrc?: string;
+  backgroundSrc?: string;
 };
 
-export function OgImage({ logoSrc }: OgImageProps): React.JSX.Element {
+export function OgImage({ logoSrc, backgroundSrc }: OgImageProps): React.JSX.Element {
   return (
     <div
       style={{
@@ -21,109 +22,114 @@ export function OgImage({ logoSrc }: OgImageProps): React.JSX.Element {
         position: 'relative'
       }}
     >
-      <div
-        style={{
-          position: 'absolute',
-          top: 24,
-          left: 24,
-          right: 24,
-          bottom: 24,
-          border: '2px solid rgba(255, 255, 255, 0.2)',
-          borderRadius: 16
-        }}
-      />
-
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          textAlign: 'center',
-          padding: 48,
-          maxWidth: 800,
-          zIndex: 10
-        }}
-      >
+      {backgroundSrc && (
         <img
-          src={logoSrc || ''}
-          alt="Corporate SportsFest"
-          width={400}
-          height={222}
-          style={{ marginBottom: 24 }}
+          src={backgroundSrc}
+          alt=""
+          style={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover'
+          }}
         />
-        <div
-          style={{
-            fontSize: 48,
-            fontWeight: 800,
-            lineHeight: 1.2,
-            color: '#f8f8f8',
-            textShadow: '0 4px 8px rgba(0, 0, 0, 0.5)'
-          }}
-        >
-          {APP_NAME}
-        </div>
+      )}
+      <div
+        style={{
+          position: 'absolute',
+          top: '24px',
+          left: '24px',
+          right: '24px',
+          bottom: '24px',
+          border: '2px solid rgba(255, 255, 255, 0.2)',
+          borderRadius: '16px'
+        }}
+      />
 
-        <div
-          style={{
-            marginTop: 24,
-            fontSize: 28,
-            fontWeight: 400,
-            lineHeight: 1.6,
-            color: 'rgba(255, 255, 255, 0.75)',
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
-          <div>Tampa Bay&apos;s Team Building Blast on the Beach.</div>
-          <div style={{ marginTop: 8 }}>No Athletic Skill is Necessary, just Team Spirit and Company Pride!</div>
-        </div>
-      </div>
+      {/* Logo in top left */}
+      <img
+        src={logoSrc || ''}
+        alt="Corporate SportsFest"
+        width="500"
+        height="277"
+        style={{
+          position: 'absolute',
+          top: '48px',
+          left: '48px',
+          zIndex: '10'
+        }}
+      />
 
-      <div
-        style={{
-          position: 'absolute',
-          width: 12,
-          height: 12,
-          borderRadius: '50%',
-          backgroundColor: '#f8f8f8',
-          top: 24,
-          left: 24
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          width: 12,
-          height: 12,
-          borderRadius: '50%',
-          backgroundColor: '#f8f8f8',
-          top: 24,
-          right: 24
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          width: 12,
-          height: 12,
-          borderRadius: '50%',
-          backgroundColor: '#f8f8f8',
-          bottom: 24,
-          left: 24
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          width: 12,
-          height: 12,
-          borderRadius: '50%',
-          backgroundColor: '#f8f8f8',
-          bottom: 24,
-          right: 24
-        }}
-      />
+      {/* Text content on the right side */}
+      {/*<div*/}
+      {/*  style={{*/}
+      {/*    position: 'absolute',*/}
+      {/*    top: '0',*/}
+      {/*    right: '0',*/}
+      {/*    width: '60%',*/}
+      {/*    height: '100%',*/}
+      {/*    display: 'flex',*/}
+      {/*    flexDirection: 'column',*/}
+      {/*    justifyContent: 'flex-start',*/}
+      {/*    alignItems: 'flex-start',*/}
+      {/*    paddingTop: '58px',*/}
+      {/*    zIndex: '10'*/}
+      {/*  }}*/}
+      {/*>*/}
+      {/*  <div*/}
+      {/*    style={{*/}
+      {/*      fontSize: '56px',*/}
+      {/*      fontWeight: '900',*/}
+      {/*      lineHeight: '1.2',*/}
+      {/*      color: '#f8f8f8',*/}
+      {/*      marginBottom: '18px'*/}
+      {/*    }}*/}
+      {/*  >*/}
+      {/*    {APP_NAME}*/}
+      {/*  </div>*/}
+
+      {/*  <div*/}
+      {/*    style={{*/}
+      {/*      fontSize: '28px',*/}
+      {/*      fontWeight: '400',*/}
+      {/*      lineHeight: '1.6',*/}
+      {/*      color: 'rgba(255, 255, 255, 0.95)',*/}
+      {/*      marginBottom: '12px'*/}
+      {/*    }}*/}
+      {/*  >*/}
+      {/*    Tampa Bay's Team Building Blast on the Beach*/}
+      {/*  </div>*/}
+
+      {/*  <div*/}
+      {/*    style={{*/}
+      {/*      fontSize: '20px',*/}
+      {/*      fontWeight: '400',*/}
+      {/*      lineHeight: '1.6',*/}
+      {/*      color: 'rgba(255, 255, 255, 0.95)',*/}
+      {/*    }}*/}
+      {/*  >*/}
+      {/*    No Athletic Skill is Necessary, just Team Spirit and Company Pride!*/}
+      {/*  </div>*/}
+      {/*</div>*/}
+
+      {[
+        { top: '24px', left: '24px' },
+        { top: '24px', right: '24px' },
+        { bottom: '24px', left: '24px' },
+        { bottom: '24px', right: '24px' }
+      ].map((position, index) => (
+        <div
+          key={index}
+          style={{
+            position: 'absolute',
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            backgroundColor: '#f8f8f8',
+            ...position
+          }}
+        />
+      ))}
     </div>
   );
 }
