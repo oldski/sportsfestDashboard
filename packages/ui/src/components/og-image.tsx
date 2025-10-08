@@ -45,15 +45,13 @@ export function OgImage({ logoSrc }: OgImageProps): React.JSX.Element {
           zIndex: 10
         }}
       >
-        {logoSrc && (
-          <img
-            src={logoSrc}
-            alt="Corporate SportsFest"
-            width={400}
-            height={222}
-            style={{ marginBottom: 24 }}
-          />
-        )}
+        <img
+          src={logoSrc || ''}
+          alt="Corporate SportsFest"
+          width={400}
+          height={222}
+          style={{ marginBottom: 24 }}
+        />
         <div
           style={{
             fontSize: 48,
