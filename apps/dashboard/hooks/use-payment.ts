@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import type { 
+import type {
   CreatePaymentIntentRequest,
-  CreatePaymentIntentResponse 
+  CreatePaymentIntentResponse
 } from '~/app/api/stripe/create-payment-intent/route';
+import type { OrderSummary, AppliedCoupon } from '~/types/order';
 
 export interface PaymentHookOptions {
   organizationSlug: string;
@@ -22,34 +23,7 @@ export interface CartItem {
   fullPrice: number;
 }
 
-export interface AppliedCoupon {
-  id: string;
-  code: string;
-  discountType: 'percentage' | 'fixed_amount';
-  discountValue: number;
-  calculatedDiscount: number;
-}
-
-export interface OrderSummary {
-  items: Array<{
-    name: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-    isDeposit?: boolean;
-    fullPrice?: number;
-  }>;
-  subtotal: number;
-  depositAmount?: number;
-  totalAmount: number;
-  dueToday: number;
-  futurePayments: number;
-  paymentType: 'full' | 'deposit';
-  appliedCoupon?: AppliedCoupon;
-  couponDiscount: number;
-  discountedSubtotal: number;
-  discountedTotal: number;
-}
+export type { OrderSummary, AppliedCoupon };
 
 export function usePayment({ organizationSlug, onSuccess, onError }: PaymentHookOptions) {
   const [isLoading, setIsLoading] = React.useState(false);
@@ -230,7 +204,7 @@ export function usePayment({ organizationSlug, onSuccess, onError }: PaymentHook
         throw new Error('Invalid response from server');
       }
       
-      setClientSecret(data.clientSecret);
+      setClientSecret(data.clientSecret || null);
       setOrderId(data.orderId);
 
     } catch (error) {

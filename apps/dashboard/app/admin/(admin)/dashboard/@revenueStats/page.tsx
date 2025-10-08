@@ -9,7 +9,7 @@ import {RevenueTrendsChart} from "~/components/admin/charts/revenue-trends-chart
 import {formatCurrency} from "~/lib/formatters";
 
 export default function RevenueStatsPage(): React.JSX.Element {
-  const [frequency, setFrequency] = React.useState<'day' | 'week' | 'month'>('day');
+  const [frequency, setFrequency] = React.useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [data, setData] = React.useState<any>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<string>('products');
@@ -43,7 +43,7 @@ export default function RevenueStatsPage(): React.JSX.Element {
     fetchInitialData();
   }, []);
 
-  const handleFrequencyChange = (newFrequency: 'day' | 'week' | 'month') => {
+  const handleFrequencyChange = (newFrequency: 'daily' | 'weekly' | 'monthly') => {
     setFrequency(newFrequency);
   };
 

@@ -249,10 +249,11 @@ const AllRostersPDF: React.FC<AllRostersPDFProps> = ({
           {sortedMembers.map((member, index) => (
             <View
               key={member.id}
-              style={[
-                styles.tableRow,
-                index % 2 === 1 ? styles.tableRowEven : null
-              ]}
+              style={
+                index % 2 === 1
+                  ? [styles.tableRow, styles.tableRowEven]
+                  : [styles.tableRow]
+              }
             >
               <Text style={[styles.tableCell, styles.teamNameCell]}>
                 {member.firstName} {member.lastName}
@@ -263,11 +264,13 @@ const AllRostersPDF: React.FC<AllRostersPDFProps> = ({
               <Text style={[styles.tableCell, styles.teamEmailCell]}>
                 {member.email}
               </Text>
-              <Text style={[
-                styles.tableCell,
-                styles.teamRoleCell,
-                member.isCaptain ? styles.captain : null
-              ]}>
+              <Text
+                style={
+                  member.isCaptain
+                    ? [styles.tableCell, styles.teamRoleCell, styles.captain]
+                    : [styles.tableCell, styles.teamRoleCell]
+                }
+              >
                 {member.isCaptain ? 'Captain' : 'Member'}
               </Text>
             </View>
@@ -312,10 +315,11 @@ const AllRostersPDF: React.FC<AllRostersPDFProps> = ({
                 {sortedPlayers.map((player, index) => (
                   <View
                     key={player.id}
-                    style={[
-                      styles.tableRow,
-                      index % 2 === 1 ? styles.tableRowEven : null
-                    ]}
+                    style={
+                      index % 2 === 1
+                        ? [styles.tableRow, styles.tableRowEven]
+                        : [styles.tableRow]
+                    }
                   >
                     <Text style={[styles.tableCell, styles.eventNameCell]}>
                       {player.firstName} {player.lastName}
@@ -323,18 +327,22 @@ const AllRostersPDF: React.FC<AllRostersPDFProps> = ({
                     <Text style={[styles.tableCell, styles.eventPhoneCell]}>
                       {player.phone ? formatPhoneNumber(player.phone) : 'N/A'}
                     </Text>
-                    <Text style={[
-                      styles.tableCell,
-                      styles.eventRoleCell,
-                      player.isStarter ? styles.starter : null
-                    ]}>
+                    <Text
+                      style={
+                        player.isStarter
+                          ? [styles.tableCell, styles.eventRoleCell, styles.starter]
+                          : [styles.tableCell, styles.eventRoleCell]
+                      }
+                    >
                       {player.isStarter ? 'Starter' : 'Sub'}
                     </Text>
-                    <Text style={[
-                      styles.tableCell,
-                      styles.eventPositionCell,
-                      player.squadLeader ? styles.squadLeader : null
-                    ]}>
+                    <Text
+                      style={
+                        player.squadLeader
+                          ? [styles.tableCell, styles.eventPositionCell, styles.squadLeader]
+                          : [styles.tableCell, styles.eventPositionCell]
+                      }
+                    >
                       {player.squadLeader ? 'Leader' : 'Player'}
                     </Text>
                     <Text style={[styles.tableCell, styles.eventGenderCell]}>

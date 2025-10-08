@@ -77,8 +77,13 @@ export async function getInvoiceDetails(invoiceId: string): Promise<Registration
     console.log('✅ Invoice found:', invoice.invoiceNumber);
 
     // For organization context, verify the user has access to this organization
-    if (!isAdmin && invoice.organizationId !== session.user.organizationId) {
-      throw new Error('Unauthorized: You do not have access to this invoice');
+    if (!isAdmin) {
+      const hasAccess = (session.user as any).memberships?.some(
+        (m: any) => m.organizationId === invoice.organizationId
+      );
+      if (!hasAccess) {
+        throw new Error('Unauthorized: You do not have access to this invoice');
+      }
     }
 
     console.log('📦 Fetching order items for order:', invoice.orderId);

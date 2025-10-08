@@ -17,8 +17,8 @@ interface ProductTypeData {
 interface RevenueTrendsChartProps {
   data: RevenueTrendData[];
   productTypes: ProductTypeData[];
-  frequency: 'day' | 'week' | 'month';
-  onFrequencyChange: (frequency: 'day' | 'week' | 'month') => void;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  onFrequencyChange: (frequency: 'daily' | 'weekly' | 'monthly') => void;
 }
 
 export function RevenueTrendsChart({
@@ -71,10 +71,10 @@ export function RevenueTrendsChart({
   };
 
   const formatXAxisLabel = (value: string) => {
-    if (frequency === 'month') {
+    if (frequency === 'monthly') {
       const [year, month] = value.split('-');
       return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-    } else if (frequency === 'week') {
+    } else if (frequency === 'weekly') {
       return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
     return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -102,9 +102,9 @@ export function RevenueTrendsChart({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="day">Daily</SelectItem>
-            <SelectItem value="week">Weekly</SelectItem>
-            <SelectItem value="month">Monthly</SelectItem>
+            <SelectItem value="daily">Daily</SelectItem>
+            <SelectItem value="weekly">Weekly</SelectItem>
+            <SelectItem value="monthly">Monthly</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -122,8 +122,8 @@ export function RevenueTrendsChart({
             angle={-45}
             textAnchor="end"
             height={70}
-            interval={frequency === 'day' ? 'preserveEnd' : frequency === 'week' ? 0 : 'preserveStartEnd'}
-            minTickGap={frequency === 'day' ? 30 : 5}
+            interval={frequency === 'daily' ? 'preserveEnd' : frequency === 'weekly' ? 0 : 'preserveStartEnd'}
+            minTickGap={frequency === 'daily' ? 30 : 5}
           />
           <YAxis
             axisLine={false}
@@ -154,7 +154,7 @@ export function RevenueTrendsChart({
               paddingTop: '20px',
               fontSize: '12px'
             }}
-            formatter={(value) => value.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            formatter={(value) => value.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
           />
         </AreaChart>
       </ResponsiveContainer>

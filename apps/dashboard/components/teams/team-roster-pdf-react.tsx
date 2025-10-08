@@ -194,10 +194,11 @@ const TeamRosterPDF: React.FC<TeamRosterPDFProps> = ({ teamData, organizationNam
           {sortedMembers.map((member, index) => (
             <View
               key={member.id}
-              style={[
-                styles.tableRow,
-                index % 2 === 1 ? styles.tableRowEven : null
-              ]}
+              style={
+                index % 2 === 1
+                  ? [styles.tableRow, styles.tableRowEven]
+                  : [styles.tableRow]
+              }
             >
               <Text style={[styles.tableCell, styles.nameCell]}>
                 {member.firstName} {member.lastName}
@@ -208,11 +209,13 @@ const TeamRosterPDF: React.FC<TeamRosterPDFProps> = ({ teamData, organizationNam
               <Text style={[styles.tableCell, styles.emailCell]}>
                 {member.email}
               </Text>
-              <Text style={[
-                styles.tableCell,
-                styles.roleCell,
-                member.isCaptain ? styles.captain : null
-              ]}>
+              <Text
+                style={
+                  member.isCaptain
+                    ? [styles.tableCell, styles.roleCell, styles.captain]
+                    : [styles.tableCell, styles.roleCell]
+                }
+              >
                 {member.isCaptain ? 'Captain' : 'Member'}
               </Text>
             </View>

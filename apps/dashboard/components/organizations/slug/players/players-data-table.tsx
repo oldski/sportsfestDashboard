@@ -298,7 +298,7 @@ export function PlayersDataTable({ data, organization, eventYears }: PlayersData
           <PlayersDataTableExport
             players={data.players}
             organizationName={organization.name}
-            eventYearName={data.eventYear?.name}
+            eventYearName={data.players[0]?.eventYear?.name}
             filename={`players-${organization.slug}-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}`}
           />
           <DataTableColumnOptionsHeader table={table} />

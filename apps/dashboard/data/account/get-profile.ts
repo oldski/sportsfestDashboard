@@ -5,7 +5,7 @@ import { unstable_cache as cache } from 'next/cache';
 import { getAuthOrganizationContext } from '@workspace/auth/context';
 import { ForbiddenError, NotFoundError } from '@workspace/common/errors';
 import { db, eq } from '@workspace/database/client';
-import { userTable } from '@workspace/database/schema';
+import { userTable, type Role } from '@workspace/database/schema';
 
 import {
   Caching,
@@ -32,7 +32,7 @@ export async function getProfile(): Promise<ProfileDto> {
   const membershipToUse = activeMembership || {
     organizationId: ctx.organization.id,
     userId: ctx.session.user.id,
-    role: 'admin' as const,
+    role: 'admin' as Role,
     isOwner: false
   };
 

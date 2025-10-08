@@ -27,7 +27,7 @@ export type TentTrackingData = {
   totalAmount: number;
   depositPaid: number;
   balanceOwed: number;
-  status: 'confirmed' | 'pending_payment' | 'partial_payment';
+  status: 'confirmed' | 'pending_payment' | 'partial_payment' | 'cancelled';
   purchaseDate: string;
   createdAt: string;
   updatedAt: string;
@@ -161,11 +161,12 @@ export async function getTentTracking(eventYearId?: string): Promise<TentTrackin
       totalAmount: Number(item.totalAmount) || 0,
       depositPaid: Number(item.depositPaid) || 0,
       balanceOwed: Number(item.balanceOwed) || 0,
-      status: item.status as 'confirmed' | 'pending_payment' | 'cancelled',
+      status: item.status as 'confirmed' | 'pending_payment' | 'partial_payment' | 'cancelled',
       purchaseDate: item.purchaseDate.toISOString().split('T')[0],
       createdAt: item.createdAt.toISOString().split('T')[0],
       updatedAt: item.updatedAt.toISOString().split('T')[0],
       isAtLimit: Number(item.tentCount) >= item.maxAllowed,
+      orderNumber: `TENT-${item.id.substring(0, 8).toUpperCase()}`, // Generate tent tracking reference
     }));
   } catch (error) {
     console.error('Error fetching tent tracking data:', error);

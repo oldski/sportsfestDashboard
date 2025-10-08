@@ -6,32 +6,35 @@ import { getActiveEventYear } from './get-event-year';
 import { db, eq, and, isNotNull } from '@workspace/database/client';
 import { orderPaymentTable, orderTable, orderItemTable, productTable, PaymentStatus } from '@workspace/database/schema';
 
-interface RevenueTrendData {
+export interface RevenueTrendData {
   date: string;
   [productType: string]: number | string;
 }
 
-interface ProductTypeData {
+export interface ProductTypeData {
   type: string;
   color: string;
 }
 
-interface RevenueStats {
+export interface RevenueStats {
   totalRevenue: number;
   revenueThisMonth: number;
 }
 
-interface PaymentTrendData {
+export interface PaymentTrendData {
   date: string;
   [paymentType: string]: number | string;
 }
 
-interface PaymentTypeData {
+export interface PaymentTypeData {
   type: string;
   color: string;
 }
 
-export async function getRevenueTrends(frequency: 'day' | 'week' | 'month' = 'day'): Promise<{
+export type FrequencyType = 'daily' | 'weekly' | 'monthly';
+export type RevenueProductType = ProductTypeData;
+
+export async function getRevenueTrends(frequency: FrequencyType = 'daily'): Promise<{
   activeEvent: any;
   trends: RevenueTrendData[];
   productTypes: ProductTypeData[];
@@ -151,7 +154,7 @@ export async function getRevenueTrends(frequency: 'day' | 'week' | 'month' = 'da
   }
 }
 
-function processRevenueData(payments: any[], frequency: 'day' | 'week' | 'month', activeEvent: any): RevenueTrendData[] {
+function processRevenueData(payments: any[], frequency: 'daily' | 'weekly' | 'monthly', activeEvent: any): RevenueTrendData[] {
   const groupedData: Record<string, Record<string, number>> = {};
 
   // Get all unique product types
@@ -164,16 +167,16 @@ function processRevenueData(payments: any[], frequency: 'day' | 'week' | 'month'
     let dateKey: string;
 
     switch (frequency) {
-      case 'day':
+      case 'daily':
         dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
         break;
-      case 'week':
+      case 'weekly':
         // Get Monday of the week
         const monday = new Date(date);
         monday.setDate(date.getDate() - date.getDay() + 1);
         dateKey = monday.toISOString().split('T')[0];
         break;
-      case 'month':
+      case 'monthly':
         dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         break;
       default:
@@ -207,7 +210,7 @@ function processRevenueData(payments: any[], frequency: 'day' | 'week' | 'month'
 function fillMissingDates(
   groupedData: Record<string, Record<string, number>>,
   productTypes: string[],
-  frequency: 'day' | 'week' | 'month',
+  frequency: 'daily' | 'weekly' | 'monthly',
   activeEvent: any
 ): [string, Record<string, number>][] {
   // Use event start date as start, current date as end
@@ -228,18 +231,18 @@ function fillMissingDates(
     let dateKey: string;
 
     switch (frequency) {
-      case 'day':
+      case 'daily':
         dateKey = current.toISOString().split('T')[0];
         current.setDate(current.getDate() + 1);
         break;
-      case 'week':
+      case 'weekly':
         // Get Monday of the week
         const monday = new Date(current);
         monday.setDate(current.getDate() - current.getDay() + 1);
         dateKey = monday.toISOString().split('T')[0];
         current.setDate(current.getDate() + 7);
         break;
-      case 'month':
+      case 'monthly':
         dateKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
         current.setMonth(current.getMonth() + 1);
         break;
@@ -277,7 +280,7 @@ function getProductTypeColors(payments: any[]): ProductTypeData[] {
   }));
 }
 
-function processPaymentData(payments: any[], frequency: 'day' | 'week' | 'month', activeEvent: any): PaymentTrendData[] {
+function processPaymentData(payments: any[], frequency: 'daily' | 'weekly' | 'monthly', activeEvent: any): PaymentTrendData[] {
   const groupedData: Record<string, Record<string, number>> = {};
 
   // Get all unique payment types
@@ -290,16 +293,16 @@ function processPaymentData(payments: any[], frequency: 'day' | 'week' | 'month'
     let dateKey: string;
 
     switch (frequency) {
-      case 'day':
+      case 'daily':
         dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
         break;
-      case 'week':
+      case 'weekly':
         // Get Monday of the week
         const monday = new Date(date);
         monday.setDate(date.getDate() - date.getDay() + 1);
         dateKey = monday.toISOString().split('T')[0];
         break;
-      case 'month':
+      case 'monthly':
         dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         break;
       default:
@@ -333,7 +336,7 @@ function processPaymentData(payments: any[], frequency: 'day' | 'week' | 'month'
 function fillMissingPaymentDates(
   groupedData: Record<string, Record<string, number>>,
   paymentTypes: string[],
-  frequency: 'day' | 'week' | 'month',
+  frequency: 'daily' | 'weekly' | 'monthly',
   activeEvent: any
 ): [string, Record<string, number>][] {
   // Use event start date as start, current date as end
@@ -354,18 +357,18 @@ function fillMissingPaymentDates(
     let dateKey: string;
 
     switch (frequency) {
-      case 'day':
+      case 'daily':
         dateKey = current.toISOString().split('T')[0];
         current.setDate(current.getDate() + 1);
         break;
-      case 'week':
+      case 'weekly':
         // Get Monday of the week
         const monday = new Date(current);
         monday.setDate(current.getDate() - current.getDay() + 1);
         dateKey = monday.toISOString().split('T')[0];
         current.setDate(current.getDate() + 7);
         break;
-      case 'month':
+      case 'monthly':
         dateKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
         current.setMonth(current.getMonth() + 1);
         break;

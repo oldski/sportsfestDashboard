@@ -7,11 +7,11 @@ import { dedupedAuth } from '@workspace/auth';
 import { getRequestStoragePathname } from '@workspace/auth/redirect';
 import { baseUrl, getPathname, replaceOrgSlug, routes } from '@workspace/routes';
 import { Logo } from '@workspace/ui/components/logo';
-import { ThemeToggle } from '@workspace/ui/components/theme-toggle';
 
 import { getOrganizations } from '~/data/organization/get-organizations';
 import { createTitle } from '~/lib/formatters';
 import { isSuperAdmin } from '~/lib/admin-utils';
+import { Footer } from "~/components/auth/footer";
 
 export const metadata: Metadata = {
   title: createTitle('Auth')
@@ -50,26 +50,26 @@ export default async function AuthLayout({
   }
   return (
     <main className="flex min-h-svh">
-      <div className="w-full md:w-1/3 flex flex-col gap-4 p-6 items-center justify-between md:p-10 bg-transparent md:bg-zinc-200">
-        <div className="flex justify-center gap-2">
-          <Link
-            href={routes.marketing.Index}
-            className="flex items-center gap-2 font-medium"
-          >
-            <Logo />
-          </Link>
-        </div>
-        {children}
-      </div>
-      <div className="w-full md:w-2/3 bg-muted relative block">
+      <div className="fixed h-screen w-screen block z-0">
         <img
           src="/assets/team-photo.jpg"
           alt="Image"
           className="absolute inset-0 h-full w-full object-cover"
         />
-
-        <ThemeToggle className="fixed bottom-2 right-2 rounded-full" />
       </div>
+      <div className="z-10 w-1/3 mx-auto flex flex-col items-center gap-6 space-y-6 p-6 md:p-10 ">
+        <div className="flex justify-center gap-2">
+          <Link
+            href={routes.marketing.Index}
+            className="flex items-center gap-2 font-medium"
+          >
+            <Logo variant="light" isFull />
+          </Link>
+        </div>
+        {children}
+      </div>
+
+      <Footer />
     </main>
   );
 }

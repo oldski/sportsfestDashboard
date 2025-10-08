@@ -15,33 +15,6 @@ export default function SignUpPage(): React.JSX.Element {
   return (
     <>
       <SignUpCard />
-      <div className="px-2 text-xs text-muted-foreground">
-        By signing up, you agree to our{' '}
-        <Link
-          prefetch={false}
-          href={routes.marketing.TermsOfUse}
-          className="text-foreground underline"
-        >
-          Terms of Use
-        </Link>{' '}
-        and{' '}
-        <Link
-          prefetch={false}
-          href={routes.marketing.PrivacyPolicy}
-          className="text-foreground underline"
-        >
-          Privacy Policy
-        </Link>
-        . Need help?{' '}
-        <Link
-          prefetch={false}
-          href={routes.marketing.Contact}
-          className="text-foreground underline"
-        >
-          Get in touch
-        </Link>
-        .
-      </div>
     </>
   );
 }

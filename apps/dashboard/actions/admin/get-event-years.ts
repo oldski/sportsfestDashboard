@@ -78,6 +78,7 @@ export type EventYearWithStats = {
   registrationDeadline: string;
   productCount: number;
   companyTeamsCount: number;
+  organizationCount: number;
   totalRevenue: number;
   status: 'active' | 'completed' | 'draft';
   createdAt: string;
@@ -143,6 +144,7 @@ export async function getEventYears(): Promise<EventYearWithStats[]> {
           registrationDeadline: ey.registrationClose.toISOString().split('T')[0],
           productCount,
           companyTeamsCount,
+          organizationCount: companyTeamsCount,
           totalRevenue,
           status,
           createdAt: ey.createdAt.toISOString().split('T')[0],

@@ -37,6 +37,7 @@ export type RegistrationOrderDto = {
     paymentDate: Date;
     method: string;
     status: string;
+    last4?: string;
   }[];
   // Invoice information
   invoices: {

@@ -9,7 +9,7 @@ import {
   organizationTable,
   eventYearTable,
   type Gender,
-  type TshirtSize,
+  type TShirtSize,
   type PlayerStatus
 } from '@workspace/database/schema';
 
@@ -20,7 +20,7 @@ export interface PlayerData {
   email: string;
   phone: string | null;
   gender: Gender;
-  tshirtSize: TshirtSize;
+  tshirtSize: TShirtSize;
   dateOfBirth: Date;
   status: PlayerStatus;
   accuracyConfirmed: boolean;

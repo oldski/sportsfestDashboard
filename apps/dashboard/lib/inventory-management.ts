@@ -333,8 +333,8 @@ export async function getTentQuotaStatus(
         .select({
           maxQuantityPerOrg: productTable.maxQuantityPerOrg,
           totalInventory: productTable.totalInventory,
-          soldCount: productTable.soldcount,
-          reservedCount: productTable.reservedcount
+          soldCount: productTable.soldCount,
+          reservedCount: productTable.reservedCount
         })
         .from(productTable)
         .where(eq(productTable.id, productId))

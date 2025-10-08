@@ -1,23 +1,13 @@
 import * as React from 'react';
 import type { CompleteOrderPaymentRequest, CompleteOrderPaymentResponse } from '~/app/api/orders/complete-payment/route';
+import type { OrderSummary } from '~/types/order';
 
 interface UseOrderPaymentCompletionProps {
   onSuccess?: (orderId: string) => void;
   onError?: (error: string) => void;
 }
 
-export interface OrderSummary {
-  items: Array<{
-    name: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-  }>;
-  subtotal: number;
-  depositAmount?: number;
-  totalAmount: number;
-  paymentType: 'full' | 'deposit';
-}
+export type { OrderSummary };
 
 interface UseOrderPaymentCompletionResult {
   isLoading: boolean;
@@ -86,7 +76,12 @@ export function useOrderPaymentCompletion({
         })),
         subtotal: originalTotal,
         totalAmount: data.remainingAmount, // Only paying the remaining amount
-        paymentType: 'full' // This is the completion of the order balance
+        dueToday: data.remainingAmount,
+        futurePayments: 0,
+        paymentType: 'full', // This is the completion of the order balance
+        couponDiscount: 0,
+        discountedSubtotal: originalTotal,
+        discountedTotal: data.remainingAmount
       };
       
       setClientSecret(data.clientSecret);

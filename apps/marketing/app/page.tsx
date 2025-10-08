@@ -8,7 +8,7 @@ import { Button } from '@workspace/ui/components/button';
 import {Logo} from "@workspace/ui/components/logo";
 import { motion } from "motion/react";
 import {ExternalIcon} from "next/dist/client/components/react-dev-overlay/ui/icons/external";
-import {ArrowBigLeft, ArrowRightIcon, ChevronRightIcon} from "lucide-react";
+import {ChevronRightIcon} from "lucide-react";
 
 export default function IndexPage(): React.JSX.Element {
   return (

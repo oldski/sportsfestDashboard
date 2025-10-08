@@ -204,6 +204,9 @@ importers:
       '@types/node':
         specifier: 22.15.30
         version: 22.15.30
+      '@types/papaparse':
+        specifier: ^5.3.16
+        version: 5.3.16
       '@types/qrcode':
         specifier: 1.5.5
         version: 1.5.5

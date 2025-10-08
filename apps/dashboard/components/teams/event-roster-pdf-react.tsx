@@ -239,10 +239,11 @@ const EventRosterPDF: React.FC<EventRosterPDFProps> = ({
           {sortedPlayers.map((player, index) => (
             <View
               key={player.id}
-              style={[
-                styles.tableRow,
-                index % 2 === 1 ? styles.tableRowEven : null
-              ]}
+              style={
+                index % 2 === 1
+                  ? [styles.tableRow, styles.tableRowEven]
+                  : [styles.tableRow]
+              }
             >
               <Text style={[styles.tableCell, styles.nameCell]}>
                 {player.firstName} {player.lastName}
@@ -250,18 +251,22 @@ const EventRosterPDF: React.FC<EventRosterPDFProps> = ({
               <Text style={[styles.tableCell, styles.phoneCell]}>
                 {player.phone ? formatPhoneNumber(player.phone) : 'N/A'}
               </Text>
-              <Text style={[
-                styles.tableCell,
-                styles.roleCell,
-                player.isStarter ? styles.starter : null
-              ]}>
+              <Text
+                style={
+                  player.isStarter
+                    ? [styles.tableCell, styles.roleCell, styles.starter]
+                    : [styles.tableCell, styles.roleCell]
+                }
+              >
                 {player.isStarter ? 'Starter' : 'Sub'}
               </Text>
-              <Text style={[
-                styles.tableCell,
-                styles.positionCell,
-                player.squadLeader ? styles.squadLeader : null
-              ]}>
+              <Text
+                style={
+                  player.squadLeader
+                    ? [styles.tableCell, styles.positionCell, styles.squadLeader]
+                    : [styles.tableCell, styles.positionCell]
+                }
+              >
                 {player.squadLeader ? 'Leader' : 'Player'}
               </Text>
               <Text style={[styles.tableCell, styles.genderCell]}>

@@ -546,7 +546,7 @@ async function sendEmailNotifications({
   const isFullPayment = remainingBalance <= 0;
 
   // Get coupon information from order metadata
-  const appliedCoupon = orderData.metadata?.appliedCoupon;
+  const appliedCoupon = orderData.metadata?.appliedCoupon || undefined;
   const couponDiscount = orderData.metadata?.couponDiscount || 0;
   const originalTotal = orderData.metadata?.originalTotal || orderData.totalAmount;
 

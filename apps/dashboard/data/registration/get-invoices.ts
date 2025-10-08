@@ -86,7 +86,10 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
           orderId: orderPaymentTable.orderId,
           id: orderPaymentTable.id,
           amount: orderPaymentTable.amount,
-          createdAt: orderPaymentTable.createdAt
+          createdAt: orderPaymentTable.createdAt,
+          last4: orderPaymentTable.last4,
+          paymentMethodType: orderPaymentTable.paymentMethodType,
+          status: orderPaymentTable.status
         })
         .from(orderPaymentTable)
         .where(inArray(orderPaymentTable.orderId, orderIds))
@@ -130,9 +133,9 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
         createdAt: item.invoice.createdAt,
         updatedAt: item.invoice.updatedAt,
         eventYear: {
-          id: item.eventYear.id || '',
-          name: item.eventYear.name || 'Unknown Event Year',
-          year: item.eventYear.year || 0
+          id: item.eventYear?.id || '',
+          name: item.eventYear?.name || 'Unknown Event Year',
+          year: item.eventYear?.year || 0
         },
         order: {
           id: item.order.id,
@@ -153,12 +156,12 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
           payments: (orderPaymentsMap.get(item.order.id) || []).map(payment => ({
             id: payment.id,
             amount: payment.amount,
-            method: 'card', // Default for now
-            status: 'completed', // Default for now
+            method: payment.paymentMethodType || 'card',
+            status: payment.status,
             paymentDate: payment.createdAt,
             transactionId: undefined, // Not available yet
             paymentType: 'full' as const, // Default for now
-            last4: undefined,
+            last4: payment.last4 || undefined,
             failureReason: undefined
           })) || []
         }

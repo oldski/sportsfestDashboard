@@ -14,17 +14,7 @@ export default async function SignInPage(): Promise<React.JSX.Element> {
   return (
     <>
       <SignInCard />
-      <div className="px-2 text-xs text-muted-foreground">
-        Need help?{' '}
-        <Link
-          prefetch={false}
-          href={routes.marketing.Contact}
-          className="text-foreground underline"
-        >
-          Get in touch
-        </Link>
-        .
-      </div>
+
     </>
   );
 }

@@ -1882,7 +1882,19 @@ export const orderTable = pgTable(
     stripePaymentIntentId: varchar('stripePaymentIntentId', { length: 255 }),
     isManuallyCreated: boolean('isManuallyCreated').default(false).notNull(),
     notes: text('notes'),
-    metadata: jsonb('metadata'),
+    metadata: jsonb('metadata').$type<{
+      cartItems?: any[];
+      paymentType?: 'full' | 'deposit';
+      originalTotal?: number;
+      couponDiscount?: number;
+      appliedCoupon?: {
+        id: string;
+        code: string;
+        discountType: 'percentage' | 'fixed_amount';
+        discountValue: number;
+        calculatedDiscount: number;
+      } | null;
+    }>(),
     createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
       .defaultNow()
       .notNull(),

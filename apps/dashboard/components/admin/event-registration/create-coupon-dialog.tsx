@@ -52,7 +52,7 @@ import { useMediaQuery } from '@workspace/ui/hooks/use-media-query';
 import { cn } from '@workspace/ui/lib/utils';
 
 import { useCreateCouponDialog } from './create-coupon-dialog-provider';
-import { createCoupon, updateCoupon, getCouponById, type CouponFormData } from '~/actions/admin/coupon-actions';
+import { createCoupon, updateCoupon, getCouponById, type CouponFormData as CouponActionData } from '~/actions/admin/coupon-actions';
 import { getOrganizationsForSelect, type OrganizationOption } from '~/actions/admin/get-organizations';
 import { toast } from '@workspace/ui/components/sonner';
 
@@ -377,20 +377,21 @@ function CouponForm({
                 <FormItem>
                   <FormLabel>Restricted Organizations</FormLabel>
                   <FormControl>
-                    <MultiSelect
-                      options={organizations.map(org => ({
-                        label: org.name,
-                        value: org.id
-                      }))}
-                      selected={selectedOrgs}
-                      onChange={handleChange}
-                      placeholder={
-                        isLoadingOrganizations
-                          ? "Loading organizations..."
-                          : "Select organizations..."
-                      }
-                      disabled={isEditMode || isLoadingOrganizations}
-                    />
+                    <div className={isEditMode || isLoadingOrganizations ? 'pointer-events-none opacity-50' : ''}>
+                      <MultiSelect
+                        options={organizations.map(org => ({
+                          label: org.name,
+                          value: org.id
+                        }))}
+                        selected={selectedOrgs}
+                        onChange={handleChange}
+                        placeholder={
+                          isLoadingOrganizations
+                            ? "Loading organizations..."
+                            : "Select organizations..."
+                        }
+                      />
+                    </div>
                   </FormControl>
                   <FormDescription>
                     Select which organizations can use this coupon. If none are selected, the coupon will be available to anyone.

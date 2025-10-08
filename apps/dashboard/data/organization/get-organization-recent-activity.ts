@@ -3,11 +3,12 @@ import 'server-only';
 import { unstable_cache as cache } from 'next/cache';
 import { getAuthOrganizationContext } from '@workspace/auth/context';
 import { db, eq, and, desc, or, sql } from '@workspace/database/client';
-import { 
+import {
   orderTable,
   orderPaymentTable,
   orderInvoiceTable,
-  OrderStatus
+  OrderStatus,
+  PaymentStatus
 } from '@workspace/database/schema';
 
 import {
@@ -90,7 +91,7 @@ export async function getOrganizationRecentActivity(limit: number = 5): Promise<
         .where(
           and(
             eq(orderTable.organizationId, ctx.organization.id),
-            eq(orderPaymentTable.status, 'completed')
+            eq(orderPaymentTable.status, PaymentStatus.COMPLETED)
           )
         )
         .orderBy(desc(orderPaymentTable.createdAt))
