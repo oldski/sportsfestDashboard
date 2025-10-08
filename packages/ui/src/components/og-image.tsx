@@ -70,11 +70,13 @@ export function OgImage({ logoSrc }: OgImageProps): React.JSX.Element {
             fontSize: 28,
             fontWeight: 400,
             lineHeight: 1.6,
-            color: 'rgba(255, 255, 255, 0.75)'
+            color: 'rgba(255, 255, 255, 0.75)',
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
-          Tampa Bay's Team Building Blast on the Beach.
-          No Athletic Skill is Necessary, just Team Spirit and Company Pride!
+          <div>Tampa Bay&apos;s Team Building Blast on the Beach.</div>
+          <div style={{ marginTop: 8 }}>No Athletic Skill is Necessary, just Team Spirit and Company Pride!</div>
         </div>
       </div>
 
