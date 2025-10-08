@@ -5,6 +5,7 @@ import { Button } from "@workspace/ui/components/button";
 import { CreditCardIcon } from "lucide-react";
 import Link from 'next/link';
 import { getOrganizationRegistrationStats } from '~/data/organization/get-organization-registration-stats';
+import {Alert, AlertDescription} from "@workspace/ui/components/alert";
 
 // Format currency
 const formatCurrency = (amount: number) => {
@@ -52,8 +53,8 @@ export default async function SnapshotPage(): Promise<React.JSX.Element> {
       </div>
 
       {stats.balanceOwed > 0 && stats.orderWithBalance && (
-        <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-          <div className="flex items-center justify-between">
+        <Alert variant="warning">
+          <AlertDescription className="ml-3 text-base flex items-center justify-between">
             <div>
               <Badge variant="secondary" className="bg-orange-100 text-orange-800">
                 Balance Remaining: {formatCurrency(stats.balanceOwed)}
@@ -68,8 +69,8 @@ export default async function SnapshotPage(): Promise<React.JSX.Element> {
                 <span>Pay Balance</span>
               </Button>
             </Link>
-          </div>
-        </div>
+          </AlertDescription>
+        </Alert>
       )}
     </>
   );

@@ -30,7 +30,7 @@ export default function IndexPage(): React.JSX.Element {
           transition={{ delay: 0.4, duration: .8 }}
           className="flex flex-col items-center gap-6"
         >
-          <Logo isFull={false} width={400} height={222} />
+          <Logo isFull={false} variant="light" width={400} height={222} />
           <div className="flex items-center gap-4">
             <Button asChild size="lg" variant="default">
               <Link href={routes.dashboard.auth.SignIn} className="group">

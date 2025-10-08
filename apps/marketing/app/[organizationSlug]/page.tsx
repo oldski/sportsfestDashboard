@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useSearchParams } from 'next/navigation';
+import {useParams} from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -110,7 +110,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 function TeamMemberSignupForm() {
-  const searchParams = useSearchParams();
+  const params = useParams();
   const [organization, setOrganization] = React.useState<{ id: string; name: string; slug: string } | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -142,7 +142,10 @@ function TeamMemberSignupForm() {
   // Load organization from URL parameter
   React.useEffect(() => {
     async function loadOrganization() {
-      const orgSlug = searchParams.get('org');
+      const orgSlug = Array.isArray(params.organizationSlug)
+        ? params.organizationSlug[0]
+        : params.organizationSlug;
+
       if (orgSlug) {
         const org = await getOrganizationForSignup(orgSlug);
         if (org) {
@@ -154,7 +157,7 @@ function TeamMemberSignupForm() {
     }
 
     loadOrganization();
-  }, [searchParams, form]);
+  }, [params.organizationSlug, form]);
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
@@ -242,7 +245,7 @@ function TeamMemberSignupForm() {
               transition={{ delay: 0.2, duration: 0.4 }}
               className="flex flex-col items-center gap-8"
             >
-              <Logo isFull={false} width={400} height={222} />
+              <Logo isFull={false} variant="light" width={400} height={222} />
             <SiteHeading
               badge="📩 You're Invited"
               title={`Join ${organization.name}`}
