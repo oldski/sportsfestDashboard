@@ -2,11 +2,9 @@
 
 import * as React from 'react';
 
-import { APP_NAME } from '@workspace/common/app';
 import { cn } from '@workspace/ui/lib/utils';
 import Image from "next/image";
 
-export type LogoElement = React.ComponentRef<'div'>;
 export type LogoProps = React.ComponentPropsWithoutRef<'div'> & {
   hideSymbol?: boolean;
   hideWordmark?: boolean;
