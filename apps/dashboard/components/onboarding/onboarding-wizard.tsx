@@ -109,6 +109,12 @@ export function OnboardingWizard({
             logo: metadata?.organization?.logo ?? undefined,
             name: metadata?.organization?.name ?? '',
             slug: metadata?.organization?.slug ?? '',
+            address: '',
+            address2: '',
+            city: '',
+            state: 'FL',
+            zip: '',
+            phone: '',
           }
         : undefined,
       inviteTeamStep: activeSteps.includes(OnboardingStep.InviteTeam)
@@ -168,7 +174,7 @@ export function OnboardingWizard({
       <form
         onSubmit={methods.handleSubmit(onSubmit)}
         className={cn(
-          'mx-auto w-full min-w-80 max-w-lg space-y-4 p-4 pt-24',
+          'mx-auto w-full min-w-80 max-w-lg space-y-4 p-4',
           className
         )}
         {...other}

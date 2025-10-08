@@ -45,7 +45,7 @@ export function SignInToAcceptCard({
       </CardHeader>
       <CardContent className="text-sm">
         <p className="text-muted-foreground">
-          To accept the invitation please sign in as
+          To accept the invitation please sign in or create an account as
         </p>
         <p className="break-all font-medium">{email}</p>
         {loggedIn && (
@@ -58,11 +58,20 @@ export function SignInToAcceptCard({
           </Alert>
         )}
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-2">
+        <Link
+          href={routes.dashboard.auth.SignUp}
+          className={buttonVariants({
+            variant: 'default',
+            className: 'w-full'
+          })}
+        >
+          Sign up
+        </Link>
         <Link
           href={routes.dashboard.auth.SignIn}
           className={buttonVariants({
-            variant: 'default',
+            variant: 'outline',
             className: 'w-full'
           })}
         >

@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { type Metadata } from 'next';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 import { APP_NAME } from '@workspace/common/app';
-import { routes } from '@workspace/routes';
+import { replaceOrgSlug, routes } from '@workspace/routes';
 import { Logo } from '@workspace/ui/components/logo';
 import { ThemeSwitcher } from '@workspace/ui/components/theme-switcher';
 
@@ -18,6 +19,16 @@ export const metadata: Metadata = {
 
 export default async function OrganizationsPage(): Promise<React.JSX.Element> {
   const organizations = await getOrganizations();
+
+  console.log('Organizations count:', organizations.length);
+  console.log('Organizations:', organizations);
+
+  // If user only has access to one organization, redirect them directly to it
+  if (organizations.length === 1) {
+    const redirectUrl = replaceOrgSlug(routes.dashboard.organizations.slug.Home, organizations[0].slug);
+    console.log('Redirecting to:', redirectUrl);
+    redirect(redirectUrl);
+  }
   return (
     <div className="flex min-h-svh">
       <div className="relative flex w-full min-w-80 max-w-lg flex-col items-stretch justify-start gap-6 h-screen overflow-hidden">

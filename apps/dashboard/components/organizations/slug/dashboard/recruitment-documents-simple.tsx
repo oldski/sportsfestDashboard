@@ -65,7 +65,7 @@ export function RecruitmentDocumentsSimple({ documents, organizationSlug, error 
   return (
     <Card className="h-full">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2">
               <MegaphoneIcon className="h-5 w-5" />

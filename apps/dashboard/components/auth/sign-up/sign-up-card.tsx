@@ -48,7 +48,7 @@ export function SignUpCard({
   const [errorMessage, setErrorMessage] = React.useState<string>();
   const methods = useZodForm({
     schema: signUpSchema,
-    mode: 'onSubmit',
+    mode: 'onChange',
     defaultValues: {
       name: '',
       email: '',
@@ -105,12 +105,12 @@ export function SignUpCard({
               name="name"
               render={({ field }) => (
                 <FormItem className="flex w-full flex-col">
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>Full Name</FormLabel>
                   <FormControl>
                     <InputWithAdornments
                       type="text"
                       maxLength={64}
-                      autoComplete="name"
+                      autoComplete="full name"
                       disabled={methods.formState.isSubmitting}
                       startAdornment={<UserIcon className="size-4 shrink-0" />}
                       {...field}
@@ -175,7 +175,7 @@ export function SignUpCard({
             <Button
               type="submit"
               className="w-full"
-              disabled={methods.formState.isSubmitting}
+              disabled={methods.formState.isSubmitting || !methods.formState.isValid}
               loading={methods.formState.isSubmitting}
             >
               Create account

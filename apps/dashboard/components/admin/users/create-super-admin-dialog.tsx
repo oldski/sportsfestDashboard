@@ -132,7 +132,7 @@ export const CreateSuperAdminDialog = NiceModal.create<NiceModalHocProps>(() => 
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>Full Name</FormLabel>
               <FormControl>
                 <Input
                   {...field}

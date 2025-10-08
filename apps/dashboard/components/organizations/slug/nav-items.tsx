@@ -81,14 +81,14 @@ export function createAccountNavItems(slug: string): NavItem[] {
       ),
       icon: LockKeyholeIcon
     },
-    {
-      title: 'Notifications',
-      href: replaceOrgSlug(
-        routes.dashboard.organizations.slug.settings.account.Notifications,
-        slug
-      ),
-      icon: BellIcon
-    }
+    // {
+    //   title: 'Notifications',
+    //   href: replaceOrgSlug(
+    //     routes.dashboard.organizations.slug.settings.account.Notifications,
+    //     slug
+    //   ),
+    //   icon: BellIcon
+    // }
   ];
 }
 

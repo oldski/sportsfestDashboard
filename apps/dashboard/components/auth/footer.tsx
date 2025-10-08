@@ -7,9 +7,9 @@ import {APP_NAME} from "@workspace/common/app";
 
 export function Footer() {
   return(
-    <footer className="relative md:fixed bottom-0 w-full px-2 py-4 z-10 backdrop-blur-xs border-t border-foreground/20 backdrop-brightness-150 dark:backdrop-brightness-50 bg-white/30 dark:bg-black/30">
+    <footer className="relative md:fixed md:bottom-0 w-full px-2 py-4 z-10 backdrop-blur-xs border-t border-foreground/20 backdrop-brightness-150 dark:backdrop-brightness-50 bg-white/30 dark:bg-black/30">
       <div className="container">
-        <div className="flex flex-row items-center justify-between gap-4 text-sm">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm">
           <p>
             © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
           </p>

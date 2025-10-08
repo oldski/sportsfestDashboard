@@ -49,7 +49,7 @@ export default async function AuthLayout({
     }
   }
   return (
-    <main className="flex min-h-svh">
+    <main className="flex flex-col justify-between min-h-svh">
       <div className="fixed h-screen w-screen block z-0">
         <img
           src="/assets/team-photo.jpg"
@@ -57,7 +57,7 @@ export default async function AuthLayout({
           className="absolute inset-0 h-full w-full object-cover"
         />
       </div>
-      <div className="z-10 w-1/3 mx-auto flex flex-col items-center gap-6 space-y-6 p-6 md:p-10 ">
+      <div className="z-10 w-full md:w-2/3 lg:max-w-2/3 xl:max-w-1/2 xxl:max-w-1/4 mx-auto flex flex-col items-center gap-6 space-y-6 p-6 md:p-10 ">
         <div className="flex justify-center gap-2">
           <Link
             href={routes.marketing.Index}

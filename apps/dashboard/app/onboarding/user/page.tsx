@@ -57,8 +57,8 @@ export default async function OnboardingOnlyUserPage(): Promise<React.JSX.Elemen
     activeSteps.push(OnboardingStep.PendingInvitations);
   }
   return (
-    <div className="relative min-h-screen bg-background">
-      <div className="absolute inset-x-0 top-0 mx-auto flex min-w-80 items-center justify-center p-4">
+    <div className="flex flex-col gap-4 space-y-4 min-h-screen bg-background">
+      <div className="relative inset-x-0 mx-auto flex min-w-80 items-center justify-center p-4">
         <Logo />
       </div>
       <SignOutButton

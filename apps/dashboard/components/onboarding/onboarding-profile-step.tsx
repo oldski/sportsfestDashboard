@@ -129,12 +129,12 @@ export function OnboardingProfileStep({
           name="profileStep.name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>Name</FormLabel>
+              <FormLabel required>Full Name</FormLabel>
               <FormControl>
                 <Input
                   type="text"
                   maxLength={64}
-                  autoComplete="name"
+                  autoComplete="full name"
                   required
                   disabled={loading}
                   {...field}

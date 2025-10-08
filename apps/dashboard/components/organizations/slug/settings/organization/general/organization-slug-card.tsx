@@ -5,6 +5,16 @@ import { useSearchParams } from 'next/navigation';
 import { type SubmitHandler } from 'react-hook-form';
 
 import { baseUrl, getPathname, routes } from '@workspace/routes';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@workspace/ui/components/alert-dialog';
 import { Button } from '@workspace/ui/components/button';
 import {
   Card,
@@ -42,6 +52,7 @@ export function OrganizationSlugCard({
   slug: initialSlug,
   ...other
 }: OrganizationDetailsCardProps): React.JSX.Element {
+  const [showWarningDialog, setShowWarningDialog] = React.useState(false);
   const methods = useZodForm({
     schema: updateOrganizationSlugSchema,
     mode: 'onSubmit',
@@ -52,7 +63,9 @@ export function OrganizationSlugCard({
   useShowSlugUpdatedOnQueryParam();
   const slug = methods.watch('slug');
   const canSubmit = !methods.formState.isSubmitting && initialSlug !== slug;
-  const onSubmit: SubmitHandler<UpdateOrganizationSlugSchema> = async (
+  const slugHasChanged = initialSlug !== slug;
+
+  const performUpdate: SubmitHandler<UpdateOrganizationSlugSchema> = async (
     values
   ) => {
     if (!canSubmit) {
@@ -79,13 +92,35 @@ export function OrganizationSlugCard({
       toast.error("Couldn't update slug");
     }
   };
+
+  const handleSaveClick = (): void => {
+    if (slugHasChanged) {
+      setShowWarningDialog(true);
+    } else {
+      methods.handleSubmit(performUpdate)();
+    }
+  };
+
+  const handleCancelDialog = (): void => {
+    methods.setValue('slug', initialSlug);
+    methods.clearErrors('slug');
+    setShowWarningDialog(false);
+  };
+
+  const handleConfirmDialog = (): void => {
+    setShowWarningDialog(false);
+    methods.handleSubmit(performUpdate)();
+  };
   return (
     <FormProvider {...methods}>
       <Card {...other}>
         <CardContent>
           <form
             className="space-y-4"
-            onSubmit={methods.handleSubmit(onSubmit)}
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveClick();
+            }}
           >
             <FormField
               control={methods.control}
@@ -123,12 +158,32 @@ export function OrganizationSlugCard({
             size="default"
             disabled={!canSubmit}
             loading={methods.formState.isSubmitting}
-            onClick={methods.handleSubmit(onSubmit)}
+            onClick={handleSaveClick}
           >
             Save
           </Button>
         </CardFooter>
       </Card>
+
+      <AlertDialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change organization slug?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Changing your organization slug will break any existing player signup links that you have shared.
+              The old link will no longer work and you will need to share the new link with your teams.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDialog}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDialog}>
+              Confirm and change
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FormProvider>
   );
 }
