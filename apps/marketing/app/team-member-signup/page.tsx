@@ -109,7 +109,7 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-export default function TeamMemberSignupPage() {
+function TeamMemberSignupForm() {
   const searchParams = useSearchParams();
   const [organization, setOrganization] = React.useState<{ id: string; name: string; slug: string } | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -629,5 +629,20 @@ export default function TeamMemberSignupPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+export default function TeamMemberSignupPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="container mx-auto px-4 py-12 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full size-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    }>
+      <TeamMemberSignupForm />
+    </React.Suspense>
   );
 }
