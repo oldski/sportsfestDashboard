@@ -16,13 +16,12 @@ export const generateSignupQr = actionClient
     const { organizationSlug } = parsedInput;
 
     // Generate signup URL
-    // In production, this should use the actual domain
     const isDevelopment = process.env.NODE_ENV === 'development';
     const baseUrl = isDevelopment
       ? process.env.NEXT_PUBLIC_MARKETING_URL || 'http://localhost:3001'
       : process.env.NEXT_PUBLIC_MARKETING_URL || 'https://join.sportsfest.com';
 
-    const signupUrl = `${baseUrl}/${organizationSlug}`;
+    const signupUrl = `${baseUrl}/on/${organizationSlug}`;
 
     // Generate QR code as data URI
     const qrDataUri = await qrcode.toDataURL(signupUrl, {
