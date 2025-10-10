@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
-import {Users, Crown, ChevronDown, ChevronUp, Trophy} from 'lucide-react';
+import {Users, Crown, ChevronDown, Trophy, TriangleAlert, CheckCircle} from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { Button } from '@workspace/ui/components/button';
@@ -124,18 +124,34 @@ export default async function TeamsParallelRoute({
                   <Collapsible
                     className="flex w-full flex-col gap-2"
                   >
-                    <div className="flex items-center justify-between gap-4">
-                      <h4 className="text-sm font-semibold">
-                        Event Roster Status
-                      </h4>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8 group">
-                          <ChevronDown className="h-4 w-4 group-data-[state=open]:hidden" />
-                          <ChevronUp className="h-4 w-4 group-data-[state=closed]:hidden" />
-                          <span className="sr-only">Toggle</span>
-                        </Button>
-                      </CollapsibleTrigger>
-                    </div>
+                    {(() => {
+                      // Check if any event roster is incomplete
+                      const hasIncompleteRosters = ALL_EVENTS.some((eventType) => {
+                        const eventRoster = team.eventRosterSummaries.find(er => er.eventType === eventType);
+                        const playerCount = eventRoster?.playerCount || 0;
+                        const requiredPlayers = eventRoster?.requiredPlayers || getRequiredPlayersForEventType(eventType);
+                        return playerCount < requiredPlayers;
+                      });
+
+                      const allRostersComplete = !hasIncompleteRosters;
+
+                      return (
+                        <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 hover:bg-muted/50 rounded-md px-2 py-1 -mx-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-semibold">
+                              Event Roster Status
+                            </h4>
+                            {hasIncompleteRosters && (
+                              <TriangleAlert className="h-4 w-4 text-destructive" />
+                            )}
+                            {allRostersComplete && (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            )}
+                          </div>
+                          <ChevronDown className="h-4 w-4 shrink-0 transition-transform data-[state=open]:rotate-180" />
+                        </CollapsibleTrigger>
+                      );
+                    })()}
                     <CollapsibleContent className="absolute bottom-full left-0 right-0 z-10 mb-2 flex flex-col gap-2 bg-background border border-border rounded-md shadow-lg p-3">
                       {ALL_EVENTS.map((eventType) => {
                         const eventInfo = EVENT_DISPLAY_INFO[eventType];

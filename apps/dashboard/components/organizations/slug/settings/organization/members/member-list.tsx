@@ -85,7 +85,7 @@ function MemberListItem({
   return (
     <li
       role="listitem"
-      className={cn('flex w-full flex-row justify-between p-6', className)}
+      className={cn('flex w-full flex-row justify-between p-6 gap-6', className)}
       {...other}
     >
       <div className="flex flex-row items-center gap-4">
@@ -109,14 +109,14 @@ function MemberListItem({
         {member.isOwner && !readOnly && (
           <Badge
             variant="secondary"
-            className="hidden rounded-3xl sm:inline-block"
+            className="inline-block rounded-3xl"
           >
             Owner
           </Badge>
         )}
         <Badge
           variant="secondary"
-          className="hidden rounded-3xl sm:inline-block"
+          className="inline-block rounded-3xl"
         >
           {sportsFestRoleLabels[member.role]}
         </Badge>

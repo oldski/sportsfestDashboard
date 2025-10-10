@@ -81,9 +81,9 @@ export function RecruitmentDocumentsSimple({ documents, organizationSlug, error 
       <CardContent>
         <div className="space-y-6">
           {/* Main Content Grid */}
-          <div className="grid lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             {/* Documents Section - Takes up 2/3 of the space */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="md:col-span-2 space-y-4">
               <div className="rounded-lg border bg-card p-4">
                 <div className="flex items-center space-x-2 mb-4">
                   <FileTextIcon className="h-5 w-5 text-blue-600" />

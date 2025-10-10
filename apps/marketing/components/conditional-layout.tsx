@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 
 import { Footer } from '~/components/footer';
 import { CookieBanner } from '~/components/fragments/cookie-banner';
-import { Navbar } from '~/components/navbar';
 
 const NO_LAYOUT_PATHS = ['/team-member-signup'];
 
@@ -21,7 +20,6 @@ export function ConditionalLayout({
 
   return (
     <>
-      {/*<Navbar />*/}
       {children}
       <Footer />
       <CookieBanner />

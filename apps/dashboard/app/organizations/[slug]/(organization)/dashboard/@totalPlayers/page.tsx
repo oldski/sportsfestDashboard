@@ -34,7 +34,7 @@ export default async function TotalPlayersPage({
         </div>
       </CardHeader>
       <CardContent className="flex h-full items-end">
-        <div className="flex w-full items-center justify-between">
+        <div className="flex flex-col lg:flex-row w-full lg:items-center justify-between gap-4">
           <div>
             <div className="text-2xl font-bold">{playerCount}</div>
             <p className="text-xs text-muted-foreground">

@@ -70,7 +70,7 @@ export default async function EventsParallelLayout({
             />
           </PagePrimaryBar>
           <PageSecondaryBar>
-            <div className="flex items-center justify-between w-full">
+            <div className="flex items-center justify-between w-full gap-4">
               <TeamSecondaryNavigation teamsData={teamsData} slug={slug} />
               <RosterExportDropdown teamData={team} eventRostersData={eventRostersData || undefined} />
             </div>

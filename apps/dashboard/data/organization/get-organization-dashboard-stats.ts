@@ -17,6 +17,7 @@ import {
 import { getOrganizationTeamCount } from './get-organization-team-count';
 
 export interface OrganizationDashboardStats {
+  organizationName: string;
   teams: {
     total: number;
     activeEventYear: number;
@@ -186,6 +187,7 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
   const balanceOwed = Math.max(0, totalAmount - paidAmount);
 
   return {
+    organizationName: ctx.organization.name,
     teams: {
       total: Number(totalTeamsAllYears[0]?.totalTeams || 0),
       activeEventYear: teamCountResult.totalTeamsPurchased

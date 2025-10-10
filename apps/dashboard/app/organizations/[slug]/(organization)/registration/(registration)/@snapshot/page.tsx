@@ -53,8 +53,8 @@ export default async function SnapshotPage(): Promise<React.JSX.Element> {
       </div>
 
       {stats.balanceOwed > 0 && stats.orderWithBalance && (
-        <Alert variant="warning">
-          <AlertDescription className="ml-3 text-base flex items-center justify-between">
+        <Alert variant="warning" className="mt-4 lg:mt-0">
+          <AlertDescription className="ml-3 text-base flex flex-col lg:flex-row gap-4 lg:items-center justify-between">
             <div>
               <Badge variant="secondary" className="bg-orange-100 text-orange-800">
                 Balance Remaining: {formatCurrency(stats.balanceOwed)}

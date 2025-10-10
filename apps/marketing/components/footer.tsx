@@ -30,7 +30,7 @@ export function Footer(): React.JSX.Element {
                     title={link.name}
                     target={link.external ? '_blank' : undefined}
                     rel={link.external ? 'noopener noreferrer' : undefined}
-                    className="relative text-sm text-foreground transition-colors hover:text-muted-foreground flex flex-row gap-2 items-center"
+                    className="relative text-sm text-foreground transition-opacity hover:text-foreground/80 flex flex-row gap-2 items-center"
                   >
                     {link.name}
                     {link.external && <ExternalIcon />}
@@ -45,7 +45,7 @@ export function Footer(): React.JSX.Element {
                 key={link.name}
                 title={link.name}
                 href={link.href}
-                className="text-foreground transition-colors hover:text-muted-foreground"
+                className="text-foreground transition-opacity hover:text-foreground/80"
                 target="_blank"
                 rel="noopener noreferrer"
               >

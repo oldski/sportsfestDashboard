@@ -37,7 +37,7 @@ export default async function TotalTentsPage({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        <div className="flex flex-col lg:flex-row w-full lg:items-center justify-end gap-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-2xl font-bold">{purchased}</div>

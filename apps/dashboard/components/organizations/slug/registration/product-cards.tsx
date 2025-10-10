@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { PlusIcon, MinusIcon, ShoppingCartIcon, PackageIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { PlusIcon, MinusIcon, ShoppingCartIcon, PackageIcon, ChevronDown } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
 import { Button } from '@workspace/ui/components/button';
@@ -192,16 +192,15 @@ function ProductCard({ product }: ProductCardProps) {
       <CardContent className="flex flex-col space-y-3 justify-between h-full px-0">
         {product.description && (
           <Collapsible className="relative">
-            <div className="flex items-center justify-between gap-2 bg-muted/50 p-2 rounded-lg">
-              <h4 className="text-sm font-semibold">Description</h4>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-6 group">
-                  <ChevronDown className="h-3 w-3 group-data-[state=open]:hidden" />
-                  <ChevronUp className="h-3 w-3 group-data-[state=closed]:hidden" />
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center justify-between gap-2 bg-muted/50 p-2 rounded-lg cursor-pointer hover:bg-muted transition-colors w-full group">
+                <h4 className="text-sm font-semibold">Description</h4>
+                <div className="flex items-center gap-1">
                   <span className="sr-only">Toggle description</span>
-                </Button>
-              </CollapsibleTrigger>
-            </div>
+                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
+                </div>
+              </button>
+            </CollapsibleTrigger>
             <CollapsibleContent className="absolute top-full left-0 right-0 z-10 mt-2 bg-background border border-border rounded-md shadow-lg p-3">
               <CardDescription className="text-sm leading-relaxed">
                 {product.description}

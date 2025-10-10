@@ -6,7 +6,7 @@ import { toast } from '@workspace/ui/components/sonner';
 
 import { Button } from '@workspace/ui/components/button';
 import { EventRosterDialog } from './event-roster-dialog';
-import { 
+import {
   autoGenerateEventRoster
 } from '~/actions/teams/event-roster-actions';
 import { EventType } from '@workspace/database/schema';
@@ -84,7 +84,7 @@ export function EventRosterManager({
   return (
     <>
       <div className="flex gap-2">
-        <Button 
+        <Button
           size="sm"
           onClick={() => setIsDialogOpen(true)}
           disabled={!hasTeamMembers}
@@ -93,7 +93,7 @@ export function EventRosterManager({
           <UserPlus className="h-4 w-4 mr-1" />
           Manage
         </Button>
-        
+
         <Button
           size="sm"
           variant="outline"

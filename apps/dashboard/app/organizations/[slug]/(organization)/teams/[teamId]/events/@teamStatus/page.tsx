@@ -9,6 +9,7 @@ import { replaceOrgSlug, routes } from '@workspace/routes';
 
 import { getEventRosters } from '~/data/teams/get-event-rosters';
 import { getCompanyTeamById } from '~/data/teams/get-company-team-by-id';
+import {Alert, AlertDescription, AlertTitle} from "@workspace/ui/components/alert";
 
 type TeamStatusProps = {
   params: Promise<{ slug: string; teamId: string }>;
@@ -46,19 +47,12 @@ export default async function TeamStatusPage({
 
       {/* Team Status Alert */}
       {team.memberCount < 12 && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 bg-orange-500 rounded-full" />
-              <div>
-                <p className="font-medium text-orange-800">Team Needs More Members</p>
-                <p className="text-sm text-orange-700">
-                  Your team needs {12 - team.memberCount} more members to meet the minimum requirement before creating event rosters.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Alert variant="warning">
+          <AlertTitle>Team Needs More Members</AlertTitle>
+          <AlertDescription>
+            Your team needs {12 - team.memberCount} more members to meet the minimum requirement before creating event rosters.
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );

@@ -12,6 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@workspace/ui/components/dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@workspace/ui/components/drawer';
 import { Button } from '@workspace/ui/components/button';
 import { Badge } from '@workspace/ui/components/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
@@ -21,6 +29,7 @@ import { ScrollArea } from '@workspace/ui/components/scroll-area';
 import { Input } from '@workspace/ui/components/input';
 import { Separator } from '@workspace/ui/components/separator';
 import { Rating } from '@workspace/ui/components/rating';
+import { useMediaQuery } from '~/hooks/use-media-query';
 
 import { DragDropRoster, EventRequirements, RosterPlayer } from './drag-drop-roster';
 
@@ -289,22 +298,11 @@ export function EventRosterDialog({
     return false;
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                Manage {EVENT_TITLES[eventType]} Roster
-              </DialogTitle>
-              <DialogDescription>
-                Add, remove, or manage players for this event. Each event has specific requirements and player limits.
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+
+  // Shared content component
+  const content = (
+    <>
 
         <Tabs defaultValue="current" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
@@ -509,18 +507,94 @@ export function EventRosterDialog({
           </TabsContent>
         </Tabs>
 
-        {eventData.players.length > 0 && (
-          <DialogFooter>
-            <Button
-              variant="destructive"
-              onClick={handleClearRoster}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clear Roster
-            </Button>
-          </DialogFooter>
-        )}
-      </DialogContent>
-    </Dialog>
+    </>
+  );
+
+  const dialogFooter = (
+    <div className="flex justify-between gap-2">
+      {eventData.players.length > 0 && (
+        <Button
+          variant="destructive"
+          onClick={handleClearRoster}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Clear Roster
+        </Button>
+      )}
+
+      <Button
+        variant="outline"
+        onClick={() => onOpenChange(false)}
+      >
+        <X />
+        Close
+      </Button>
+    </div>
+  );
+
+  const drawerFooter = (
+    <div className="flex gap-2">
+      {eventData.players.length > 0 && (
+        <Button
+          variant="destructive"
+          onClick={handleClearRoster}
+          className="flex-1"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Clear Roster
+        </Button>
+      )}
+      <Button
+        variant="outline"
+        onClick={() => onOpenChange(false)}
+        className="flex-1"
+      >
+        Close
+      </Button>
+    </div>
+  );
+
+  if (isDesktop) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col justify-between">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5" />
+                  Manage {EVENT_TITLES[eventType]} Roster
+                </DialogTitle>
+                <DialogDescription>
+                  Add, remove, or manage players for this event. Each event has specific requirements and player limits.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          {content}
+          {dialogFooter && <DialogFooter className="pt-2">{dialogFooter}</DialogFooter>}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="max-h-[90vh]">
+        <DrawerHeader>
+          <DrawerTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5" />
+            Manage {EVENT_TITLES[eventType]} Roster
+          </DrawerTitle>
+          <DrawerDescription>
+            Add, remove, or manage players for this event. Each event has specific requirements and player limits.
+          </DrawerDescription>
+        </DrawerHeader>
+        <div className="px-4 overflow-y-auto">
+          {content}
+        </div>
+        <DrawerFooter>{drawerFooter}</DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

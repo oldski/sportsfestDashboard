@@ -58,7 +58,7 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
   // Filter members based on search query
   const filteredMembers = React.useMemo(() => {
     if (!searchQuery.trim()) return sortedMembers;
-    
+
     const searchTerm = searchQuery.toLowerCase();
     return sortedMembers.filter(member =>
       member.firstName.toLowerCase().includes(searchTerm) ||
@@ -129,7 +129,7 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
@@ -139,12 +139,12 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
                 Current team members and their roles
               </CardDescription>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="default"
               size="sm"
               onClick={() => setIsRosterDialogOpen(true)}
             >
-              Manage Roster
+              Manage Team Roster
             </Button>
           </div>
         </CardHeader>
@@ -184,6 +184,9 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
                             {member.isCaptain && (
                               <Crown className="h-4 w-4 text-amber-500" />
                             )}
+                            <Badge variant="outline">
+                              {member.isCaptain ? 'Captain' : 'Player'}
+                            </Badge>
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {member.email} • {member.gender}
@@ -191,11 +194,8 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline">
-                          {member.isCaptain ? 'Captain' : 'Member'}
-                        </Badge>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="ghost"
                           onClick={() => handleEditPlayer(member.id, member.isCaptain)}
                         >
@@ -214,7 +214,7 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
               <p className="text-muted-foreground mb-4">
                 Start building your team by adding players from your organization.
               </p>
-              <Button 
+              <Button
                 disabled={team.availablePlayerCount === 0}
                 onClick={() => setIsRosterDialogOpen(true)}
               >

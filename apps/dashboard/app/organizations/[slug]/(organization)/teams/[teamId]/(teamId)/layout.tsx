@@ -5,10 +5,11 @@ import { getCompanyTeams } from '~/data/teams/get-company-teams';
 import { getEventRosters } from '~/data/teams/get-event-rosters';
 import {Page, PageBody, PageHeader, PagePrimaryBar, PageSecondaryBar} from "@workspace/ui/components/page";
 import {OrganizationPageTitle} from "~/components/organizations/slug/organization-page-title";
-import {replaceOrgSlug, routes} from "@workspace/routes";
+import {routes} from "@workspace/routes";
 import {TransitionProvider} from "~/hooks/use-transition-context";
 import {TeamSecondaryNavigation} from "~/components/teams/team-secondary-navigation";
 import {RosterExportDropdown} from "~/components/teams/roster-export-dropdown";
+import {TeamSidebarCollapsible} from "~/components/teams/team-sidebar-collapsible";
 
 export type TeamOverviewLayoutProps = {
   teamOverview: React.ReactNode;
@@ -51,10 +52,8 @@ export default async function TeamOverviewLayout({
             />
           </PagePrimaryBar>
           <PageSecondaryBar>
-            <div className="flex items-center justify-between w-full">
-              <TeamSecondaryNavigation teamsData={teamsData} slug={slug} />
-              <RosterExportDropdown teamData={team} eventRostersData={eventRostersData || undefined} />
-            </div>
+            <TeamSecondaryNavigation teamsData={teamsData} slug={slug} />
+            <RosterExportDropdown teamData={team} eventRostersData={eventRostersData || undefined} />
           </PageSecondaryBar>
         </PageHeader>
         <PageBody>
@@ -64,14 +63,14 @@ export default async function TeamOverviewLayout({
               {teamOverview}
 
               {/* Main Content Area */}
-              <div className="grid gap-6 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 {/* Team Roster */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="order-2 lg:order-1 lg:col-span-2 space-y-6">
                   {teamRoster}
                 </div>
 
                 {/* Sidebar */}
-                <div className="space-y-6">
+                <div className="col-span-1 order-1 lg:order-2 space-y-6">
                   {teamSidebar}
                 </div>
               </div>

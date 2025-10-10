@@ -48,7 +48,7 @@ export default async function TeamsOverviewLayout({
             </PageActions>
           </PagePrimaryBar>
           <PageSecondaryBar>
-            <div className="flex items-center justify-between w-full">
+            <div className="flex items-center justify-between w-full gap-4">
               <TeamSecondaryNavigation teamsData={teamsData} slug={slug} />
             </div>
           </PageSecondaryBar>

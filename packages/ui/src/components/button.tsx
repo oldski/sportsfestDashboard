@@ -52,23 +52,23 @@ function Button({
   ...props
 }: ButtonProps): React.JSX.Element {
   const Comp = asChild ? SlotPrimitive.Slot : 'button';
-  const componentProps = asChild 
-    ? { 
+  const componentProps = asChild
+    ? {
         className: cn(
           buttonVariants({ variant, size, className }),
           loading && 'relative'
         ),
-        ...props 
+        ...props
       }
-    : { 
+    : {
         'data-slot': 'button',
         className: cn(
           buttonVariants({ variant, size, className }),
           loading && 'relative'
         ),
-        ...props 
+        ...props
       };
-  
+
   return (
     <Comp
       {...componentProps}
