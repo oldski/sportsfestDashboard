@@ -114,7 +114,7 @@ export default async function HomeLayout({
               <div className="col-span-1 md:col-span-3">
                 {recruitmentTools}
               </div>
-              <div className="col-span-1 md:col-span-2">
+              <div className="col-span-1 md:col-span-2 ">
               {gameDayInformation}
               </div>
             </div>
