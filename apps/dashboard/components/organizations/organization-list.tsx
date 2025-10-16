@@ -13,7 +13,6 @@ import {
 import {
   Avatar,
   AvatarFallback,
-  AvatarImage
 } from '@workspace/ui/components/avatar';
 import { buttonVariants } from '@workspace/ui/components/button';
 import {
@@ -106,10 +105,6 @@ export function OrganizationList({
                   <div className="flex h-full flex-row items-center justify-between p-4">
                     <div className="flex flex-row items-center gap-2 transition-colors group-hover:text-secondary-foreground">
                       <Avatar className="aspect-square size-6 rounded-md">
-                        <AvatarImage
-                          className="rounded-md"
-                          src={organization.logo}
-                        />
                         <AvatarFallback className="flex size-6 items-center justify-center rounded-md border border-neutral-200 bg-neutral-100 text-sm font-medium text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
                           {organization.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
