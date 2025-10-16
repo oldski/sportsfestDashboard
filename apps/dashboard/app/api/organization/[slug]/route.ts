@@ -21,6 +21,7 @@ export async function GET(
         id: organizationTable.id,
         name: organizationTable.name,
         slug: organizationTable.slug,
+        logo: organizationTable.logo,
       })
       .from(organizationTable)
       .where(eq(organizationTable.slug, slug))

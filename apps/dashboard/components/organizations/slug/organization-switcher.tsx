@@ -16,8 +16,7 @@ import {
 import { replaceOrgSlug, routes } from '@workspace/routes';
 import {
   Avatar,
-  AvatarFallback,
-  AvatarImage
+  AvatarFallback
 } from '@workspace/ui/components/avatar';
 import {
   DropdownMenu,
@@ -79,10 +78,6 @@ export function OrganizationSwitcher({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton className="w-full px-1.5 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:p-1.5!">
               <Avatar className="aspect-square size-6 rounded-md">
-                <AvatarImage
-                  className="rounded-md"
-                  src={activeOrganization.logo}
-                />
                 <AvatarFallback className="flex size-6 items-center justify-center rounded-md border border-neutral-200 bg-neutral-100 font-medium text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
                   {activeOrganization.name.charAt(0).toUpperCase()}
                 </AvatarFallback>
@@ -129,10 +124,6 @@ export function OrganizationSwitcher({
                       onClick={handleCloseSidebar}
                     >
                       <Avatar className="aspect-square size-4 rounded-xs">
-                        <AvatarImage
-                          className="rounded-xs"
-                          src={organization.logo}
-                        />
                         <AvatarFallback className="flex size-4 items-center justify-center rounded-xs border border-neutral-200 bg-neutral-100 text-xs font-medium text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
                           {organization.name.charAt(0).toUpperCase()}
                         </AvatarFallback>

@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@workspace/ui/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@workspace/ui/components/tooltip';
 import { Alert, AlertDescription } from '@workspace/ui/components/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@workspace/ui/components/alert-dialog';
-import { CalendarIcon, AlertCircleIcon, InfoIcon } from 'lucide-react';
+import {CalendarIcon, AlertCircleIcon, InfoIcon, SeparatorVertical} from 'lucide-react';
 import { cn } from '@workspace/ui/lib/utils';
 import { SiteHeading } from "~/components/fragments/site-heading";
 import {
@@ -32,6 +32,7 @@ import {
 } from '~/components/team-signup';
 import { motion } from "motion/react";
 import {Logo} from "@workspace/ui/components/logo";
+import {Separator} from "@workspace/ui/components/separator";
 
 // API functions
 const getOrganizationForSignup = async (slug?: string) => {
@@ -111,7 +112,7 @@ type FormData = z.infer<typeof formSchema>;
 
 function TeamMemberSignupForm() {
   const params = useParams();
-  const [organization, setOrganization] = React.useState<{ id: string; name: string; slug: string } | null>(null);
+  const [organization, setOrganization] = React.useState<{ id: string; name: string; slug: string; logo?: string | null } | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [calendarMonth, setCalendarMonth] = React.useState<Date>(new Date(new Date().getFullYear() - 25, 0));
@@ -243,9 +244,23 @@ function TeamMemberSignupForm() {
               initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.4 }}
-              className="flex flex-col items-center gap-8"
+              className="flex flex-col items-center gap-8 space-y-8"
             >
-              <Logo isFull={false} variant="light" width={400} height={222} />
+              <div className="flex flex-row items-center justify-center gap-4 lg:gap-8 h-28">
+                {organization.logo ? (
+                  <>
+                    <Logo isFull={true} variant="light" width={200} height={111} />
+                    <Separator orientation="vertical" className="h-full opacity-60"  />
+                    <img
+                      src={organization.logo}
+                      alt={`${organization.name} logo`}
+                      className="max-h-[222px] w-auto object-contain"
+                    />
+                  </>
+                ) : (
+                  <Logo isFull={true} variant="light" width={400} height={222} />
+                )}
+              </div>
             <SiteHeading
               badge="📩 You're Invited"
               title={`Join ${organization.name}`}

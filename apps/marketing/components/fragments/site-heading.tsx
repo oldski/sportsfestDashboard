@@ -28,10 +28,10 @@ export function SiteHeading({
         </Badge>
       )}
       {title && (
-        <h1 className="text-pretty text-5xl font-bold lg:text-6xl">{title}</h1>
+        <h1 className="text-pretty text-primary text-5xl font-bold lg:text-6xl">{title}</h1>
       )}
       {description && (
-        <p className={cn("text-lg text-muted-foreground opacity-85 lg:text-xl", className)}>
+        <p className={cn("text-lg text-primary/80 lg:text-xl", className)}>
           {description}
         </p>
       )}

@@ -2,14 +2,14 @@
 
 import * as React from 'react';
 import NiceModal from '@ebay/nice-modal-react';
-import { TrashIcon, UploadIcon } from 'lucide-react';
+import { ExternalLinkIcon, TrashIcon, UploadIcon } from 'lucide-react';
 import { type SubmitHandler } from 'react-hook-form';
 
-import { Avatar, AvatarFallback } from '@workspace/ui/components/avatar';
 import { Button } from '@workspace/ui/components/button';
 import {
   Card,
   CardContent,
+  CardFooter,
   type CardProps
 } from '@workspace/ui/components/card';
 import { FormProvider } from '@workspace/ui/components/form';
@@ -32,10 +32,12 @@ import {
 
 export type OrganizationLogoCardProps = CardProps & {
   logo?: string;
+  organizationSlug: string;
 };
 
 export function OrganizationLogoCard({
   logo: initialLogo,
+  organizationSlug,
   ...props
 }: OrganizationLogoCardProps): React.JSX.Element {
   const methods = useZodForm({
@@ -57,7 +59,7 @@ export function OrganizationLogoCard({
       } else {
         const base64Image: string = await NiceModal.show(CropPhotoModal, {
           file,
-          aspectRatio: 1,
+          aspectRatio: undefined,
           circularCrop: false
         });
         if (base64Image) {
@@ -110,13 +112,11 @@ export function OrganizationLogoCard({
                 onDrop={handleDrop}
                 src={logo}
                 borderRadius="xl"
-                className="size-20 rounded-xl p-0.5"
+                className="h-20 w-32 rounded-xl p-0.5"
               >
-                <Avatar className="size-[72px] rounded-md">
-                  <AvatarFallback className="size-[72px] rounded-md text-2xl">
-                    <UploadIcon className="size-5 shrink-0 text-muted-foreground" />
-                  </AvatarFallback>
-                </Avatar>
+                <div className="flex h-[76px] w-[124px] items-center justify-center rounded-md border-2 border-dashed border-muted-foreground/25 bg-muted/50">
+                  <UploadIcon className="size-5 shrink-0 text-muted-foreground" />
+                </div>
               </ImageDropzone>
               {!!logo && (
                 <Tooltip>
@@ -143,6 +143,25 @@ export function OrganizationLogoCard({
             </div>
           </form>
         </CardContent>
+        {logo && (
+          <CardFooter className="border-t pt-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+            >
+              <a
+                href={`${process.env.NEXT_PUBLIC_MARKETING_URL}/on/${organizationSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
+                See it in action
+                <ExternalLinkIcon className="size-4 shrink-0" />
+              </a>
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </FormProvider>
   );
