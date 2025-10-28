@@ -66,7 +66,8 @@ export const getRegistrationProducts = cache(async (organizationSlug: string): P
         basePrice: product.basePrice as number,
         requiresDeposit: product.requiresDeposit as boolean,
         depositAmount: product.depositAmount as number | undefined,
-        maxQuantityPerOrg: product.maxQuantityPerOrg as number | undefined,
+        // Use calculated maxQuantityPerOrg from availability (dynamic for tents), fallback to DB value
+        maxQuantityPerOrg: availability?.maxQuantityPerOrg ?? (product.maxQuantityPerOrg as number | undefined),
         totalInventory: product.totalInventory as number | undefined,
         image: product.image as string | undefined,
         createdAt: product.createdAt as Date,
@@ -80,6 +81,8 @@ export const getRegistrationProducts = cache(async (organizationSlug: string): P
         // Add availability information
         availableQuantity: availability?.availableQuantity ?? null,
         purchasedQuantity: availability?.purchasedQuantity ?? 0,
+        isTentProduct: availability?.isTentProduct,
+        requiresTeam: availability?.requiresTeam,
       };
     });
   } catch (error) {

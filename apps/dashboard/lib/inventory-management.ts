@@ -1,12 +1,38 @@
 'use server';
 
 import { db, sql, eq, and } from '@workspace/database/client';
-import { tentPurchaseTrackingTable, productTable } from '@workspace/database/schema';
+import { tentPurchaseTrackingTable, productTable, companyTeamTable } from '@workspace/database/schema';
 
 export interface InventoryResult {
   success: boolean;
   availableInventory?: number;
   error?: string;
+}
+
+/**
+ * Get the count of company teams for an organization in a specific event year
+ * Used to calculate tent quota (2 tents per company team)
+ */
+export async function getCompanyTeamCount(
+  organizationId: string,
+  eventYearId: string
+): Promise<number> {
+  try {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(companyTeamTable)
+      .where(
+        and(
+          eq(companyTeamTable.organizationId, organizationId),
+          eq(companyTeamTable.eventYearId, eventYearId)
+        )
+      );
+
+    return result[0]?.count || 0;
+  } catch (error) {
+    console.error('Error getting company team count:', error);
+    return 0;
+  }
 }
 
 /**
@@ -162,18 +188,78 @@ export interface TentTrackingResult {
 }
 
 /**
+ * Reserve tent inventory by organization slug (client-friendly wrapper)
+ * @param teamsInCart - Number of company team items currently in cart (used for dynamic quota calculation)
+ */
+export async function reserveTentInventoryBySlug(
+  productId: string,
+  organizationSlug: string,
+  quantity: number,
+  teamsInCart: number = 0
+): Promise<TentTrackingResult> {
+  try {
+    // Look up organization and current event year
+    const orgResult = await db.execute(sql`
+      SELECT o.id as "organizationId", ey.id as "eventYearId"
+      FROM "organization" o
+      CROSS JOIN "eventYear" ey
+      WHERE o.slug = ${organizationSlug}
+        AND ey."isCurrent" = true
+      LIMIT 1
+    `);
+
+    const org = (orgResult as any)?.rows?.[0];
+    if (!org) {
+      return {
+        success: false,
+        error: 'Organization or current event year not found'
+      };
+    }
+
+    // Call the main reserveTentInventory function
+    return await reserveTentInventory(
+      productId,
+      org.organizationId as string,
+      org.eventYearId as string,
+      quantity,
+      teamsInCart
+    );
+  } catch (error) {
+    console.error('Error reserving tent inventory by slug:', error);
+    return { success: false, error: 'Database error while reserving tent inventory' };
+  }
+}
+
+/**
  * Reserve tent inventory with quota checking
+ * @param teamsInCart - Number of company team items currently in cart (used for dynamic quota calculation)
  */
 export async function reserveTentInventory(
   productId: string,
   organizationId: string,
   eventYearId: string,
-  quantity: number
+  quantity: number,
+  teamsInCart: number = 0
 ): Promise<TentTrackingResult> {
   try {
-    // First, get the product's maxQuantityPerOrg
+    // Get count of purchased company teams
+    const purchasedTeams = await getCompanyTeamCount(organizationId, eventYearId);
+
+    // Calculate dynamic quota: 2 tents per company team (purchased + in cart)
+    const totalTeams = purchasedTeams + teamsInCart;
+    const maxAllowed = totalTeams * 2;
+
+    // Must have at least one team to purchase tents
+    if (totalTeams === 0) {
+      return {
+        success: false,
+        error: 'Must have at least one company team purchased or in cart to purchase tents'
+      };
+    }
+
+    // Get product inventory info
     const productResult = await db.execute(sql`
-      SELECT "maxQuantityPerOrg", "totalInventory", soldcount, reservedcount
+      SELECT "totalInventory", soldcount, reservedcount
       FROM product
       WHERE id = ${productId} AND type = 'tent_rental'
     `);
@@ -183,7 +269,6 @@ export async function reserveTentInventory(
       return { success: false, error: 'Tent product not found' };
     }
 
-    const maxAllowed = Number(product.maxQuantityPerOrg || 0);
     const availableInventory = Number(product.totalInventory) - Number(product.soldcount) - Number(product.reservedcount);
 
     // Check if enough inventory is available
@@ -208,7 +293,7 @@ export async function reserveTentInventory(
     if (currentPurchased + quantity > maxAllowed) {
       return {
         success: false,
-        error: `Exceeds organization limit. Max allowed: ${maxAllowed}, Current: ${currentPurchased}`
+        error: `Exceeds tent limit. Max allowed: ${maxAllowed} (${totalTeams} team${totalTeams !== 1 ? 's' : ''} × 2 tents), Already purchased: ${currentPurchased}`
       };
     }
 
@@ -231,6 +316,8 @@ export async function reserveTentInventory(
 
 /**
  * Confirm tent sale - updates both inventory and tent tracking
+ * Called after payment completion. At this point, team purchases in the order
+ * will also be confirmed, so we only count purchased teams (not cart).
  */
 export async function confirmTentSale(
   productId: string,
@@ -245,15 +332,11 @@ export async function confirmTentSale(
       return inventoryResult;
     }
 
-    // Get the product's maxQuantityPerOrg
-    const productResult = await db.execute(sql`
-      SELECT "maxQuantityPerOrg"
-      FROM product
-      WHERE id = ${productId}
-    `);
+    // Get count of purchased company teams (includes teams in current order being confirmed)
+    const purchasedTeams = await getCompanyTeamCount(organizationId, eventYearId);
 
-    const product = (productResult as any)?.rows?.[0];
-    const maxAllowed = Number(product?.maxQuantityPerOrg || 0);
+    // Calculate dynamic quota: 2 tents per company team
+    const maxAllowed = purchasedTeams * 2;
 
     // Update or create tent tracking record
     const existingTracking = await db
@@ -275,7 +358,9 @@ export async function confirmTentSale(
         .update(tentPurchaseTrackingTable)
         .set({
           quantityPurchased: newQuantity,
+          maxAllowed,
           remainingAllowed: newRemaining,
+          companyTeamCount: purchasedTeams,
           updatedAt: new Date()
         })
         .where(eq(tentPurchaseTrackingTable.id, existingTracking[0].id));
@@ -295,7 +380,8 @@ export async function confirmTentSale(
         tentProductId: productId,
         quantityPurchased: quantity,
         maxAllowed,
-        remainingAllowed: newRemaining
+        remainingAllowed: newRemaining,
+        companyTeamCount: purchasedTeams
       });
 
       return {
@@ -312,14 +398,16 @@ export async function confirmTentSale(
 
 /**
  * Get tent quota status for an organization
+ * @param teamsInCart - Number of company team items currently in cart (used for dynamic quota calculation)
  */
 export async function getTentQuotaStatus(
   productId: string,
   organizationId: string,
-  eventYearId: string
+  eventYearId: string,
+  teamsInCart: number = 0
 ) {
   try {
-    const [tracking, product] = await Promise.all([
+    const [tracking, product, purchasedTeams] = await Promise.all([
       db
         .select()
         .from(tentPurchaseTrackingTable)
@@ -331,14 +419,14 @@ export async function getTentQuotaStatus(
         .limit(1),
       db
         .select({
-          maxQuantityPerOrg: productTable.maxQuantityPerOrg,
           totalInventory: productTable.totalInventory,
           soldCount: productTable.soldCount,
           reservedCount: productTable.reservedCount
         })
         .from(productTable)
         .where(eq(productTable.id, productId))
-        .limit(1)
+        .limit(1),
+      getCompanyTeamCount(organizationId, eventYearId)
     ]);
 
     const trackingRecord = tracking[0];
@@ -348,7 +436,11 @@ export async function getTentQuotaStatus(
       return null;
     }
 
-    const maxAllowed = Number(productRecord.maxQuantityPerOrg || 0);
+    // Calculate dynamic quota: 2 tents per company team (purchased + in cart)
+    const totalTeams = purchasedTeams + teamsInCart;
+    const maxAllowed = totalTeams * 2;
+    const requiresTeam = totalTeams === 0;
+
     const quantityPurchased = trackingRecord?.quantityPurchased || 0;
     const remainingAllowed = Math.max(0, maxAllowed - quantityPurchased);
     const availableInventory = Number(productRecord.totalInventory) - Number(productRecord.soldCount) - Number(productRecord.reservedCount);
@@ -359,7 +451,9 @@ export async function getTentQuotaStatus(
       remainingAllowed,
       atQuotaLimit: remainingAllowed === 0,
       availableInventory,
-      canPurchaseMore: remainingAllowed > 0 && availableInventory > 0
+      canPurchaseMore: !requiresTeam && remainingAllowed > 0 && availableInventory > 0,
+      requiresTeam,
+      teamCount: totalTeams
     };
   } catch (error) {
     console.error('Error getting tent quota status:', error);

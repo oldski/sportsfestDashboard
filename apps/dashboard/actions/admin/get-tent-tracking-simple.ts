@@ -41,6 +41,7 @@ export async function getTentTrackingSimple(): Promise<TentTrackingData[]> {
         eventYearName: eventYearTable.name,
         tentCount: tentPurchaseTracking.quantityPurchased,
         maxAllowed: tentPurchaseTracking.maxAllowed,
+        companyTeamCount: tentPurchaseTracking.companyTeamCount,
         tentProductId: tentPurchaseTracking.tentProductId,
         tentProductName: product.name,
         createdAt: tentPurchaseTracking.createdAt,

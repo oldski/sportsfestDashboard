@@ -55,6 +55,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'localhost',
         pathname: '/api/**'
+      },
+      {
+        protocol: 'https',
+        hostname: 'dashboard.sportsfest.com',
+        pathname: '/api/**'
       }
     ]
   },

@@ -1,7 +1,7 @@
 'use server';
 
 import { ForbiddenError, NotFoundError } from '@workspace/common/errors';
-import { db, eq, and } from '@workspace/database/client';
+import { db, eq, and, sql } from '@workspace/database/client';
 import { 
   orderTable, 
   orderItemTable, 
@@ -109,7 +109,7 @@ export async function fulfillOrder(orderId: string): Promise<OrderFulfillmentRes
       }
 
       case ProductType.TENT_RENTAL: {
-        // Track tent purchases with limits
+        // Track tent purchases with dynamic limits based on company teams
         const existingTentTracking = await db
           .select({
             currentCount: tentPurchaseTrackingTable.quantityPurchased
@@ -123,14 +123,28 @@ export async function fulfillOrder(orderId: string): Promise<OrderFulfillmentRes
           )
           .limit(1);
 
+        // Get company team count to calculate dynamic quota
+        const teamCountResult = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(companyTeamTable)
+          .where(
+            and(
+              eq(companyTeamTable.organizationId, order[0].organizationId),
+              eq(companyTeamTable.eventYearId, order[0].eventYearId)
+            )
+          );
+
+        const companyTeamCount = teamCountResult[0]?.count || 0;
+        const maxAllowed = companyTeamCount * 2; // 2 tents per company team
+
         const currentTentCount = existingTentTracking[0]?.currentCount || 0;
         const newTentCount = currentTentCount + item.quantity;
 
-        // Check 2-tent limit
-        if (newTentCount > 2) {
+        // Check dynamic tent limit
+        if (newTentCount > maxAllowed) {
           return {
             success: false,
-            message: `Cannot fulfill tent order: Organization would exceed 2-tent limit (current: ${currentTentCount}, requested: ${item.quantity})`
+            message: `Cannot fulfill tent order: Organization would exceed tent limit of ${maxAllowed} (${companyTeamCount} team${companyTeamCount !== 1 ? 's' : ''} × 2 tents). Current: ${currentTentCount}, Requested: ${item.quantity}`
           };
         }
 
@@ -140,7 +154,9 @@ export async function fulfillOrder(orderId: string): Promise<OrderFulfillmentRes
             .update(tentPurchaseTrackingTable)
             .set({
               quantityPurchased: newTentCount,
-              remainingAllowed: 2 - newTentCount,
+              maxAllowed,
+              remainingAllowed: maxAllowed - newTentCount,
+              companyTeamCount,
               updatedAt: new Date()
             })
             .where(
@@ -159,7 +175,7 @@ export async function fulfillOrder(orderId: string): Promise<OrderFulfillmentRes
               eq(productTable.eventYearId, order[0].eventYearId)
             ))
             .limit(1);
-            
+
           if (tentProduct[0]) {
             await db
               .insert(tentPurchaseTrackingTable)
@@ -168,8 +184,9 @@ export async function fulfillOrder(orderId: string): Promise<OrderFulfillmentRes
                 eventYearId: order[0].eventYearId,
                 tentProductId: tentProduct[0].id,
                 quantityPurchased: item.quantity,
-                maxAllowed: 2,
-                remainingAllowed: 2 - item.quantity
+                maxAllowed,
+                remainingAllowed: maxAllowed - item.quantity,
+                companyTeamCount
               });
           }
         }

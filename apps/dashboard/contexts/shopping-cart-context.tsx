@@ -6,7 +6,7 @@ import { toast } from '@workspace/ui/components/sonner';
 import type { CartItem, RegistrationProductDto } from '~/types/dtos/registration-product-dto';
 import { saveCartSessionAction } from '~/actions/cart/save-cart-session';
 import { loadCartSessionAction } from '~/actions/cart/load-cart-session';
-import { reserveInventory, releaseInventory } from '~/lib/inventory-management';
+import { reserveInventory, releaseInventory, reserveTentInventoryBySlug } from '~/lib/inventory-management';
 import { validateCouponCode } from '~/actions/admin/coupon-actions';
 
 type AppliedCoupon = {
@@ -20,6 +20,7 @@ type AppliedCoupon = {
 type ShoppingCartContextType = {
   items: CartItem[];
   appliedCoupon: AppliedCoupon | null;
+  cartValidationError: string | null;
   addItem: (product: RegistrationProductDto, quantity: number, useDeposit: boolean) => Promise<void>;
   removeItem: (productId: string, useDeposit?: boolean) => Promise<void>;
   updateQuantity: (productId: string, quantity: number, useDeposit?: boolean) => Promise<void>;
@@ -35,6 +36,9 @@ type ShoppingCartContextType = {
   getDiscountedTotal: () => number;
   applyCoupon: (code: string, organizationId: string) => Promise<{ success: boolean; error?: string }>;
   removeCoupon: () => void;
+  getTeamCountInCart: () => number;
+  getTentCountInCart: () => number;
+  hasCartValidationErrors: () => boolean;
 };
 
 const ShoppingCartContext = React.createContext<ShoppingCartContextType | undefined>(undefined);
@@ -42,9 +46,29 @@ const ShoppingCartContext = React.createContext<ShoppingCartContextType | undefi
 export function ShoppingCartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = React.useState<CartItem[]>([]);
   const [appliedCoupon, setAppliedCoupon] = React.useState<AppliedCoupon | null>(null);
+  const [cartValidationError, setCartValidationError] = React.useState<string | null>(null);
   const [sessionId, setSessionId] = React.useState<string>('');
   const [isLoaded, setIsLoaded] = React.useState(false);
   const params = useParams();
+
+  // Helper: Count company teams in cart
+  const getTeamCountInCart = React.useCallback(() => {
+    return items
+      .filter(item => item.product.type === 'team_registration')
+      .reduce((total, item) => total + item.quantity, 0);
+  }, [items]);
+
+  // Helper: Count tents in cart
+  const getTentCountInCart = React.useCallback(() => {
+    return items
+      .filter(item => item.product.type === 'tent_rental')
+      .reduce((total, item) => total + item.quantity, 0);
+  }, [items]);
+
+  // Helper: Check if cart has validation errors
+  const hasCartValidationErrors = React.useCallback(() => {
+    return cartValidationError !== null;
+  }, [cartValidationError]);
 
   // Generate a unique session ID (client-side)
   const generateSessionId = (): string => {
@@ -96,8 +120,24 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
   }, [items, sessionId, isLoaded]);
 
   const addItem = React.useCallback(async (product: RegistrationProductDto, quantity: number, useDeposit: boolean) => {
-    // Reserve inventory first
-    const reservationResult = await reserveInventory(product.id, quantity);
+    // Reserve inventory first - use tent-specific logic for tent products
+    let reservationResult;
+
+    if (product.type === 'tent_rental') {
+      // For tent products, check quota based on teams in cart
+      const teamsInCart = getTeamCountInCart();
+      const orgSlug = params.slug as string;
+
+      reservationResult = await reserveTentInventoryBySlug(
+        product.id,
+        orgSlug,
+        quantity,
+        teamsInCart
+      );
+    } else {
+      // For non-tent products, use standard inventory reservation
+      reservationResult = await reserveInventory(product.id, quantity);
+    }
 
     if (!reservationResult.success) {
       toast.error(reservationResult.error || 'Unable to reserve inventory');
@@ -177,7 +217,7 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         return [...prev, newItem];
       }
     });
-  }, []);
+  }, [getTeamCountInCart, params.slug]);
 
   const removeItem = React.useCallback(async (productId: string, useDeposit?: boolean) => {
     // Get the item(s) to be removed first so we can release their inventory
@@ -188,6 +228,30 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         return item.productId === productId;
       }
     });
+
+    // Check if removing a team product would violate tent quota
+    const isRemovingTeam = itemsToRemove.some(item => item.product.type === 'team_registration');
+    if (isRemovingTeam) {
+      const teamsBeingRemoved = itemsToRemove
+        .filter(item => item.product.type === 'team_registration')
+        .reduce((total, item) => total + item.quantity, 0);
+
+      const currentTeamsInCart = getTeamCountInCart();
+      const newTeamsInCart = currentTeamsInCart - teamsBeingRemoved;
+      const tentsInCart = getTentCountInCart();
+      const maxTentsAllowed = newTeamsInCart * 2;
+
+      if (tentsInCart > maxTentsAllowed) {
+        // Set validation error and show warning
+        const errorMsg = `Cannot remove team - you have ${tentsInCart} tent${tentsInCart !== 1 ? 's' : ''} in cart but would only be allowed ${maxTentsAllowed} (${newTeamsInCart} team${newTeamsInCart !== 1 ? 's' : ''} × 2 tents). Please remove tents first.`;
+        setCartValidationError(errorMsg);
+        toast.warning(errorMsg);
+        return;
+      }
+    }
+
+    // Clear any previous validation errors when successfully removing
+    setCartValidationError(null);
 
     // Release inventory for removed items
     for (const item of itemsToRemove) {
@@ -212,7 +276,7 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         return prev.filter(item => item.productId !== productId);
       }
     });
-  }, [items]);
+  }, [items, getTeamCountInCart, getTentCountInCart]);
 
   const updateQuantity = React.useCallback(async (productId: string, quantity: number, useDeposit?: boolean) => {
     if (quantity <= 0) {
@@ -400,6 +464,7 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
   const value = React.useMemo(() => ({
     items,
     appliedCoupon,
+    cartValidationError,
     addItem,
     removeItem,
     updateQuantity,
@@ -414,10 +479,14 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
     getDiscountedSubtotal,
     getDiscountedTotal,
     applyCoupon,
-    removeCoupon
+    removeCoupon,
+    getTeamCountInCart,
+    getTentCountInCart,
+    hasCartValidationErrors
   }), [
     items,
     appliedCoupon,
+    cartValidationError,
     addItem,
     removeItem,
     updateQuantity,
@@ -432,7 +501,10 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
     getDiscountedSubtotal,
     getDiscountedTotal,
     applyCoupon,
-    removeCoupon
+    removeCoupon,
+    getTeamCountInCart,
+    getTentCountInCart,
+    hasCartValidationErrors
   ]);
 
   return (

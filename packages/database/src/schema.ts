@@ -2081,6 +2081,7 @@ export const tentPurchaseTrackingTable = pgTable(
     quantityPurchased: integer('quantityPurchased').notNull(),
     maxAllowed: integer('maxAllowed').notNull(),
     remainingAllowed: integer('remainingAllowed').notNull(),
+    companyTeamCount: integer('companyTeamCount').notNull().default(0),
     createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
       .defaultNow()
       .notNull(),

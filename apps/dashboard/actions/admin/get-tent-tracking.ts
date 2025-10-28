@@ -22,6 +22,7 @@ export type TentTrackingData = {
   eventYearName: string;
   tentCount: number;
   maxAllowed: number;
+  companyTeamCount: number;
   tentProductId: string;
   tentProductName: string;
   totalAmount: number;

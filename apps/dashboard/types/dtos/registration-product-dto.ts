@@ -26,6 +26,8 @@ export type RegistrationProductDto = {
   // Availability information for smart quantity limits
   availableQuantity: number | null; // null means unlimited
   purchasedQuantity: number;
+  isTentProduct?: boolean;
+  requiresTeam?: boolean;
 };
 
 export type CartItem = {

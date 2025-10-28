@@ -1,12 +1,15 @@
 'use server';
 
 import { db, sql } from '@workspace/database/client';
+import { getCompanyTeamCount } from '../../lib/inventory-management';
 
 export interface ProductAvailability {
   productId: string;
   maxQuantityPerOrg: number | null;
   purchasedQuantity: number;
   availableQuantity: number | null; // null means unlimited
+  isTentProduct?: boolean;
+  requiresTeam?: boolean;
 }
 
 export async function getProductAvailability(
@@ -27,7 +30,6 @@ export async function getProductAvailability(
     }
 
     const organizationId = orgResult.rows[0].id as string;
-    console.log('Found organization ID:', organizationId);
 
     // Get all products for current event year with their purchased quantities
     // Exclude abandoned orders (pending orders with no payments)
@@ -35,6 +37,7 @@ export async function getProductAvailability(
       SELECT
         p.id as "productId",
         p."maxQuantityPerOrg",
+        p.type as "productType",
         COALESCE(SUM(
           CASE
             WHEN o."eventYearId" = ${currentEventYearId}
@@ -56,26 +59,42 @@ export async function getProductAvailability(
       LEFT JOIN "order" o ON o.id = oi."orderId"
       WHERE p."eventYearId" = ${currentEventYearId}
         AND p.status = 'active'
-      GROUP BY p.id, p."maxQuantityPerOrg"
+      GROUP BY p.id, p."maxQuantityPerOrg", p.type
     `);
 
-    console.log('Product availability query returned:', result.rows.length, 'products');
+    // Get company team count for tent quota calculation
+    const companyTeamCount = await getCompanyTeamCount(organizationId, currentEventYearId);
 
     return result.rows.map((row: any) => {
-      const maxQuantityPerOrg = row.maxQuantityPerOrg as number | null;
+      const productType = row.productType as string;
+      const isTentProduct = productType === 'tent_rental';
       const purchasedQuantity = parseInt(row.purchasedQuantity as string) || 0;
-      
-      const availableQuantity = maxQuantityPerOrg !== null 
-        ? Math.max(0, maxQuantityPerOrg - purchasedQuantity)
-        : null; // null means unlimited
 
-      // console.log(`Product ${row.productId}: max=${maxQuantityPerOrg}, purchased=${purchasedQuantity}, available=${availableQuantity}`);
+      let maxQuantityPerOrg: number | null;
+      let availableQuantity: number | null;
+      let requiresTeam = false;
+
+      if (isTentProduct) {
+        // For tent products, calculate dynamic quota based on company teams
+        // 2 tents per company team
+        requiresTeam = companyTeamCount === 0;
+        maxQuantityPerOrg = companyTeamCount * 2;
+        availableQuantity = Math.max(0, maxQuantityPerOrg - purchasedQuantity);
+      } else {
+        // For non-tent products, use the standard logic
+        maxQuantityPerOrg = row.maxQuantityPerOrg as number | null;
+        availableQuantity = maxQuantityPerOrg !== null
+          ? Math.max(0, maxQuantityPerOrg - purchasedQuantity)
+          : null; // null means unlimited
+      }
 
       return {
         productId: row.productId as string,
         maxQuantityPerOrg,
         purchasedQuantity,
-        availableQuantity
+        availableQuantity,
+        isTentProduct,
+        requiresTeam
       };
     });
 

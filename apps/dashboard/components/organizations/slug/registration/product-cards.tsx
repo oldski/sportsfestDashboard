@@ -48,7 +48,7 @@ type ProductCardProps = {
 };
 
 function ProductCard({ product }: ProductCardProps) {
-  const { addItem, items } = useShoppingCart();
+  const { addItem, items, getTeamCountInCart } = useShoppingCart();
   const [quantity, setQuantity] = React.useState(1);
   const [paymentOption, setPaymentOption] = React.useState<'full' | 'deposit'>('full');
 
@@ -59,6 +59,12 @@ function ProductCard({ product }: ProductCardProps) {
       .reduce((total, item) => total + item.quantity, 0);
   }, [items, product.id]);
 
+  // Check if this is a tent product and if teams are required
+  const isTentProduct = product.type === 'tent_rental';
+  const teamsInCart = getTeamCountInCart();
+  // Use the requiresTeam flag from product availability which accounts for purchased teams
+  const requiresTeam = isTentProduct && (product.requiresTeam ?? teamsInCart === 0);
+
   // Calculate effective available quantity considering cart items
   const effectiveAvailableQuantity = React.useMemo(() => {
     if (product.availableQuantity === null) return null; // No limit
@@ -68,8 +74,7 @@ function ProductCard({ product }: ProductCardProps) {
   const isOutOfStock = product.status === 'archived' || (product.totalInventory !== undefined && product.totalInventory === 0);
   const isInactive = product.status === 'inactive';
   const isQuantityLimited = effectiveAvailableQuantity !== null && effectiveAvailableQuantity === 0;
-  const isUnavailable = isOutOfStock || isInactive || isQuantityLimited;
-
+  const isUnavailable = isOutOfStock || isInactive || isQuantityLimited || requiresTeam;
 
   const effectivePrice = product.organizationPrice?.customPrice || product.basePrice;
   const effectiveDepositAmount = product.organizationPrice?.customDepositAmount || product.depositAmount;
@@ -275,7 +280,21 @@ function ProductCard({ product }: ProductCardProps) {
             </div>
             {/* Smart availability messaging */}
             <div className="mt-1 space-y-1">
-              {product.availableQuantity !== null ? (
+              {requiresTeam ? (
+                <p className="text-xs text-amber-600 font-medium">
+                  Purchase a company team to unlock tent rentals
+                </p>
+              ) : isTentProduct && product.maxQuantityPerOrg ? (
+                <p className="text-xs text-muted-foreground">
+                  Up to {product.maxQuantityPerOrg} tent{product.maxQuantityPerOrg !== 1 ? 's' : ''} available ({product.maxQuantityPerOrg / 2} team{product.maxQuantityPerOrg / 2 !== 1 ? 's' : ''} × 2 tents)
+                  {product.purchasedQuantity > 0 && (
+                    <span className="ml-2">({product.purchasedQuantity} purchased)</span>
+                  )}
+                  {cartQuantity > 0 && (
+                    <span className="ml-2 text-blue-600">({cartQuantity} in cart)</span>
+                  )}
+                </p>
+              ) : product.availableQuantity !== null ? (
                 <p className="text-xs text-muted-foreground">
                   {effectiveAvailableQuantity === 0 ? (
                     <span className="text-destructive font-medium">
@@ -297,7 +316,7 @@ function ProductCard({ product }: ProductCardProps) {
                 </p>
               )}
 
-              {product.maxQuantityPerOrg && (
+              {product.maxQuantityPerOrg && !isTentProduct && (
                 <p className="text-xs text-muted-foreground">
                   Max {product.maxQuantityPerOrg} per organization
                 </p>
@@ -333,9 +352,11 @@ function ProductCard({ product }: ProductCardProps) {
             ? 'Out of Stock'
             : isInactive
               ? 'Unavailable'
-              : isQuantityLimited
-                ? 'Limit Reached'
-                : 'Add to Cart'
+              : requiresTeam
+                ? 'Requires Company Team'
+                : isQuantityLimited
+                  ? 'Limit Reached'
+                  : 'Add to Cart'
           }
         </Button>
       </CardFooter>

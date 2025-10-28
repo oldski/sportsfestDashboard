@@ -48,6 +48,7 @@ export function ShoppingCartDrawer() {
   const {
     items,
     appliedCoupon,
+    cartValidationError,
     removeItem,
     updateQuantity,
     clearCart,
@@ -61,7 +62,8 @@ export function ShoppingCartDrawer() {
     getDiscountedSubtotal,
     getDiscountedTotal,
     applyCoupon,
-    removeCoupon
+    removeCoupon,
+    hasCartValidationErrors
   } = useShoppingCart();
 
   const params = useParams();
@@ -428,20 +430,31 @@ export function ShoppingCartDrawer() {
 
           {/* Drawer Footer with Buttons */}
           <DrawerFooter className="border-t">
+            {/* Validation Error Message */}
+            {cartValidationError && (
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-2">
+                <p className="text-sm text-amber-800 font-medium">
+                  {cartValidationError}
+                </p>
+              </div>
+            )}
+
             <Button
               className="w-full"
               size="lg"
               onClick={() => handleCheckout(totalDeposit > 0 ? 'deposit' : 'full')}
-              disabled={items.length === 0 || isPaymentLoading}
+              disabled={items.length === 0 || isPaymentLoading || hasCartValidationErrors()}
             >
               <CreditCardIcon className="size-4 mr-2" />
               {isPaymentLoading
                 ? 'Processing...'
-                : `Complete Purchase - ${formatCurrency(
-                    totalDeposit > 0
-                      ? Math.max(0, dueToday - getCouponDiscount())
-                      : getDiscountedSubtotal()
-                  )}`
+                : hasCartValidationErrors()
+                  ? 'Fix Cart Issues to Continue'
+                  : `Complete Purchase - ${formatCurrency(
+                      totalDeposit > 0
+                        ? Math.max(0, dueToday - getCouponDiscount())
+                        : getDiscountedSubtotal()
+                    )}`
               }
             </Button>
             <DrawerClose asChild>
