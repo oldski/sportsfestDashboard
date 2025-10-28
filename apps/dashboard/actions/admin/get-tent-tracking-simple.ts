@@ -110,6 +110,7 @@ export async function getTentTrackingSimple(): Promise<TentTrackingData[]> {
         eventYearName: purchase.eventYearName,
         tentCount: purchase.tentCount,
         maxAllowed: purchase.maxAllowed,
+        companyTeamCount: purchase.companyTeamCount,
         tentProductId: purchase.tentProductId,
         tentProductName: purchase.tentProductName,
         totalAmount,
