@@ -45,16 +45,16 @@ import type { EventYearFormData } from '~/actions/admin/event-year';
 const eventYearFormSchema = z.object({
   year: z.number().min(2023).max(2030),
   name: z.string().min(1, 'Event name is required').max(100),
-  eventStartDate: z.date({
+  eventStartDate: z.coerce.date({
     required_error: 'Event start date is required',
   }),
-  eventEndDate: z.date({
+  eventEndDate: z.coerce.date({
     required_error: 'Event end date is required',
   }),
-  registrationOpen: z.date({
+  registrationOpen: z.coerce.date({
     required_error: 'Registration open date is required',
   }),
-  registrationClose: z.date({
+  registrationClose: z.coerce.date({
     required_error: 'Registration close date is required',
   }),
   locationName: z.string().min(1, 'Location name is required').max(255),
@@ -65,16 +65,25 @@ const eventYearFormSchema = z.object({
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
   isActive: z.boolean(),
-}).refine((data) => data.eventEndDate > data.eventStartDate, {
+}).refine((data) => {
+  const start = new Date(data.eventStartDate);
+  const end = new Date(data.eventEndDate);
+  return end > start;
+}, {
   message: 'Event end date must be after start date',
   path: ['eventEndDate'],
-}).refine((data) => data.registrationOpen >= data.eventStartDate, {
-  message: 'Registration must open on or after event start date',
-  path: ['registrationOpen'],
-}).refine((data) => data.registrationClose > data.registrationOpen, {
+}).refine((data) => {
+  const regClose = new Date(data.registrationClose);
+  const regOpen = new Date(data.registrationOpen);
+  return regClose > regOpen;
+}, {
   message: 'Registration close date must be after registration open date',
   path: ['registrationClose'],
-}).refine((data) => data.registrationClose <= data.eventEndDate, {
+}).refine((data) => {
+  const regClose = new Date(data.registrationClose);
+  const eventEnd = new Date(data.eventEndDate);
+  return regClose <= eventEnd;
+}, {
   message: 'Registration must close on or before event end date',
   path: ['registrationClose'],
 });
@@ -119,7 +128,22 @@ export function EventYearDialog({
     if (open) {
       // Reset form when dialog opens
       if (eventYear) {
-        form.reset(eventYear);
+        // Transform date strings to Date objects
+        form.reset({
+          ...eventYear,
+          eventStartDate: eventYear.eventStartDate instanceof Date
+            ? eventYear.eventStartDate
+            : new Date(eventYear.eventStartDate),
+          eventEndDate: eventYear.eventEndDate instanceof Date
+            ? eventYear.eventEndDate
+            : new Date(eventYear.eventEndDate),
+          registrationOpen: eventYear.registrationOpen instanceof Date
+            ? eventYear.registrationOpen
+            : new Date(eventYear.registrationOpen),
+          registrationClose: eventYear.registrationClose instanceof Date
+            ? eventYear.registrationClose
+            : new Date(eventYear.registrationClose),
+        });
       } else {
         form.reset({
           year: new Date().getFullYear() + 1,
@@ -166,19 +190,42 @@ export function EventYearDialog({
   };
 
   const onSubmit = async (data: EventYearFormData) => {
-    setIsLoading(true);
+    console.log('=== onSubmit called ===');
     console.log('Form submitted with data:', data);
     console.log('Mode:', mode);
     console.log('Event Year ID:', eventYear?.id);
-    
+    console.log('Form errors:', form.formState.errors);
+    console.log('Form is valid:', form.formState.isValid);
+
+    setIsLoading(true);
+
+    // Ensure dates are Date objects, not strings
+    const transformedData: EventYearFormData = {
+      ...data,
+      eventStartDate: data.eventStartDate instanceof Date
+        ? data.eventStartDate
+        : new Date(data.eventStartDate),
+      eventEndDate: data.eventEndDate instanceof Date
+        ? data.eventEndDate
+        : new Date(data.eventEndDate),
+      registrationOpen: data.registrationOpen instanceof Date
+        ? data.registrationOpen
+        : new Date(data.registrationOpen),
+      registrationClose: data.registrationClose instanceof Date
+        ? data.registrationClose
+        : new Date(data.registrationClose),
+    };
+
+    console.log('Transformed data:', transformedData);
+
     try {
       if (mode === 'create') {
         const { createEventYear } = await import('~/actions/admin/event-year');
-        await createEventYear(data);
+        await createEventYear(transformedData);
       } else if (eventYear?.id) {
         const { updateEventYear } = await import('~/actions/admin/event-year');
         console.log('Calling updateEventYear with ID:', eventYear.id);
-        await updateEventYear(eventYear.id, data);
+        await updateEventYear(eventYear.id, transformedData);
       } else {
         throw new Error('No event year ID provided for update');
       }
@@ -210,7 +257,7 @@ export function EventYearDialog({
         </DialogHeader>
 
         <FormProvider {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" id="event-year-form">
             <div className="grid md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-4">
                 <div className="pt-4">
@@ -530,18 +577,35 @@ export function EventYearDialog({
                 </FormItem>
               )}
             />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isLoading}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                onClick={async (e) => {
+                  console.log('=== Submit button clicked ===');
+                  console.log('Form state:', form.formState);
+                  console.log('Form values:', form.getValues());
+                  console.log('Form errors:', form.formState.errors);
+                  console.log('Is form valid?', form.formState.isValid);
+
+                  // Manually trigger validation to see errors
+                  const isValid = await form.trigger();
+                  console.log('Manual validation result:', isValid);
+                  if (!isValid) {
+                    console.log('VALIDATION FAILED - Errors:', form.formState.errors);
+                  }
+                }}
+              >
+                {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+                {mode === 'create' ? 'Create' : 'Update'} Event Year
+              </Button>
+            </DialogFooter>
           </form>
         </FormProvider>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
-            {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-            {mode === 'create' ? 'Create' : 'Update'} Event Year
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

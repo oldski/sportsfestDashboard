@@ -74,10 +74,6 @@ export default async function TeamsOverviewLayout({
                 {/* Teams Grid */}
                 {teams}
 
-                {/* Available Players */}
-                <div className="grid gap-6 lg:grid-cols-2">
-                  {availablePlayers}
-                </div>
               </div>
             )}
           </div>

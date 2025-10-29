@@ -38,14 +38,14 @@ const columns = [
       <DataTableColumnHeader column={column} title="Year" />
     ),
     cell: ({ row }) => {
-      const currentYear = new Date().getFullYear();
       const year = row.getValue('year') as number;
+      const status = row.original.status;
 
       return (
         <div className="flex items-center space-x-2">
           <span className="font-medium">{year}</span>
-          {year === currentYear && (
-            <Badge variant="outline" className="text-xs">Current</Badge>
+          {status === 'active' && (
+            <Badge variant="default" className="text-xs">Active</Badge>
           )}
         </div>
       );

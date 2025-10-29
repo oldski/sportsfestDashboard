@@ -57,6 +57,15 @@ export function formatDate(dateString: string): string {
   return date.toLocaleDateString('en-US');
 }
 
+export function formatDateLong(date: Date | string): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(dateObj);
+}
+
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

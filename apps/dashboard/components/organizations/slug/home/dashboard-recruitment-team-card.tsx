@@ -162,7 +162,7 @@ export function RecruitmentTeamCard({
   return (
     <>
       {/* Desktop: Always show full card */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block lg:w-[400px]">
         <Card
           className={cn('flex h-full flex-col gap-0 pb-0', className)}
           {...other}

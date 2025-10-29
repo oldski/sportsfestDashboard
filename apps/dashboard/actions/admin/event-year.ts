@@ -9,16 +9,16 @@ import { auth } from '@workspace/auth';
 const eventYearSchema = z.object({
   year: z.number().min(2023).max(2030),
   name: z.string().min(1, 'Event name is required').max(100),
-  eventStartDate: z.date({
+  eventStartDate: z.coerce.date({
     required_error: 'Event start date is required',
   }),
-  eventEndDate: z.date({
+  eventEndDate: z.coerce.date({
     required_error: 'Event end date is required',
   }),
-  registrationOpen: z.date({
+  registrationOpen: z.coerce.date({
     required_error: 'Registration open date is required',
   }),
-  registrationClose: z.date({
+  registrationClose: z.coerce.date({
     required_error: 'Registration close date is required',
   }),
   // Location fields
@@ -30,16 +30,25 @@ const eventYearSchema = z.object({
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
   isActive: z.boolean().default(false),
-}).refine((data) => data.eventEndDate > data.eventStartDate, {
+}).refine((data) => {
+  const start = new Date(data.eventStartDate);
+  const end = new Date(data.eventEndDate);
+  return end > start;
+}, {
   message: 'Event end date must be after start date',
   path: ['eventEndDate'],
-}).refine((data) => data.registrationOpen >= data.eventStartDate, {
-  message: 'Registration must open on or after event start date',
-  path: ['registrationOpen'],
-}).refine((data) => data.registrationClose > data.registrationOpen, {
+}).refine((data) => {
+  const regClose = new Date(data.registrationClose);
+  const regOpen = new Date(data.registrationOpen);
+  return regClose > regOpen;
+}, {
   message: 'Registration close date must be after registration open date',
   path: ['registrationClose'],
-}).refine((data) => data.registrationClose <= data.eventEndDate, {
+}).refine((data) => {
+  const regClose = new Date(data.registrationClose);
+  const eventEnd = new Date(data.eventEndDate);
+  return regClose <= eventEnd;
+}, {
   message: 'Registration must close on or before event end date',
   path: ['registrationClose'],
 });

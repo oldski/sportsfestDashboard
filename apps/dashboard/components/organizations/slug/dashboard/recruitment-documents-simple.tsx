@@ -3,6 +3,7 @@
 import * as React from 'react';
 import {FileTextIcon, MegaphoneIcon, PlayIcon, VideoIcon} from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 import { AspectRatio } from '@workspace/ui/components/aspect-ratio';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@workspace/ui/components/hover-card';
@@ -62,6 +63,20 @@ export function RecruitmentDocumentsSimple({ documents, organizationSlug, error 
     );
   }
 
+  // Training video data
+  const trainingVideos = [
+    { id: 1, title: 'Accessing Recruitment Tools', duration: '1:15' },
+    { id: 2, title: 'Sharing Your Signup Link & QR Code', duration: '1:45' },
+    { id: 3, title: 'Customizing Your Organization Logo', duration: '0:52' },
+    { id: 4, title: 'Purchasing Company Teams', duration: '2:15' },
+    { id: 5, title: 'Building Team Rosters', duration: '2:30' },
+    { id: 6, title: 'Building Event Rosters', duration: '2:20' },
+    { id: 7, title: 'The Player Signup Experience', duration: '1:50' },
+    { id: 8, title: 'Viewing Your Recruited Players', duration: '1:30' },
+    { id: 9, title: 'Viewing Recruitment Documents', duration: '0:45' },
+    { id: 10, title: 'Best Practices & Tips', duration: '2:10' },
+  ];
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -72,7 +87,7 @@ export function RecruitmentDocumentsSimple({ documents, organizationSlug, error 
               Recruitment Resources
             </CardTitle>
             <CardDescription>
-              {documents.length} document{documents.length !== 1 ? 's' : ''} and training materials available
+              {documents.length} document{documents.length !== 1 ? 's' : ''} and {trainingVideos.length} training videos available
             </CardDescription>
           </div>
           <PlayerSignUpButton organizationSlug={organizationSlug} />
@@ -80,10 +95,10 @@ export function RecruitmentDocumentsSimple({ documents, organizationSlug, error 
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Main Content Grid */}
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Documents Section - Takes up 2/3 of the space */}
-            <div className="md:col-span-2 space-y-4">
+          {/* Main Content Grid - Documents on left, Videos on right */}
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Documents Section - Takes up 1/3 of the space */}
+            <div className="lg:col-span-1 space-y-4">
               <div className="rounded-lg border bg-card p-4">
                 <div className="flex items-center space-x-2 mb-4">
                   <FileTextIcon className="h-5 w-5 text-blue-600" />
@@ -121,48 +136,66 @@ export function RecruitmentDocumentsSimple({ documents, organizationSlug, error 
               </div>
             </div>
 
-            {/* Training Videos Section - Takes up 1/3 of the space */}
-            <div className="space-y-4">
+            {/* Training Videos Section - Takes up 2/3 of the space */}
+            <div className="lg:col-span-2 space-y-4">
               <div className="rounded-lg border bg-card p-4">
                 <div className="flex items-center space-x-2 mb-4">
                   <VideoIcon className="h-5 w-5 text-green-600" />
                   <h4 className="font-medium">Training Videos</h4>
                 </div>
 
-                <div className="space-y-3">
-                  <HoverCard>
-                    <HoverCardTrigger asChild>
-                      <div className="cursor-pointer rounded-md border border-muted bg-muted/30 hover:bg-muted/50 transition-colors">
-                        <AspectRatio ratio={16 / 9}>
-                          <div className="flex flex-col items-center justify-center h-full p-2">
-                            <PlayIcon className="h-6 w-6 text-muted-foreground mb-1" />
-                            <p className="text-xs text-center text-muted-foreground">Recruitment Best Practices</p>
-                          </div>
-                        </AspectRatio>
-                      </div>
-                    </HoverCardTrigger>
-                    <HoverCardContent>
-                      <p className="text-sm font-medium">Recruitment Best Practices</p>
-                      <p className="text-xs text-muted-foreground mt-1">Learn effective strategies for team recruitment and player engagement.</p>
-                    </HoverCardContent>
-                  </HoverCard>
+                {/* Video Grid - 2 columns on medium+, 3 columns on xl+ */}
+                <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                  {trainingVideos.map((video) => (
+                    <HoverCard key={video.id}>
+                      <HoverCardTrigger asChild>
+                        <div className="cursor-pointer rounded-md border border-muted overflow-hidden hover:border-green-600 transition-colors group">
+                          <AspectRatio ratio={16 / 9}>
+                            <div className="relative h-full w-full">
+                              {/* Background Thumbnail */}
+                              <Image
+                                src="/assets/graphic-training-video-thumbnail.webp"
+                                alt={video.title}
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                              />
 
-                  <HoverCard>
-                    <HoverCardTrigger asChild>
-                      <div className="cursor-pointer rounded-md border border-muted bg-muted/30 hover:bg-muted/50 transition-colors">
-                        <AspectRatio ratio={16 / 9}>
-                          <div className="flex flex-col items-center justify-center h-full p-2">
-                            <PlayIcon className="h-6 w-6 text-muted-foreground mb-1" />
-                            <p className="text-xs text-center text-muted-foreground">Team Management</p>
-                          </div>
-                        </AspectRatio>
-                      </div>
-                    </HoverCardTrigger>
-                    <HoverCardContent>
-                      <p className="text-sm font-medium">Team Management</p>
-                      <p className="text-xs text-muted-foreground mt-1">Essential tips for managing teams and coordinating with players.</p>
-                    </HoverCardContent>
-                  </HoverCard>
+                              {/* Overlay with gradient for better text readability */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+
+                              {/* Content Overlay */}
+                              <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
+                                {/* Duration Badge */}
+                                <div className="absolute top-2 right-2 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
+                                  {video.duration}
+                                </div>
+
+                                {/* Play Icon */}
+                                <PlayIcon className="h-8 w-8 text-white drop-shadow-lg mb-2 group-hover:text-green-400 transition-colors" />
+
+                                {/* Title */}
+                                <p className="text-[11px] text-center text-white font-medium leading-tight line-clamp-2 drop-shadow-md">
+                                  {video.title}
+                                </p>
+                              </div>
+                            </div>
+                          </AspectRatio>
+                        </div>
+                      </HoverCardTrigger>
+                      <HoverCardContent side="top" className="w-64">
+                        <p className="text-sm font-medium">{video.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Duration: {video.duration}</p>
+                        <p className="text-xs text-muted-foreground mt-2">Click to watch this training video</p>
+                      </HoverCardContent>
+                    </HoverCard>
+                  ))}
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-border">
+                  <p className="text-xs text-muted-foreground text-center">
+                    Click any video to watch • {trainingVideos.length} videos available
+                  </p>
                 </div>
               </div>
             </div>
