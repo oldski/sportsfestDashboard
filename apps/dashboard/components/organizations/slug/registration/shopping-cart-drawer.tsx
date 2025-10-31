@@ -44,7 +44,12 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-export function ShoppingCartDrawer() {
+interface ShoppingCartDrawerProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function ShoppingCartDrawer({ open: controlledOpen, onOpenChange: controlledOnOpenChange }: ShoppingCartDrawerProps = {}) {
   const {
     items,
     appliedCoupon,
@@ -75,8 +80,12 @@ export function ShoppingCartDrawer() {
   const [isApplyingCoupon, setIsApplyingCoupon] = React.useState(false);
   const { data: session } = useSession();
 
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+  const [internalDrawerOpen, setInternalDrawerOpen] = React.useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
+
+  // Use controlled state if provided, otherwise use internal state
+  const isDrawerOpen = controlledOpen !== undefined ? controlledOpen : internalDrawerOpen;
+  const setIsDrawerOpen = controlledOnOpenChange || setInternalDrawerOpen;
 
   const {
     isLoading: isPaymentLoading,
@@ -166,8 +175,8 @@ export function ShoppingCartDrawer() {
   return (
     <>
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        {/* Floating Cart Button - Show on all screen sizes */}
-        <div className="fixed bottom-6 right-6 z-50">
+        {/* Floating Cart Button - Lower position on mobile/tablet, higher on desktop to avoid toast overlap */}
+        <div className="fixed bottom-6 right-6 lg:bottom-24 z-50">
           <DrawerTrigger asChild>
             <Button
               size="lg"

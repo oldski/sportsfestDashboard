@@ -55,7 +55,14 @@ export async function saveCartSession(
         basePrice: item.product.basePrice,
         requiresDeposit: item.product.requiresDeposit,
         depositAmount: item.product.depositAmount,
-        maxQuantityPerOrg: item.product.maxQuantityPerOrg
+        maxQuantityPerOrg: item.product.maxQuantityPerOrg,
+        type: item.product.type,
+        category: {
+          id: item.product.category.id,
+          name: item.product.category.name,
+          description: item.product.category.description
+        },
+        image: item.product.image
       }
     }));
 
@@ -122,15 +129,16 @@ export async function loadCartItems(sessionId: string): Promise<CartItem[]> {
         name: item.productSnapshot.name,
         basePrice: item.productSnapshot.basePrice,
         requiresDeposit: item.productSnapshot.requiresDeposit,
-        depositAmount: item.productSnapshot.depositAmount,
-        maxQuantityPerOrg: item.productSnapshot.maxQuantityPerOrg,
+        depositAmount: item.productSnapshot.depositAmount ?? undefined,
+        maxQuantityPerOrg: item.productSnapshot.maxQuantityPerOrg ?? undefined,
+        type: item.productSnapshot.type || 'merchandise' as const,
+        category: item.productSnapshot.category || { id: '', name: '', description: '' },
+        image: item.productSnapshot.image,
         // Minimal product data - full product would be fetched if needed
         description: '',
-        type: 'merchandise' as const,
         status: 'active' as const,
         createdAt: new Date(),
         updatedAt: new Date(),
-        category: { id: '', name: '', description: '' },
         availableQuantity: null,
         purchasedQuantity: 0,
         organizationPrice: undefined,
@@ -150,8 +158,8 @@ export async function loadCartItems(sessionId: string): Promise<CartItem[]> {
         purchasedQuantity: 0,
         organizationPrice: undefined,
         totalInventory: undefined,
-        depositAmount: null,
-        maxQuantityPerOrg: null
+        depositAmount: undefined,
+        maxQuantityPerOrg: undefined
       }
     }));
   } catch (error) {

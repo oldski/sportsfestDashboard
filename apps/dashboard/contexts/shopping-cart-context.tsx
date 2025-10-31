@@ -155,19 +155,23 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         const existingItem = updatedItems[existingItemIndex];
         const newQuantity = existingItem.quantity + quantity;
 
-        // Check available quantity first (takes precedence over max quantity)
-        if (product.availableQuantity !== null && newQuantity > product.availableQuantity) {
-          toast.error(`Only ${product.availableQuantity} available for your organization`);
-          // Release the inventory we just reserved since we can't add it
-          releaseInventory(product.id, quantity).catch(console.error);
-          return prev;
-        }
-        // Fallback to max quantity constraint for products without availability system
-        if (product.availableQuantity === null && product.maxQuantityPerOrg && newQuantity > product.maxQuantityPerOrg) {
-          toast.error(`Maximum quantity for ${product.name} is ${product.maxQuantityPerOrg}`);
-          // Release the inventory we just reserved since we can't add it
-          releaseInventory(product.id, quantity).catch(console.error);
-          return prev;
+        // Skip availability check for tent products - they use dynamic quota based on teams in cart
+        // The tent-specific reservation logic already validated this
+        if (product.type !== 'tent_rental') {
+          // Check available quantity first (takes precedence over max quantity)
+          if (product.availableQuantity !== null && newQuantity > product.availableQuantity) {
+            toast.error(`Only ${product.availableQuantity} available for your organization`);
+            // Release the inventory we just reserved since we can't add it
+            releaseInventory(product.id, quantity).catch(console.error);
+            return prev;
+          }
+          // Fallback to max quantity constraint for products without availability system
+          if (product.availableQuantity === null && product.maxQuantityPerOrg && newQuantity > product.maxQuantityPerOrg) {
+            toast.error(`Maximum quantity for ${product.name} is ${product.maxQuantityPerOrg}`);
+            // Release the inventory we just reserved since we can't add it
+            releaseInventory(product.id, quantity).catch(console.error);
+            return prev;
+          }
         }
 
         updatedItems[existingItemIndex] = {
@@ -180,19 +184,23 @@ export function ShoppingCartProvider({ children }: { children: React.ReactNode }
         return updatedItems;
       } else {
         // Add new item
-        // Check available quantity first (takes precedence over max quantity)
-        if (product.availableQuantity !== null && quantity > product.availableQuantity) {
-          toast.error(`Only ${product.availableQuantity} available for your organization`);
-          // Release the inventory we just reserved since we can't add it
-          releaseInventory(product.id, quantity).catch(console.error);
-          return prev;
-        }
-        // Fallback to max quantity constraint for products without availability system
-        if (product.availableQuantity === null && product.maxQuantityPerOrg && quantity > product.maxQuantityPerOrg) {
-          toast.error(`Maximum quantity for ${product.name} is ${product.maxQuantityPerOrg}`);
-          // Release the inventory we just reserved since we can't add it
-          releaseInventory(product.id, quantity).catch(console.error);
-          return prev;
+        // Skip availability check for tent products - they use dynamic quota based on teams in cart
+        // The tent-specific reservation logic already validated this
+        if (product.type !== 'tent_rental') {
+          // Check available quantity first (takes precedence over max quantity)
+          if (product.availableQuantity !== null && quantity > product.availableQuantity) {
+            toast.error(`Only ${product.availableQuantity} available for your organization`);
+            // Release the inventory we just reserved since we can't add it
+            releaseInventory(product.id, quantity).catch(console.error);
+            return prev;
+          }
+          // Fallback to max quantity constraint for products without availability system
+          if (product.availableQuantity === null && product.maxQuantityPerOrg && quantity > product.maxQuantityPerOrg) {
+            toast.error(`Maximum quantity for ${product.name} is ${product.maxQuantityPerOrg}`);
+            // Release the inventory we just reserved since we can't add it
+            releaseInventory(product.id, quantity).catch(console.error);
+            return prev;
+          }
         }
 
         const unitPrice = useDeposit && product.requiresDeposit && product.depositAmount

@@ -62,14 +62,49 @@ function ProductCard({ product }: ProductCardProps) {
   // Check if this is a tent product and if teams are required
   const isTentProduct = product.type === 'tent_rental';
   const teamsInCart = getTeamCountInCart();
-  // Use the requiresTeam flag from product availability which accounts for purchased teams
-  const requiresTeam = isTentProduct && (product.requiresTeam ?? teamsInCart === 0);
+
+  // Debug: log cart items
+  console.log('Cart items:', items.map(item => ({
+    name: item.product.name,
+    type: item.product.type,
+    quantity: item.quantity
+  })));
+  console.log('Teams in cart from getTeamCountInCart():', teamsInCart);
+
+  // Check if teams are required: product.requiresTeam is true if NO purchased teams exist
+  // But if there are teams in cart, we should allow tent purchase
+  const requiresTeam = isTentProduct && product.requiresTeam && teamsInCart === 0;
 
   // Calculate effective available quantity considering cart items
   const effectiveAvailableQuantity = React.useMemo(() => {
+    // For tent products, recalculate quota based on teams in cart
+    if (isTentProduct) {
+      const tentsInCart = items
+        .filter(item => item.product.type === 'tent_rental')
+        .reduce((total, item) => total + item.quantity, 0);
+
+      // 2 tents per team in cart (including purchased teams reflected in product.availableQuantity base)
+      // product.maxQuantityPerOrg already includes teams, but availableQuantity might be 0 if no purchased teams
+      // So we need to calculate: (teams in cart * 2) - tents already in cart
+      const maxTentsAllowed = teamsInCart * 2;
+      return Math.max(0, maxTentsAllowed - tentsInCart);
+    }
+
     if (product.availableQuantity === null) return null; // No limit
     return Math.max(0, product.availableQuantity - cartQuantity);
-  }, [product.availableQuantity, cartQuantity]);
+  }, [product.availableQuantity, cartQuantity, isTentProduct, teamsInCart, items]);
+
+  // Debug logging for tent products
+  if (isTentProduct) {
+    console.log('Tent product debug:', {
+      productName: product.name,
+      productRequiresTeam: product.requiresTeam,
+      teamsInCart,
+      requiresTeam,
+      availableQuantity: product.availableQuantity,
+      effectiveAvailableQuantity
+    });
+  }
 
   const isOutOfStock = product.status === 'archived' || (product.totalInventory !== undefined && product.totalInventory === 0);
   const isInactive = product.status === 'inactive';
@@ -284,11 +319,16 @@ function ProductCard({ product }: ProductCardProps) {
                 <p className="text-xs text-amber-600 font-medium">
                   Purchase a company team to unlock tent rentals
                 </p>
-              ) : isTentProduct && product.maxQuantityPerOrg ? (
+              ) : isTentProduct ? (
                 <p className="text-xs text-muted-foreground">
-                  Up to {product.maxQuantityPerOrg} tent{product.maxQuantityPerOrg !== 1 ? 's' : ''} available ({product.maxQuantityPerOrg / 2} team{product.maxQuantityPerOrg / 2 !== 1 ? 's' : ''} × 2 tents)
-                  {product.purchasedQuantity > 0 && (
-                    <span className="ml-2">({product.purchasedQuantity} purchased)</span>
+                  {effectiveAvailableQuantity === 0 ? (
+                    <span className="text-destructive font-medium">
+                      {cartQuantity > 0 ? 'All available items in cart' : 'Limit reached'}
+                    </span>
+                  ) : (
+                    <>
+                      {effectiveAvailableQuantity} tent{effectiveAvailableQuantity !== 1 ? 's' : ''} available ({teamsInCart} team{teamsInCart !== 1 ? 's' : ''} × 2 tents)
+                    </>
                   )}
                   {cartQuantity > 0 && (
                     <span className="ml-2 text-blue-600">({cartQuantity} in cart)</span>
@@ -316,9 +356,9 @@ function ProductCard({ product }: ProductCardProps) {
                 </p>
               )}
 
-              {product.maxQuantityPerOrg && !isTentProduct && (
+              {!isTentProduct && product.maxQuantityPerOrg != null && product.maxQuantityPerOrg > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Max {product.maxQuantityPerOrg} per organization
+                 Max {product.maxQuantityPerOrg} per organization
                 </p>
               )}
             </div>

@@ -1,7 +1,7 @@
 'use server';
 
 import { db, sql, eq, and } from '@workspace/database/client';
-import { tentPurchaseTrackingTable, productTable, companyTeamTable } from '@workspace/database/schema';
+import { tentPurchaseTrackingTable, productTable, companyTeamTable, organizationTable, eventYearTable } from '@workspace/database/schema';
 
 export interface InventoryResult {
   success: boolean;
@@ -198,23 +198,38 @@ export async function reserveTentInventoryBySlug(
   teamsInCart: number = 0
 ): Promise<TentTrackingResult> {
   try {
-    // Look up organization and current event year
-    const orgResult = await db.execute(sql`
-      SELECT o.id as "organizationId", ey.id as "eventYearId"
-      FROM "organization" o
-      CROSS JOIN "eventYear" ey
-      WHERE o.slug = ${organizationSlug}
-        AND ey."isCurrent" = true
-      LIMIT 1
-    `);
+    // Look up organization by slug
+    const organization = await db
+      .select({ id: organizationTable.id })
+      .from(organizationTable)
+      .where(eq(organizationTable.slug, organizationSlug))
+      .limit(1);
 
-    const org = (orgResult as any)?.rows?.[0];
-    if (!org) {
+    if (!organization[0]) {
       return {
         success: false,
-        error: 'Organization or current event year not found'
+        error: 'Organization not found'
       };
     }
+
+    // Look up current event year
+    const eventYear = await db
+      .select({ id: eventYearTable.id })
+      .from(eventYearTable)
+      .where(eq(eventYearTable.isActive, true))
+      .limit(1);
+
+    if (!eventYear[0]) {
+      return {
+        success: false,
+        error: 'Current event year not found'
+      };
+    }
+
+    const org = {
+      organizationId: organization[0].id,
+      eventYearId: eventYear[0].id
+    };
 
     // Call the main reserveTentInventory function
     return await reserveTentInventory(
@@ -226,6 +241,14 @@ export async function reserveTentInventoryBySlug(
     );
   } catch (error) {
     console.error('Error reserving tent inventory by slug:', error);
+    console.error('Error details:', {
+      productId,
+      organizationSlug,
+      quantity,
+      teamsInCart,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined
+    });
     return { success: false, error: 'Database error while reserving tent inventory' };
   }
 }
@@ -242,8 +265,11 @@ export async function reserveTentInventory(
   teamsInCart: number = 0
 ): Promise<TentTrackingResult> {
   try {
+    console.log('reserveTentInventory called with:', { productId, organizationId, eventYearId, quantity, teamsInCart });
+
     // Get count of purchased company teams
     const purchasedTeams = await getCompanyTeamCount(organizationId, eventYearId);
+    console.log('Purchased teams:', purchasedTeams);
 
     // Calculate dynamic quota: 2 tents per company team (purchased + in cart)
     const totalTeams = purchasedTeams + teamsInCart;
@@ -265,11 +291,14 @@ export async function reserveTentInventory(
     `);
 
     const product = (productResult as any)?.rows?.[0];
+    console.log('Product result:', product);
+
     if (!product) {
       return { success: false, error: 'Tent product not found' };
     }
 
     const availableInventory = Number(product.totalInventory) - Number(product.soldcount) - Number(product.reservedcount);
+    console.log('Available inventory:', availableInventory);
 
     // Check if enough inventory is available
     if (availableInventory < quantity) {
@@ -289,7 +318,12 @@ export async function reserveTentInventory(
 
     const currentPurchased = currentTracking[0]?.quantityPurchased || 0;
 
-    // Check quota limit
+    // Note: We don't check reservedCount here because:
+    // 1. reservedCount is global across all orgs, not org-specific
+    // 2. The cart context already tracks tents in cart and calculates availability client-side
+    // 3. We only validate against purchased tents here, as cart logic prevents over-adding
+
+    // Check quota limit (only against purchased, not reserved)
     if (currentPurchased + quantity > maxAllowed) {
       return {
         success: false,
@@ -298,7 +332,10 @@ export async function reserveTentInventory(
     }
 
     // Reserve the inventory
+    console.log('Calling reserveInventory with:', { productId, quantity });
     const reserveResult = await reserveInventory(productId, quantity);
+    console.log('Reserve result:', reserveResult);
+
     if (!reserveResult.success) {
       return reserveResult;
     }
@@ -310,6 +347,10 @@ export async function reserveTentInventory(
     };
   } catch (error) {
     console.error('Error reserving tent inventory:', error);
+    console.error('Error details:', {
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined
+    });
     return { success: false, error: 'Database error while reserving tent inventory' };
   }
 }
