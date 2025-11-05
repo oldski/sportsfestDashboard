@@ -22,50 +22,75 @@ import {ContactCard} from "~/components/fragments/contact-card";
 
 const DATA_CARDS = [
   {
-    title: 'Introduction',
+    title: 'Who We Are',
     icon: <BookIcon className="size-4 shrink-0" />,
     content:
-      'This Privacy Policy explains how we collect, use, and protect your personal data when you interact with our platform.'
+      'Florida Corporate SportsFest, Inc. operates Tampa Bay Corporate SportsFest, providing corporate sports events and team-building activities. This Privacy Policy explains how we collect, use, and protect your personal information when you use our platform or participate in our events.'
   },
   {
-    title: 'Information Collection',
+    title: 'Information We Collect',
     icon: <ScaleIcon className="size-4 shrink-0" />,
     content:
-      'We collect information that you provide directly to us, such as when you sign up or interact with our services.'
+      'We collect personal information including your name, email, phone number, date of birth, gender, t-shirt size, and event preferences. We also collect company/organization details, payment information for registrations and services, and usage data through Google Analytics.'
   },
   {
-    title: 'Data Usage',
+    title: 'How We Use Your Data',
     icon: <AlertCircleIcon className="size-4 shrink-0" />,
     content:
-      'We use your data to provide, personalize, and improve your experience on our platform, including marketing and support.'
+      'We use your information to manage event registrations, process payments, coordinate team rosters, communicate event details, send marketing emails via Constant Contact, improve our services, and take photos/videos at events for promotional purposes.'
   }
 ];
 
 const DATA_ACCORDION = [
   {
-    title: 'How We Protect Your Data',
+    title: 'Payment Processing',
     content:
-      'We implement various security measures, including encryption and secure storage, to protect your personal information.'
+      'We collect and process payment information for event registrations, tent rentals, and other services. Payment data is securely processed through trusted payment processors and is not stored on our servers. All financial transactions are encrypted and comply with industry standards.'
   },
   {
-    title: 'Third-Party Sharing',
+    title: 'Third-Party Service Providers',
     content:
-      'We may share your data with trusted third-party service providers for essential operations like payment processing or analytics.'
+      'We do not sell or share your personal data with third parties for their marketing purposes. However, we use trusted service providers to operate our platform: payment processors for secure transactions, Google Analytics to understand how our platform is used, and Constant Contact for sending event updates and marketing communications. These providers are contractually obligated to protect your data and use it only for the services they provide to us.'
   },
   {
-    title: 'User Rights',
+    title: 'Photo and Video Usage',
     content:
-      'You have the right to access, update, or delete your personal data at any time. You can also opt-out of marketing communications.'
+      'By participating in SportsFest events, you grant us permission to use photographs, videotapes, or any other recordings of you taken during events for marketing, promotional, and social media purposes. If you do not wish to be photographed or recorded, please notify event staff on-site.'
   },
   {
-    title: 'Cookies and Tracking',
+    title: 'Data Security',
     content:
-      'We use cookies and similar technologies to personalize your experience and analyze usage patterns on our site.'
+      'We implement industry-standard security measures including encryption, secure servers, and access controls to protect your personal information. While we strive to use commercially acceptable means to protect your data, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.'
   },
   {
-    title: 'Changes to This Policy',
+    title: 'Your Rights and Choices',
     content:
-      'We may update this Privacy Policy from time to time. Changes will be posted here, and continued use of the platform constitutes acceptance.'
+      'You have the right to access, update, or delete your personal information at any time through your account dashboard or by contacting us. You can opt-out of marketing communications by clicking the unsubscribe link in our emails or by contacting us directly. You may also request a copy of the personal data we hold about you.'
+  },
+  {
+    title: 'Cookies and Tracking Technologies',
+    content:
+      'We use Google Analytics and similar tracking technologies to analyze usage patterns, improve user experience, and understand how visitors interact with our platform. These tools may use cookies to collect information about your browsing behavior. You can control cookie settings through your browser preferences.'
+  },
+  {
+    title: 'Data Retention',
+    content:
+      'We retain your personal information for as long as necessary to provide our services, comply with legal obligations, resolve disputes, and enforce our agreements. Event participation data may be retained for historical record-keeping and to facilitate future event planning.'
+  },
+  {
+    title: 'Children\'s Privacy',
+    content:
+      'Our services are intended for individuals who are 18 years of age or older. We do not knowingly collect personal information from individuals under 18. If you believe we have inadvertently collected information from someone under 18, please contact us immediately.'
+  },
+  {
+    title: 'Changes to This Privacy Policy',
+    content:
+      'We may update this Privacy Policy from time to time to reflect changes in our practices or legal requirements. We will notify you of significant changes by posting the updated policy on our website with a new effective date. Your continued use of our services after changes are posted constitutes acceptance of the updated policy.'
+  },
+  {
+    title: 'Contact Us',
+    content:
+      'If you have questions about this Privacy Policy or wish to exercise your privacy rights, please contact us: Prem Persaud, Privacy Officer | Email: prem@sportsfest.com | Phone: 727.512.6619 ext 1'
   }
 ];
 
@@ -78,16 +103,9 @@ export function PrivacyPolicy(): React.JSX.Element {
           <SiteHeading
             badge="Legal"
             title="Privacy Policy"
-            description="Learn how we collect, use, and protect your data. Please read carefully to understand our practices."
+            description="Learn how Florida Corporate SportsFest, Inc. collects, uses, and protects your personal information. Effective Date: January 1, 2025"
           />
         </div>
-        <Alert variant="warning">
-          <AlertDescription className="ml-3 text-base inline">
-            This policy provides a general framework. It should be reviewed and
-            customized by a legal professional to suit your jurisdiction and use
-            case.
-          </AlertDescription>
-        </Alert>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {DATA_CARDS.map((item, index) => (

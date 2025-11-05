@@ -23,12 +23,12 @@ const SLIDESHOW_IMAGES = [
   },
   {
     src: '/assets/team-member-signup/sportsfest-tug-of-war.webp',
-    alt: 'Corporate SportsFest Tug-of-war',
+    alt: 'Corporate SportsFest Tug-of-War',
     title: 'Tug-of-War'
   },
   {
     src: '/assets/team-member-signup/sportsfest-team-building.webp',
-    alt: 'Corporate SportFest team building activities',
+    alt: 'Corporate SportFest Team Building Activities',
     title: 'Team Building'
   },
   {
@@ -42,7 +42,7 @@ const SLIDESHOW_IMAGES = [
     title: 'Bote Beach Challenge'
   },
   {
-    src: '/assets/team-member-signup/sportsfest-bote-beach-challenge.webp',
+    src: '/assets/team-member-signup/sportsfest-team-spirit.webp',
     alt: 'Corporate SportsFest Team Spirit',
     title: 'Team Spirit'
   }

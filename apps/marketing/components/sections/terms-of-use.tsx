@@ -22,55 +22,85 @@ import {ContactCard} from "~/components/fragments/contact-card";
 
 const DATA_CARDS = [
   {
-    title: 'Introduction',
+    title: 'Acceptance of Terms',
     icon: <BookIcon className="size-4 shrink-0" />,
     content:
-      'These terms outline the rules for using our platform. By continuing to use the platform, you agree to comply with them.'
+      'By accessing or using the Tampa Bay Corporate SportsFest platform and services, you agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use our services or participate in our events.'
   },
   {
-    title: 'Eligibility',
+    title: 'Eligibility Requirements',
     icon: <ScaleIcon className="size-4 shrink-0" />,
     content:
-      'Users must be at least 18 years old and provide accurate details to maintain their accounts.'
+      'You must be at least 18 years of age to register for and participate in SportsFest events. By registering, you confirm that all information provided is accurate and current. You are responsible for maintaining the confidentiality of your account credentials.'
   },
   {
-    title: 'Prohibited Uses',
+    title: 'Event Participation',
     icon: <AlertCircleIcon className="size-4 shrink-0" />,
     content:
-      'Users must avoid posting harmful content, distributing malware, or attempting unauthorized platform access.'
+      'Participants acknowledge that SportsFest activities are potentially hazardous. You must be in proper physical condition to participate and assume all risks associated with participation, including falls, contact with other participants, and weather conditions.'
   }
 ];
 
 const DATA_ACCORDION = [
   {
+    title: 'Registration and Payment Terms',
+    content:
+      'Event registrations, tent rentals, and other services require payment as specified on our platform. All fees are due at the time of registration unless otherwise stated. Payment must be made through our secure payment processing system. Once submitted, all sales are final with no refunds; however, credits may be issued at our discretion for future events or services.'
+  },
+  {
+    title: 'Cancellations and Credits',
+    content:
+      'Florida Corporate SportsFest, Inc. does not provide refunds for registrations, tent rentals, or other paid services. In certain circumstances, we may offer credits toward future events at our sole discretion. Event cancellations due to weather, acts of God, or other circumstances beyond our control do not entitle participants to refunds. We reserve the right to cancel or reschedule events and will work with participants to apply payments to future events.'
+  },
+  {
+    title: 'Roster and Team Management',
+    content:
+      'Organization administrators and team captains are responsible for managing their rosters and ensuring that only registered participants compete in events. You may not permit individuals to participate who are not on your official roster or who are not registered with Corporate SportsFest. Violations may result in team disqualification and forfeiture of registration fees.'
+  },
+  {
+    title: 'Waiver and Release of Liability',
+    content:
+      'By participating in SportsFest events, you acknowledge the inherent risks and voluntarily waive, release, and discharge Florida Corporate SportsFest, Inc., its affiliates, sponsors, agents, employees, and event officials from any and all liability for injuries, damages, or losses arising from your participation. This includes, but is not limited to, injuries from falls, contact with participants, equipment, weather conditions including lightning and heat, and any other event-related risks.'
+  },
+  {
+    title: 'Photo and Video Consent',
+    content:
+      'By participating in SportsFest events, you grant Florida Corporate SportsFest, Inc. permission to use photographs, videotapes, or any other recordings of you for marketing, promotional, and social media purposes without compensation. If you object to being photographed or recorded, you must notify event staff on-site.'
+  },
+  {
+    title: 'Alcohol and Prohibited Conduct',
+    content:
+      'Participants may not bring alcohol to any SportsFest event sites. Prohibited conduct includes: posting harmful or offensive content, harassment of other participants or staff, cheating or unsportsmanlike behavior, damaging event property or facilities, and any illegal activities. Violations may result in immediate removal from the event without refund and prohibition from future events.'
+  },
+  {
     title: 'Intellectual Property Rights',
     content:
-      'All platform content, including trademarks and materials, is owned by us. Unauthorized use is prohibited.'
+      'All content on the SportsFest platform, including logos, trademarks, text, graphics, images, and software, is the property of Florida Corporate SportsFest, Inc. and is protected by copyright and trademark laws. You may not reproduce, distribute, modify, or create derivative works without our express written permission. The "Tampa Bay Corporate SportsFest" name and logo are registered trademarks.'
   },
   {
-    title: 'User-Generated Content',
+    title: 'Limitation of Liability and Disclaimers',
     content:
-      'You retain ownership of content you post but grant us a license to use it. Inappropriate content may be removed at our discretion.'
+      'Our platform and services are provided "as is" without warranties of any kind, either express or implied. Florida Corporate SportsFest, Inc. shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of our services or participation in events. Our total liability shall not exceed the amount you paid for registration or services. Some jurisdictions do not allow the exclusion of certain warranties or limitations of liability, so these limitations may not apply to you.'
   },
   {
-    title: 'Limitation of Liability',
+    title: 'Account Termination',
     content:
-      "Our platform is provided 'as is' without warranties. We are not liable for indirect damages, and users assume associated risks."
+      'We reserve the right to suspend or terminate your account and access to our services at any time, with or without notice, for violations of these Terms of Use, fraudulent activity, non-payment, unsportsmanlike conduct, or any other reason at our sole discretion. Upon termination, your right to use our services immediately ceases.'
   },
   {
-    title: 'Termination of Access',
+    title: 'Governing Law and Dispute Resolution',
     content:
-      'We may suspend or terminate access for violations of these terms, fraudulent activity, or other valid reasons.'
-  },
-  {
-    title: 'Governing Law and Disputes',
-    content:
-      'These terms are governed by the laws of [jurisdiction]. Disputes will be resolved through arbitration or designated courts.'
+      'These Terms of Use are governed by and construed in accordance with the laws of the State of Florida, without regard to its conflict of law provisions. Any disputes arising from these terms or your use of our services shall be resolved in the state or federal courts located in Florida. You consent to the exclusive jurisdiction and venue of such courts.'
   },
   {
     title: 'Modifications to Terms',
     content:
-      'We reserve the right to update these terms. Changes will be posted here, and continued use constitutes acceptance.'
+      'Florida Corporate SportsFest, Inc. reserves the right to update or modify these Terms of Use at any time. Changes will be posted on our website with a new effective date. Your continued use of our services after changes are posted constitutes your acceptance of the updated terms. We encourage you to review these terms periodically.'
+  },
+  {
+    title: 'Contact Information',
+    content:
+      'If you have questions about these Terms of Use, please contact us: Prem Persaud | Email: prem@sportsfest.com | Phone: 727.512.6619 ext 1'
   }
 ];
 
@@ -83,16 +113,9 @@ export function TermsOfUse(): React.JSX.Element {
           <SiteHeading
             badge="Legal"
             title="Terms of Use"
-            description="By accessing our platform, you agree to the terms outlined below. Please read them carefully to ensure you understand your rights and responsibilities."
+            description="By accessing or using Tampa Bay Corporate SportsFest services, you agree to these terms. Please read carefully to understand your rights and responsibilities. Effective Date: January 1, 2025"
           />
         </div>
-        <Alert variant="warning">
-          <AlertDescription className="ml-3 text-base inline">
-            These terms provide a general framework. They should be reviewed and
-            customized by a legal professional to suit your jurisdiction and use
-            case.
-          </AlertDescription>
-        </Alert>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {DATA_CARDS.map((item, index) => (

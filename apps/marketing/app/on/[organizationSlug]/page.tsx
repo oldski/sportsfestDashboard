@@ -18,8 +18,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@workspace/ui/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@workspace/ui/components/tooltip';
 import { Alert, AlertDescription } from '@workspace/ui/components/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@workspace/ui/components/alert-dialog';
-import {CalendarIcon, AlertCircleIcon, InfoIcon, SeparatorVertical} from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@workspace/ui/components/dialog';
+import {CalendarIcon, AlertCircleIcon, InfoIcon} from 'lucide-react';
 import { cn } from '@workspace/ui/lib/utils';
+import { PatternFormat } from 'react-number-format';
 import { SiteHeading } from "~/components/fragments/site-heading";
 import {
   BackgroundSlideshow,
@@ -33,6 +35,7 @@ import {
 import { motion } from "motion/react";
 import {Logo} from "@workspace/ui/components/logo";
 import {Separator} from "@workspace/ui/components/separator";
+import Image from "next/image";
 
 // API functions
 const getOrganizationForSignup = async (slug?: string) => {
@@ -100,7 +103,7 @@ const formSchema = z.object({
     required_error: 'Date of birth is required'
   }),
   email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  phone: z.string().min(10, 'Please enter a valid 10-digit phone number').max(10, 'Please enter a valid 10-digit phone number'),
   gender: z.nativeEnum(Gender),
   tshirtSize: z.nativeEnum(TShirtSize),
   confirmAccuracy: z.boolean().refine(val => val === true, 'You must confirm the accuracy of your information'),
@@ -119,9 +122,13 @@ function TeamMemberSignupForm() {
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [errorDialog, setErrorDialog] = React.useState<{ title: string; message: string } | null>(null);
+  const [isWaiverDialogOpen, setIsWaiverDialogOpen] = React.useState(false);
+  const [hasAgreedToWaiver, setHasAgreedToWaiver] = React.useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
     defaultValues: {
       organizationId: '',
       firstName: '',
@@ -159,6 +166,19 @@ function TeamMemberSignupForm() {
 
     loadOrganization();
   }, [params.organizationSlug, form]);
+
+  // Handle opening waiver dialog
+  const handleOpenWaiverDialog = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsWaiverDialogOpen(true);
+  };
+
+  // Handle agreeing to waiver
+  const handleAgreeToWaiver = () => {
+    setHasAgreedToWaiver(true);
+    form.setValue('waiverAgreement', true);
+    setIsWaiverDialogOpen(false);
+  };
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
@@ -199,6 +219,19 @@ function TeamMemberSignupForm() {
     }
   };
 
+  const onError = (errors: any) => {
+    console.log('Form validation errors:', errors);
+    // Scroll to first error
+    const firstErrorField = Object.keys(errors)[0];
+    if (firstErrorField) {
+      const element = document.getElementById(firstErrorField);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.focus();
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 flex items-center justify-center min-h-screen">
@@ -213,24 +246,65 @@ function TeamMemberSignupForm() {
   // Show error if no valid organization
   if (!organization) {
     return (
-      <div className="container mx-auto px-4 py-12 flex items-center justify-center min-h-screen">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-destructive">
-              <AlertCircleIcon className="size-5" />
-              <span>Invalid Link</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert>
-              <AlertDescription>
-                This signup link is invalid or the organization could not be found.
-                Please contact your organization administrator for the correct signup link.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      </div>
+      <>
+        <div className="fixed inset-0 z-0">
+          <Image
+            src="/assets/team-member-signup/sportsfest-bad-link.webp"
+            alt="Invalid Link"
+            width="1920"
+            height="1080"
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <div className="relative z-10 container mx-auto px-4 py-12 flex items-center justify-center min-h-screen">
+          <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-destructive">
+                <AlertCircleIcon className="size-5" />
+                <span>Invalid Link</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Alert>
+                <AlertDescription>
+                  This signup link is invalid or the organization could not be found.
+                  Please contact your organization administrator for the correct signup link.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
+
+  // Show success message
+  if (successMessage) {
+    return (
+      <>
+        <div className="fixed inset-0 z-0">
+          <Image
+            src="/assets/team-member-signup/sportsfest-player-signup-success.webp"
+            alt="Registration Successful"
+            width="1920"
+            height="1080"
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <div className="relative z-10 container mx-auto px-4 py-12 flex items-center justify-center min-h-screen">
+          <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-center text-green-600">Registration Successful! 🎉</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p>{successMessage}</p>
+              <p className="text-sm text-muted-foreground">
+                Get ready to be part of your company team! An email notification was sent to your Team Organizer.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </>
     );
   }
 
@@ -251,25 +325,27 @@ function TeamMemberSignupForm() {
                   <>
                     <Logo isFull={true} variant="light" width={200} height={111} />
                     <Separator orientation="vertical" className="h-full opacity-60"  />
-                    <img
-                      src={organization.logo}
-                      alt={`${organization.name} logo`}
-                      className="max-h-[222px] w-auto object-contain"
-                    />
+                    <Card className="py-4 px-2">
+                      <img
+                        src={organization.logo}
+                        alt={`${organization.name} logo`}
+                        className="max-h-[222px] w-auto object-contain"
+                      />
+                    </Card>
                   </>
                 ) : (
                   <Logo isFull={true} variant="light" width={400} height={222} />
                 )}
               </div>
-            <SiteHeading
-              badge="📩 You're Invited"
-              title={`Join ${organization.name}`}
-              description="No Athletic Skill Necessary, Just Team Spirit and Company Pride!"
-            />
+              <SiteHeading
+                badge="📩 You're Invited"
+                title={`Join ${organization.name}`}
+                description="No Athletic Skill Necessary, Just Team Spirit and Company Pride!"
+              />
             </motion.div>
           </div>
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-8">
             <motion.div
               initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
@@ -328,11 +404,23 @@ function TeamMemberSignupForm() {
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      {...form.register('phone')}
-                      className={form.formState.errors.phone ? 'border-destructive' : ''}
+                    <Controller
+                      name="phone"
+                      control={form.control}
+                      render={({ field }) => (
+                        <PatternFormat
+                          id="phone"
+                          format="(###) ###-####"
+                          mask="_"
+                          allowEmptyFormatting
+                          customInput={Input}
+                          value={field.value}
+                          onValueChange={(values) => {
+                            field.onChange(values.value); // Store only raw digits
+                          }}
+                          className={form.formState.errors.phone ? 'border-destructive' : ''}
+                        />
+                      )}
                     />
                     {form.formState.errors.phone && (
                       <p className="text-sm text-destructive mt-1">
@@ -386,7 +474,22 @@ function TeamMemberSignupForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>T-Shirt Size *</Label>
+                    <div className="flex items-center gap-2">
+                      <Label>T-Shirt Size *</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs">
+                              This information is for your team captain and company planning purposes only.
+                              Please note that SportsFest will not be distributing t-shirts to players.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Controller
                       name="tshirtSize"
                       control={form.control}
@@ -568,26 +671,29 @@ function TeamMemberSignupForm() {
                 </div>
 
                 <div className="flex items-start space-x-2">
-                  <Controller
-                    name="waiverAgreement"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Checkbox
-                        id="waiverAgreement"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    )}
+                  <Checkbox
+                    id="waiverAgreement"
+                    checked={hasAgreedToWaiver}
+                    disabled
+                    className="cursor-not-allowed"
                   />
                   <div className="grid gap-1.5 leading-none">
                     <Label
                       htmlFor="waiverAgreement"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      className="text-sm font-medium leading-none"
                     >
-                      I agree to the waiver and release of liability *
+                      I agree to the{' '}
+                      <button
+                        type="button"
+                        onClick={handleOpenWaiverDialog}
+                        className="text-primary underline underline-offset-4 hover:text-primary/80 transition-colors"
+                      >
+                        waiver and release of liability
+                      </button>{' '}
+                      *
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      You understand and agree to participate in sports activities at your own risk.
+                      You must read and agree to the waiver to complete registration.
                     </p>
                     {form.formState.errors.waiverAgreement && (
                       <p className="text-xs text-destructive">
@@ -613,22 +719,30 @@ function TeamMemberSignupForm() {
         </div>
       </div>
 
-      {/* Success Message */}
-      {successMessage && (
-        <div className="fixed inset-0 z-50 bg-white flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="text-center text-green-600">Registration Successful! 🎉</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <p>{successMessage}</p>
-              <p className="text-sm text-muted-foreground">
-                Get ready to be part of your company team! An email notification was sent to your Team Organizer.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Waiver Dialog */}
+      <Dialog open={isWaiverDialogOpen} onOpenChange={setIsWaiverDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Waiver and Release of Liability</DialogTitle>
+            <DialogDescription>
+              Please read the waiver carefully before agreeing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 text-sm">
+            <p>
+              Waiver RELEASE AND WAIVER OF LIABILITY AND INDEMNITY AGREEMENT MUST BE COMPLETED BY EVERY COMPETING MEMBER. Tampa Bay Corporate SportsFest IN CONSIDERATION of being permitted to participate in Tampa Bay Corporate SportsFest: I acknowledge that I must be 18 years of age to participate in the activities. I know the events and activities offered by Florida Corporate SportsFest, Inc. are potentially hazardous. I am in proper physical condition to participate and assume any and all risks associated with my participation, including, but not limited to falls, contact with other participants, the effect of the weather, including lightning, high heat and/or humidity, all such risks being known and appreciated by me. In consideration of this entry, I for myself and anyone entitled to act on my behalf, waive, release and discharge Florida Corporate SportsFest, Inc., any affiliated companies, sponsors and/or its agents, employees, all event officials, and any other sponsors, groups or individuals associated with SportsFest activity. I will not permit individuals to participate who are not on my roster or who are not officially registered with Corporate SportsFest. I will not bring alcohol to any of the sites. I grant the agents of this event permission to use photographs, videotapes or any other record of me in this event. THE UNDERSIGNED HAS READ AND VOLUNTARILY SIGNS THE RELEASE AND WAIVER OF LIABILITY AND INDEMNITY AGREEMENT, and further agrees that no oral representations, statements or inducements apart from the foregoing written agreement have been made.
+            </p>
+          </div>
+          <DialogFooter className="flex-shrink-0">
+            <Button
+              onClick={handleAgreeToWaiver}
+              className="w-full sm:w-auto"
+            >
+              I Agree
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Error Dialog */}
       <AlertDialog open={!!errorDialog} onOpenChange={() => setErrorDialog(null)}>
