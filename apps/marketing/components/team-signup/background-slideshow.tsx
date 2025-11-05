@@ -70,7 +70,7 @@ export function BackgroundSlideshow() {
                 <img
                   src={image.src}
                   alt={image.alt}
-                  className="absolute inset-0 h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full object-cover object-top md:object-center"
                 />
                 <div className="absolute inset-0 bg-black/30" />
               </div>
