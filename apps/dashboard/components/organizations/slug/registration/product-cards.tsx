@@ -77,17 +77,18 @@ function ProductCard({ product }: ProductCardProps) {
 
   // Calculate effective available quantity considering cart items
   const effectiveAvailableQuantity = React.useMemo(() => {
-    // For tent products, recalculate quota based on teams in cart
+    // For tent products, calculate based on purchased + cart teams
     if (isTentProduct) {
       const tentsInCart = items
         .filter(item => item.product.type === 'tent_rental')
         .reduce((total, item) => total + item.quantity, 0);
 
-      // 2 tents per team in cart (including purchased teams reflected in product.availableQuantity base)
-      // product.maxQuantityPerOrg already includes teams, but availableQuantity might be 0 if no purchased teams
-      // So we need to calculate: (teams in cart * 2) - tents already in cart
-      const maxTentsAllowed = teamsInCart * 2;
-      return Math.max(0, maxTentsAllowed - tentsInCart);
+      // product.availableQuantity already accounts for purchased teams (from server)
+      // We need to add additional quota from teams in cart: (teams in cart * 2)
+      // Then subtract tents already in cart
+      const additionalQuotaFromCart = teamsInCart * 2;
+      const baseAvailable = product.availableQuantity ?? 0;
+      return Math.max(0, baseAvailable + additionalQuotaFromCart - tentsInCart);
     }
 
     if (product.availableQuantity === null) return null; // No limit

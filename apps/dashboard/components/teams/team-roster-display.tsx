@@ -21,6 +21,7 @@ import {
 } from '@workspace/ui/components/alert-dialog';
 import { RosterManagementDialog } from './roster-management-dialog';
 import {
+  addPlayerToTeam,
   togglePlayerCaptain,
   removePlayerFromTeam,
   transferPlayerToTeam
@@ -84,6 +85,15 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
       toast.success('Player removed from team successfully');
     } else {
       toast.error(result.error || 'Failed to remove player');
+    }
+  };
+
+  const handleAddPlayer = async (playerId: string) => {
+    const result = await addPlayerToTeam(playerId, team.id);
+    if (result.success) {
+      toast.success('Player added to team successfully');
+    } else {
+      toast.error(result.error || 'Failed to add player');
     }
   };
 
@@ -232,10 +242,7 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
         teamName={team.name || `Team ${team.teamNumber}`}
         teamNumber={team.teamNumber}
         playersData={playersData}
-        onAddPlayer={async (playerId) => {
-          // This will be handled by the dialog's existing functionality
-          // The page will refresh automatically due to revalidatePath
-        }}
+        onAddPlayer={handleAddPlayer}
         onRemovePlayer={handleRemovePlayer}
         onTransferPlayer={handleTransferPlayer}
         onToggleCaptain={handleEditPlayer}

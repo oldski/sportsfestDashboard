@@ -63,7 +63,36 @@ export async function getProductAvailability(
     `);
 
     // Get company team count for tent quota calculation
-    const companyTeamCount = await getCompanyTeamCount(organizationId, currentEventYearId);
+    // This includes both:
+    // 1. Teams already created (fulfilled orders)
+    // 2. Teams in paid/partially-paid orders (not yet fulfilled)
+    const createdTeamCount = await getCompanyTeamCount(organizationId, currentEventYearId);
+
+    // Count team purchases from paid orders (that may not be fulfilled yet)
+    const purchasedTeamResult = await db.execute(sql`
+      SELECT COALESCE(SUM(oi.quantity), 0) as "teamQuantity"
+      FROM "orderItem" oi
+      INNER JOIN "order" o ON o.id = oi."orderId"
+      INNER JOIN "product" p ON p.id = oi."productId"
+      WHERE p.type = 'team_registration'
+        AND p."eventYearId" = ${currentEventYearId}
+        AND o."organizationId" = ${organizationId}
+        AND o."eventYearId" = ${currentEventYearId}
+        AND (
+          o.status != 'pending'
+          OR EXISTS (
+            SELECT 1 FROM "orderPayment" op
+            WHERE op."orderId" = o.id
+            AND op.status = 'completed'
+          )
+        )
+    `);
+
+    const purchasedTeamCount = parseInt(purchasedTeamResult.rows[0]?.teamQuantity as string) || 0;
+
+    // Use the greater of created teams or purchased teams
+    // This ensures that paid-but-not-fulfilled orders count toward tent quota
+    const companyTeamCount = Math.max(createdTeamCount, purchasedTeamCount);
 
     return result.rows.map((row: any) => {
       const productType = row.productType as string;

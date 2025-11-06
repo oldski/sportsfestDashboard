@@ -1,7 +1,7 @@
 'use server';
 
 import { auth } from '@workspace/auth';
-import { db, eq, and } from '@workspace/database/client';
+import { db, eq, and, jsonAggBuildObject } from '@workspace/database/client';
 import {
   orderInvoiceTable,
   orderTable,
@@ -9,7 +9,9 @@ import {
   orderPaymentTable,
   productTable,
   eventYearTable,
-  organizationTable
+  organizationTable,
+  membershipTable,
+  userTable
 } from '@workspace/database/schema';
 import { isSuperAdmin } from '~/lib/admin-utils';
 import type { RegistrationInvoiceDto } from '~/types/dtos/registration-invoice-dto';
@@ -21,12 +23,35 @@ const formatLocalDate = (date: Date): Date => {
 
 export async function getInvoiceDetails(invoiceId: string): Promise<RegistrationInvoiceDto | null> {
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
+  const userId = session.user.id;
+
   // Check if user is super admin (for admin context)
   const isAdmin = isSuperAdmin(session.user);
+
+  // Fetch user memberships from database
+  const [userInfo] = await db
+    .select({
+      memberships: jsonAggBuildObject({
+        organizationId: membershipTable.organizationId,
+        userId: membershipTable.userId,
+        role: membershipTable.role,
+        isOwner: membershipTable.isOwner
+      })
+    })
+    .from(userTable)
+    .leftJoin(membershipTable, eq(membershipTable.userId, userTable.id))
+    .where(eq(userTable.id, userId))
+    .groupBy(userTable.id)
+    .limit(1);
+
+  // Fix memberships - jsonAggBuildObject can return [null] when empty
+  const memberships = userInfo && Array.isArray(userInfo.memberships)
+    ? userInfo.memberships.filter((m) => m !== null)
+    : [];
 
   try {
     console.log('🔍 Fetching invoice details for ID:', invoiceId);
@@ -78,8 +103,8 @@ export async function getInvoiceDetails(invoiceId: string): Promise<Registration
 
     // For organization context, verify the user has access to this organization
     if (!isAdmin) {
-      const hasAccess = (session.user as any).memberships?.some(
-        (m: any) => m.organizationId === invoice.organizationId
+      const hasAccess = memberships.some(
+        (m) => m.organizationId === invoice.organizationId
       );
       if (!hasAccess) {
         throw new Error('Unauthorized: You do not have access to this invoice');

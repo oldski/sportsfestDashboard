@@ -12,13 +12,21 @@ export interface InventoryResult {
 /**
  * Get the count of company teams for an organization in a specific event year
  * Used to calculate tent quota (2 tents per company team)
+ *
+ * This now returns the MAXIMUM of:
+ * 1. Created teams (fulfilled orders)
+ * 2. Purchased teams (paid orders, even if not fulfilled yet)
+ *
+ * This ensures that users can purchase tents immediately after paying for teams,
+ * without waiting for admin fulfillment.
  */
 export async function getCompanyTeamCount(
   organizationId: string,
   eventYearId: string
 ): Promise<number> {
   try {
-    const result = await db
+    // Count created teams (fulfilled orders)
+    const createdResult = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(companyTeamTable)
       .where(
@@ -28,7 +36,32 @@ export async function getCompanyTeamCount(
         )
       );
 
-    return result[0]?.count || 0;
+    const createdCount = createdResult[0]?.count || 0;
+
+    // Count purchased teams from paid orders (may not be fulfilled yet)
+    const purchasedResult = await db.execute(sql`
+      SELECT COALESCE(SUM(oi.quantity), 0)::int as count
+      FROM "orderItem" oi
+      INNER JOIN "order" o ON o.id = oi."orderId"
+      INNER JOIN "product" p ON p.id = oi."productId"
+      WHERE p.type = 'team_registration'
+        AND p."eventYearId" = ${eventYearId}
+        AND o."organizationId" = ${organizationId}
+        AND o."eventYearId" = ${eventYearId}
+        AND (
+          o.status != 'pending'
+          OR EXISTS (
+            SELECT 1 FROM "orderPayment" op
+            WHERE op."orderId" = o.id
+            AND op.status = 'completed'
+          )
+        )
+    `);
+
+    const purchasedCount = (purchasedResult as any)?.rows?.[0]?.count || 0;
+
+    // Return the maximum to ensure tent quota is based on paid teams
+    return Math.max(createdCount, purchasedCount);
   } catch (error) {
     console.error('Error getting company team count:', error);
     return 0;
