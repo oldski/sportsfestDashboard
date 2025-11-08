@@ -115,7 +115,7 @@ type FormData = z.infer<typeof formSchema>;
 
 function TeamMemberSignupForm() {
   const params = useParams();
-  const [organization, setOrganization] = React.useState<{ id: string; name: string; slug: string; logo?: string | null } | null>(null);
+  const [organization, setOrganization] = React.useState<{ id: string; name: string; slug: string; logo?: string | null; activeEventYear?: { id: string; name: string } | null } | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [calendarMonth, setCalendarMonth] = React.useState<Date>(new Date(new Date().getFullYear() - 25, 0));
@@ -339,7 +339,7 @@ function TeamMemberSignupForm() {
               </div>
               <SiteHeading
                 badge="📩 You're Invited"
-                title={`Join ${organization.name}`}
+                title={`Join ${organization.name}${organization.activeEventYear ? ` ${organization.activeEventYear.name} Team` : ''}`}
                 description="No Athletic Skill Necessary, Just Team Spirit and Company Pride!"
               />
             </motion.div>

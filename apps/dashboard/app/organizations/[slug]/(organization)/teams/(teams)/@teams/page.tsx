@@ -16,7 +16,7 @@ import { EventType } from '@workspace/database/schema';
 const EVENT_DISPLAY_INFO = {
   [EventType.BEACH_VOLLEYBALL]: { icon: '🏐', title: 'Beach Volleyball', order: 1 },
   [EventType.BEACH_DODGEBALL]: { icon: '⚡', title: 'Beach Dodgeball', order: 2 },
-  [EventType.BOTE_BEACH_CHALLENGE]: { icon: '🏄', title: 'Bote Beach Challenge', order: 3 },
+  [EventType.BOTE_BEACH_CHALLENGE]: { icon: '🏄', title: 'Surf & Turf Rally', order: 3 },
   [EventType.TUG_OF_WAR]: { icon: '🪢', title: 'Tug of War', order: 4 },
   [EventType.CORN_TOSS]: { icon: '🌽', title: 'Corn Toss', order: 5 },
 };

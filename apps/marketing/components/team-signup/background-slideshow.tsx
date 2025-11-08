@@ -38,8 +38,8 @@ const SLIDESHOW_IMAGES = [
   },
   {
     src: '/assets/team-member-signup/sportsfest-bote-beach-challenge.webp',
-    alt: 'Corporate SportsFest Bote Beach Challenge',
-    title: 'Bote Beach Challenge'
+    alt: 'Corporate SportsFest Surf & Turf Rally',
+    title: 'Surf & Turf Rally'
   },
   {
     src: '/assets/team-member-signup/sportsfest-team-spirit.webp',

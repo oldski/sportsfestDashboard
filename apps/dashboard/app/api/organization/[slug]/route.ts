@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, eq } from '@workspace/database/client';
-import { organizationTable } from '@workspace/database/schema';
+import { organizationTable, eventYearTable } from '@workspace/database/schema';
 
 export async function GET(
   request: NextRequest,
@@ -15,6 +15,16 @@ export async function GET(
         { status: 400 }
       );
     }
+
+    // Get the active event year
+    const activeEventYear = await db
+      .select({
+        id: eventYearTable.id,
+        name: eventYearTable.name,
+      })
+      .from(eventYearTable)
+      .where(eq(eventYearTable.isActive, true))
+      .limit(1);
 
     const organization = await db
       .select({
@@ -34,7 +44,10 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(organization[0]);
+    return NextResponse.json({
+      ...organization[0],
+      activeEventYear: activeEventYear[0] || null,
+    });
   } catch (error) {
     console.error('Error fetching organization:', error);
     return NextResponse.json(

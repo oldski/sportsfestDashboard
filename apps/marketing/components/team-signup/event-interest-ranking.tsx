@@ -43,7 +43,7 @@ const EVENT_DETAILS: Record<EventTypeValue, { name: string; emoji: string }> = {
   [EventType.BEACH_VOLLEYBALL]: { name: 'Beach Volleyball', emoji: '🏐' },
   [EventType.TUG_OF_WAR]: { name: 'Tug of War', emoji: '💪' },
   [EventType.CORN_TOSS]: { name: 'Corn Toss', emoji: '🌽' },
-  [EventType.BOTE_BEACH_CHALLENGE]: { name: 'BOTE Beach Challenge', emoji: '🏄‍♂️' },
+  [EventType.BOTE_BEACH_CHALLENGE]: { name: 'Surf & Turf Rally', emoji: '🏄‍♂️' },
   [EventType.BEACH_DODGEBALL]: { name: 'Beach Dodgeball', emoji: '🔵' }
 };
 

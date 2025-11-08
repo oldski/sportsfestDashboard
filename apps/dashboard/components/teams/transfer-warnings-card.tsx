@@ -28,8 +28,8 @@ interface TransferWarningsCardProps {
 
 const EVENT_TITLES = {
   beach_volleyball: 'Beach Volleyball',
-  beach_dodgeball: 'Beach Dodgeball', 
-  bote_beach_challenge: 'Bote Beach Challenge',
+  beach_dodgeball: 'Beach Dodgeball',
+  bote_beach_challenge: 'Surf & Turf Rally',
   tug_of_war: 'Tug of War',
   corn_toss: 'Corn Toss',
 } as const;

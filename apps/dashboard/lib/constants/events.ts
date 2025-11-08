@@ -10,7 +10,7 @@ export const EVENT_DISPLAY_INFO = {
     description: 'Three females and three males play five-minute games. Win by eliminating the other team or by player advantage.',
   },
   bote_beach_challenge: {
-    title: 'Bote Beach Challenge',
+    title: 'Surf & Turf Rally',
     icon: '🏄',
     description: 'Three females and four males race for best time in 8 team heats. Heat winner moves on to afternoon championships.',
   },

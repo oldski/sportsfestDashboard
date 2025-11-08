@@ -68,13 +68,12 @@ export function RecruitmentDocumentsSimple({ documents, organizationSlug, error 
     { id: 1, title: 'Accessing Recruitment Tools', duration: '1:15' },
     { id: 2, title: 'Sharing Your Signup Link & QR Code', duration: '1:45' },
     { id: 3, title: 'Customizing Your Organization Logo', duration: '0:52' },
-    { id: 4, title: 'Purchasing Company Teams', duration: '2:15' },
-    { id: 5, title: 'Building Team Rosters', duration: '2:30' },
-    { id: 6, title: 'Building Event Rosters', duration: '2:20' },
-    { id: 7, title: 'The Player Signup Experience', duration: '1:50' },
-    { id: 8, title: 'Viewing Your Recruited Players', duration: '1:30' },
-    { id: 9, title: 'Viewing Recruitment Documents', duration: '0:45' },
-    { id: 10, title: 'Best Practices & Tips', duration: '2:10' },
+    { id: 4, title: 'The Player Signup Experience', duration: '1:50' },
+    { id: 5, title: 'Purchasing Company Teams & Tents', duration: '2:15' },
+    { id: 6, title: 'Viewing Your Recruited Players', duration: '1:30' },
+    { id: 7, title: 'Building Team Rosters', duration: '2:30' },
+    { id: 8, title: 'Building Event Rosters', duration: '2:20' },
+    { id: 9, title: 'Best Practices & Tips', duration: '2:10' },
   ];
 
   return (
@@ -145,7 +144,7 @@ export function RecruitmentDocumentsSimple({ documents, organizationSlug, error 
                 </div>
 
                 {/* Video Grid - 2 columns on medium+, 3 columns on xl+ */}
-                <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
                   {trainingVideos.map((video) => (
                     <HoverCard key={video.id}>
                       <HoverCardTrigger asChild>
