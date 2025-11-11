@@ -5,7 +5,8 @@ import {
   CalendarIcon,
   MapPinIcon,
   ClockIcon,
-  ChevronDown
+  ChevronDown,
+  ExternalLinkIcon
 } from 'lucide-react';
 import { Badge } from '@workspace/ui/components/badge';
 import { Separator } from '@workspace/ui/components/separator';
@@ -16,6 +17,7 @@ import {
 } from '@workspace/ui/components/collapsible';
 import { cn } from '@workspace/ui/lib/utils';
 import { formatDateLong } from '~/lib/formatters';
+import Link from "next/link";
 
 export type EventInfoBarProps = {
   currentEventYear: {
@@ -25,6 +27,8 @@ export type EventInfoBarProps = {
     registrationClose: Date;
     registrationOpen: boolean;
     locationName: string;
+    latitude: number | null;
+    longitude: number | null;
   };
 };
 
@@ -53,10 +57,15 @@ export function EventInfoBar({ currentEventYear }: EventInfoBarProps): React.JSX
               {currentEventYear.registrationOpen ? 'Open' : 'Closed'}
             </Badge>
           </div>
-          <div className="flex items-center gap-2">
-            <MapPinIcon className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{currentEventYear.locationName}</span>
-          </div>
+          <Link
+            href={`https://www.google.com/maps/dir/?api=1&destination=${currentEventYear.latitude},${currentEventYear.longitude}`}
+            target="_blank"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+          >
+            <MapPinIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+            <span className="group-hover:underline">{currentEventYear.locationName}</span>
+            <ExternalLinkIcon className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </Link>
         </div>
       </div>
 
@@ -91,10 +100,15 @@ export function EventInfoBar({ currentEventYear }: EventInfoBarProps): React.JSX
                   {currentEventYear.registrationOpen ? 'Open' : 'Closed'}
                 </Badge>
               </div>
-              <div className="flex items-center gap-2">
-                <MapPinIcon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">{currentEventYear.locationName}</span>
-              </div>
+              <Link
+                href={`https://www.google.com/maps/dir/?api=1&destination=${currentEventYear.latitude},${currentEventYear.longitude}`}
+                target="_blank"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+              >
+                <MapPinIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                <span className="group-hover:underline">{currentEventYear.locationName}</span>
+                <ExternalLinkIcon className="h-3 w-3 transition-opacity" />
+              </Link>
             </div>
           </CollapsibleContent>
         </Collapsible>

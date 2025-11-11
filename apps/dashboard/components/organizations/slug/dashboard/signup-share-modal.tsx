@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CheckIcon, CopyIcon, LinkIcon, QrCodeIcon, ShareIcon, XIcon } from 'lucide-react';
+import { CheckIcon, CopyIcon, LinkIcon, MailIcon, QrCodeIcon, ShareIcon, XIcon } from 'lucide-react';
 import { useAction } from 'next-safe-action/hooks';
 
 import { Button } from '@workspace/ui/components/button';
@@ -16,9 +16,33 @@ interface SignupShareModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   organizationSlug: string;
+  organizationName: string;
+  eventYearName: string;
+  eventDate: Date;
+  locationName: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
-export function SignupShareModal({ open, onOpenChange, organizationSlug }: SignupShareModalProps) {
+export function SignupShareModal({
+  open,
+  onOpenChange,
+  organizationSlug,
+  organizationName,
+  eventYearName,
+  eventDate,
+  locationName,
+  address,
+  city,
+  state,
+  zipCode,
+  latitude,
+  longitude
+}: SignupShareModalProps) {
   const [copiedUrl, setCopiedUrl] = React.useState(false);
   const [copiedImage, setCopiedImage] = React.useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -97,6 +121,49 @@ export function SignupShareModal({ open, onOpenChange, organizationSlug }: Signu
     toast.success('QR code downloaded!');
   };
 
+  const shareViaEmail = () => {
+    if (!result?.data?.signupUrl) return;
+
+    // Format the event date
+    const eventDateFormatted = new Date(eventDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    // Build full address
+    const fullAddress = `${address}, ${city}, ${state} ${zipCode}`;
+
+    // Build Google Maps URL
+    const mapsUrl = latitude && longitude
+      ? `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`
+      : '';
+
+    // Build email subject and body
+    const subject = `Join ${organizationName}'s ${eventYearName} Team!`;
+
+    const body = `We're building our team for ${eventYearName} and would love to have you join us!
+
+Event Details:
+Date: ${eventDateFormatted}
+Location: ${locationName}
+Address: ${fullAddress}${mapsUrl ? `\nGet Directions: ${mapsUrl}` : ''}
+
+Ready to sign up? Click here:
+${result.data.signupUrl}
+
+See you on the beach!`;
+
+    // Create mailto URL
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    // Open email client
+    window.location.href = mailtoUrl;
+
+    toast.success('Opening email client...');
+  };
+
   const Content = () => (
     <div className="space-y-6">
       {/* QR Code Display */}
@@ -169,17 +236,27 @@ export function SignupShareModal({ open, onOpenChange, organizationSlug }: Signu
               </>
             )}
           </Button>
-        </div>
 
-        <Button
-          variant="secondary"
-          onClick={downloadQrCode}
-          disabled={!result?.data?.qrDataUri}
-          className="w-full justify-start"
-        >
-          <QrCodeIcon className="h-4 w-4 mr-2" />
-          Download QR Code
-        </Button>
+          <Button
+            variant="outline"
+            onClick={shareViaEmail}
+            disabled={!result?.data?.signupUrl}
+            className="justify-start"
+          >
+            <MailIcon className="h-4 w-4 mr-2" />
+            Share via Email
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={downloadQrCode}
+            disabled={!result?.data?.qrDataUri}
+            className="justify-start"
+          >
+            <QrCodeIcon className="h-4 w-4 mr-2" />
+            Download QR Code
+          </Button>
+        </div>
       </div>
 
       {/* URL Display */}

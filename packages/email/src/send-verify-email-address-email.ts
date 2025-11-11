@@ -15,7 +15,7 @@ export async function sendVerifyEmailAddressEmail(
 
   await EmailProvider.sendEmail({
     recipient: input.recipient,
-    subject: 'Verify email address',
+    subject: 'SportsFest asks to verify your email address',
     html,
     text
   });

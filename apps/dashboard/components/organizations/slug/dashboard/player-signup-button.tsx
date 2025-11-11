@@ -9,9 +9,32 @@ import { SignupShareModal } from './signup-share-modal';
 interface PlayerSignUpButtonProps {
   organizationSlug: string;
   className?: string;
+  organizationName: string;
+  eventYearName: string;
+  eventDate: Date;
+  locationName: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
-export function PlayerSignUpButton({ organizationSlug, className }: PlayerSignUpButtonProps) {
+export function PlayerSignUpButton({
+  organizationSlug,
+  organizationName,
+  eventYearName,
+  eventDate,
+  locationName,
+  address,
+  city,
+  state,
+  zipCode,
+  latitude,
+  longitude,
+  className
+}: PlayerSignUpButtonProps) {
   const [showShareModal, setShowShareModal] = React.useState(false);
 
   return (
@@ -30,6 +53,16 @@ export function PlayerSignUpButton({ organizationSlug, className }: PlayerSignUp
         open={showShareModal}
         onOpenChange={setShowShareModal}
         organizationSlug={organizationSlug}
+        organizationName={organizationName}
+        eventYearName={eventYearName}
+        eventDate={eventDate}
+        locationName={locationName}
+        address={address}
+        city={city}
+        state={state}
+        zipCode={zipCode}
+        latitude={latitude}
+        longitude={longitude}
       />
     </>
   );

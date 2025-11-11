@@ -53,7 +53,19 @@ export default async function HomeLayout({
             <OrganizationPageTitle
               title="Dashboard"
             />
-            <PlayerSignUpButton organizationSlug={slug} />
+            <PlayerSignUpButton
+              organizationSlug={slug}
+              organizationName={stats.organizationName}
+              eventYearName={stats.currentEventYear.name}
+              eventDate={stats.currentEventYear.eventEndDate}
+              locationName={stats.currentEventYear.locationName}
+              address={stats.currentEventYear.address}
+              city={stats.currentEventYear.city}
+              state={stats.currentEventYear.state}
+              zipCode={stats.currentEventYear.zipCode}
+              latitude={stats.currentEventYear.latitude}
+              longitude={stats.currentEventYear.longitude}
+            />
           </PagePrimaryBar>
           {currentEventYear.id && (
             <PageSecondaryBar className="bg-muted/30">

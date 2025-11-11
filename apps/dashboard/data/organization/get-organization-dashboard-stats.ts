@@ -52,6 +52,8 @@ export interface OrganizationDashboardStats {
     city: string;
     state: string;
     zipCode: string;
+    latitude: number | null;
+    longitude: number | null;
   };
 }
 
@@ -72,7 +74,9 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
       address: eventYearTable.address,
       city: eventYearTable.city,
       state: eventYearTable.state,
-      zipCode: eventYearTable.zipCode
+      zipCode: eventYearTable.zipCode,
+      latitude: eventYearTable.latitude,
+      longitude: eventYearTable.longitude,
     })
     .from(eventYearTable)
     .where(eq(eventYearTable.isActive, true))
@@ -84,7 +88,7 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
 
   // Get team statistics using paid orders as source of truth
   const teamCountResult = await getOrganizationTeamCount();
-  
+
   // Also get total teams from all years (using companyTeam table for historical data)
   const totalTeamsAllYears = await db
     .select({
@@ -216,7 +220,9 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
       address: eventYear.address,
       city: eventYear.city,
       state: eventYear.state,
-      zipCode: eventYear.zipCode
+      zipCode: eventYear.zipCode,
+      latitude: eventYear.latitude,
+      longitude: eventYear.longitude,
     } : {
       id: '',
       year: 0,
@@ -229,7 +235,9 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
       address: '',
       city: '',
       state: '',
-      zipCode: ''
+      zipCode: '',
+      latitude: null,
+      longitude: null,
     }
   };
 }

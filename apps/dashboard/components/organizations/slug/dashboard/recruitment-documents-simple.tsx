@@ -15,10 +15,34 @@ import { PlayerSignUpButton } from './player-signup-button';
 interface RecruitmentDocumentsSimpleProps {
   documents: WordPressDocument[];
   organizationSlug: string;
+  organizationName: string;
+  eventYearName: string;
+  eventDate: Date;
+  locationName: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  latitude: number | null;
+  longitude: number | null;
   error?: string;
 }
 
-export function RecruitmentDocumentsSimple({ documents, organizationSlug, error }: RecruitmentDocumentsSimpleProps) {
+export function RecruitmentDocumentsSimple({
+  documents,
+  organizationSlug,
+  organizationName,
+  eventYearName,
+  eventDate,
+  locationName,
+  address,
+  city,
+  state,
+  zipCode,
+  latitude,
+  longitude,
+  error
+}: RecruitmentDocumentsSimpleProps) {
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return 'Unknown size';
 
@@ -89,7 +113,19 @@ export function RecruitmentDocumentsSimple({ documents, organizationSlug, error 
               {documents.length} document{documents.length !== 1 ? 's' : ''} and {trainingVideos.length} training videos available
             </CardDescription>
           </div>
-          <PlayerSignUpButton organizationSlug={organizationSlug} />
+          <PlayerSignUpButton
+            organizationSlug={organizationSlug}
+            organizationName={organizationName}
+            eventYearName={eventYearName}
+            eventDate={eventDate}
+            locationName={locationName}
+            address={address}
+            city={city}
+            state={state}
+            zipCode={zipCode}
+            latitude={latitude}
+            longitude={longitude}
+          />
         </div>
       </CardHeader>
       <CardContent>

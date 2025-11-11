@@ -6,6 +6,7 @@ import {Page, PageActions, PageBody, PageHeader, PagePrimaryBar, PageSecondaryBa
 import {OrganizationPageTitle} from "~/components/organizations/slug/organization-page-title";
 import {TransitionProvider} from "~/hooks/use-transition-context";
 import {PlayerSignUpButton} from "~/components/organizations/slug/dashboard/player-signup-button";
+import { getOrganizationDashboardStats } from '~/data/organization/get-organization-dashboard-stats';
 
 export const metadata: Metadata = {
   title: createTitle('Players')
@@ -16,10 +17,12 @@ interface PlayersLayoutProps {
   params: { slug: string };
 }
 
-export default function PlayersLayout({
+export default async function PlayersLayout({
   playersTable,
   params
-}: PlayersLayoutProps): React.JSX.Element {
+}: PlayersLayoutProps): Promise<React.JSX.Element> {
+  const { slug } = await params;
+  const stats = await getOrganizationDashboardStats();
   return (
     <TransitionProvider>
       <Page>
@@ -30,7 +33,19 @@ export default function PlayersLayout({
               info=" Players who've showed interest in joining the team"
             />
 
-            <PlayerSignUpButton organizationSlug={params.slug} />
+            <PlayerSignUpButton
+              organizationSlug={slug}
+              organizationName={stats.organizationName}
+              eventYearName={stats.currentEventYear.name}
+              eventDate={stats.currentEventYear.eventEndDate}
+              locationName={stats.currentEventYear.locationName}
+              address={stats.currentEventYear.address}
+              city={stats.currentEventYear.city}
+              state={stats.currentEventYear.state}
+              zipCode={stats.currentEventYear.zipCode}
+              latitude={stats.currentEventYear.latitude}
+              longitude={stats.currentEventYear.longitude}
+            />
           </PagePrimaryBar>
         </PageHeader>
         <PageBody disableScroll>
