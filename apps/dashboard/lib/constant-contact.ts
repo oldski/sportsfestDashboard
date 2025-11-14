@@ -182,6 +182,10 @@ class ConstantContactService {
         await this.saveRefreshToken(data.refresh_token);
       }
 
+      if (!this.config.accessToken) {
+        throw new Error('Failed to obtain access token');
+      }
+
       return this.config.accessToken;
     } catch (error) {
       console.error('Error refreshing Constant Contact access token:', error);
