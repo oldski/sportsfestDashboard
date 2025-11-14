@@ -37,6 +37,7 @@ import {
 import { addExampleData } from '~/actions/onboarding/_add-example';
 import { authActionClient } from '~/actions/safe-action';
 import { Caching, OrganizationCacheKey, UserCacheKey } from '~/data/caching';
+import { constantContactService } from '~/lib/constant-contact';
 import { FileUploadAction } from '~/lib/file-upload';
 import { getTimeSlot } from '~/lib/formatters';
 import {
@@ -138,6 +139,42 @@ export const completeOnboarding = authActionClient
           membership.organization.id
         )
       );
+    }
+
+    // Add user to Constant Contact admins/captains list with organization context
+    try {
+      // Fetch user details including referral source
+      const [userData] = await db
+        .select({
+          name: userTable.name,
+          phone: userTable.phone,
+          referralSource: userTable.referralSource
+        })
+        .from(userTable)
+        .where(eq(userTable.id, userId))
+        .limit(1);
+
+      if (userData) {
+        // Parse name into first and last name (best effort)
+        const nameParts = userData.name.trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        // Get organization name if one was created
+        const organizationName = parsedInput.organizationStep?.name;
+
+        await constantContactService.addAdmin({
+          email: userEmail,
+          firstName,
+          lastName,
+          phone: userData.phone || undefined,
+          organizationName,
+          referralSource: userData.referralSource || undefined
+        });
+      }
+    } catch (e) {
+      // Log error but don't fail onboarding if Constant Contact fails
+      console.error('Error adding user to Constant Contact during onboarding:', e);
     }
 
     // Default redirect - use first organization if available

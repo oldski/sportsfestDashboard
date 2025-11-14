@@ -29,7 +29,20 @@ export const signUpSchema = z.object({
     .max(72, 'Maximum 72 characters allowed.')
     .refine((arg) => passwordValidator.validate(arg).success, {
       message: 'Password does not meet requirements.'
+    }),
+  referralSource: z
+    .string({
+      required_error: 'Please tell us where you heard about SportsFest.',
+      invalid_type_error: 'Referral source must be a string.'
     })
+    .trim()
+    .min(1, 'Please tell us where you heard about SportsFest.')
+    .max(255, 'Maximum 255 characters allowed.'),
+  referralSourceDetails: z
+    .string()
+    .trim()
+    .max(500, 'Maximum 500 characters allowed.')
+    .optional()
 });
 
 export type SignUpSchema = z.infer<typeof signUpSchema>;

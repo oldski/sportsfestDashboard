@@ -784,6 +784,8 @@ export const userTable = pgTable(
     image: varchar('image', { length: 2048 }),
     name: varchar('name', { length: 64 }).notNull(),
     phone: varchar('phone', { length: 32 }),
+    referralSource: varchar('referralSource', { length: 255 }),
+    referralSourceDetails: varchar('referralSourceDetails', { length: 500 }),
     isSportsFestAdmin: boolean('isSportsFestAdmin').default(false).notNull(),
     createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
       .defaultNow()
@@ -2370,6 +2372,22 @@ export const couponRelations = relations(couponTable, ({ one }) => ({
     references: [eventYearTable.id]
   })
 }));
+
+// ================================
+// Settings Table
+// ================================
+
+/**
+ * Application settings table for storing configuration values
+ * Used for storing sensitive values like API tokens that need to be updated dynamically
+ */
+export const settingsTable = pgTable('settings', {
+  key: varchar('key', { length: 255 }).primaryKey(),
+  value: text('value'),
+  description: text('description'),
+  updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull()
+});
 
 // Table aliases for imports
 export const cartSession = cartSessionTable;

@@ -702,6 +702,13 @@ function TeamMemberSignupForm() {
                     )}
                   </div>
                 </div>
+
+                <Alert variant="default" className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950 mt-4">
+                  <InfoIcon className="h-[18px] w-[18px] shrink-0 text-blue-600 dark:text-blue-400" />
+                  <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
+                    By completing this registration, you acknowledge that you will receive marketing emails from SportsFest.
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
 

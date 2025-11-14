@@ -2,9 +2,10 @@
 
 import * as React from 'react';
 import NiceModal from '@ebay/nice-modal-react';
-import { TrashIcon } from 'lucide-react';
+import { InfoIcon, TrashIcon } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 
+import { Alert, AlertDescription } from '@workspace/ui/components/alert';
 import { Avatar, AvatarFallback } from '@workspace/ui/components/avatar';
 import { Button } from '@workspace/ui/components/button';
 import {
@@ -173,6 +174,12 @@ export function OnboardingProfileStep({
           />
         </div>
       </div>
+      <Alert variant="default" className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
+        <InfoIcon className="size-[18px] shrink-0 text-blue-600 dark:text-blue-400" />
+        <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
+          By creating an account, you acknowledge that you will receive marketing emails from SportsFest.
+        </AlertDescription>
+      </Alert>
       <NextButton
         loading={loading}
         disabled={!canNext}

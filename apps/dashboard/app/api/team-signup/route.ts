@@ -14,6 +14,7 @@ import {
 } from '@workspace/database/schema';
 import { z } from 'zod';
 import { sendTeamSignupNotificationEmail } from '@workspace/email/send-team-signup-notification-email';
+import { constantContactService } from '~/lib/constant-contact';
 
 // Validation schema
 const teamSignupSchema = z.object({
@@ -170,6 +171,22 @@ export async function POST(request: NextRequest) {
     } catch (emailError) {
       // Log email error but don't fail the signup
       console.error('Failed to send notification emails:', emailError);
+    }
+
+    // Add player to Constant Contact players/interested athletes list
+    try {
+      console.log('Adding player to Constant Contact players list');
+      await constantContactService.addPlayer({
+        email: validatedData.email,
+        firstName: validatedData.firstName,
+        lastName: validatedData.lastName,
+        phone: validatedData.phone,
+        organizationName: organization[0]?.name
+      });
+      console.log('Player successfully added to Constant Contact');
+    } catch (constantContactError) {
+      // Log error but don't fail the signup if Constant Contact fails
+      console.error('Failed to add player to Constant Contact:', constantContactError);
     }
 
     console.log('Preparing success response');

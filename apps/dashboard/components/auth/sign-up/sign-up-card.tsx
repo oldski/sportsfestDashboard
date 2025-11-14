@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { AlertCircleIcon, LockIcon, MailIcon, UserIcon } from 'lucide-react';
+import { AlertCircleIcon, InfoIcon, LockIcon, MailIcon, UserIcon } from 'lucide-react';
 import { type SubmitHandler } from 'react-hook-form';
 
 import { routes } from '@workspace/routes';
@@ -29,8 +29,16 @@ import {
   FormMessage,
   FormProvider
 } from '@workspace/ui/components/form';
+import { Input } from '@workspace/ui/components/input';
 import { InputPassword } from '@workspace/ui/components/input-password';
 import { InputWithAdornments } from '@workspace/ui/components/input-with-adornments';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@workspace/ui/components/select';
 import { cn } from '@workspace/ui/lib/utils';
 
 import { continueWithGoogle } from '~/actions/auth/continue-with-google';
@@ -52,10 +60,16 @@ export function SignUpCard({
     defaultValues: {
       name: '',
       email: '',
-      password: ''
+      password: '',
+      referralSource: '',
+      referralSourceDetails: ''
     }
   });
   const password = methods.watch('password');
+  const referralSource = methods.watch('referralSource');
+
+  // Determine if we need to show the details field
+  const showReferralDetails = referralSource === 'Referral from another company' || referralSource === 'Other';
   const onSubmit: SubmitHandler<SignUpSchema> = async (values) => {
     const result = await signUp(values);
     if (result?.serverError || result?.validationErrors) {
@@ -164,6 +178,83 @@ export function SignUpCard({
                 )}
               />
             </div>
+            <FormField
+              control={methods.control}
+              name="referralSource"
+              render={({ field }) => (
+                <FormItem className="flex w-full flex-col">
+                  <FormLabel>Where did you hear about SportsFest?</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      // Clear details when changing selection
+                      if (value !== 'Referral from another company' && value !== 'Other') {
+                        methods.setValue('referralSourceDetails', '');
+                      }
+                    }}
+                    value={field.value}
+                    disabled={methods.formState.isSubmitting}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an option" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="I'm a Previous Participating Company">
+                        I&apos;m a Previous Participating Company
+                      </SelectItem>
+                      <SelectItem value="Referral from another company">
+                        Referral from another company
+                      </SelectItem>
+                      <SelectItem value="Tampa Bay Business Journal">
+                        Tampa Bay Business Journal
+                      </SelectItem>
+                      <SelectItem value="MOR TV">MOR TV</SelectItem>
+                      <SelectItem value="Radio">Radio</SelectItem>
+                      <SelectItem value="Google Search">Google Search</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {showReferralDetails && (
+              <FormField
+                control={methods.control}
+                name="referralSourceDetails"
+                render={({ field }) => (
+                  <FormItem className="flex w-full flex-col">
+                    <FormLabel>
+                      {referralSource === 'Referral from another company'
+                        ? 'What company?'
+                        : 'How did you hear about us?'}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        maxLength={500}
+                        placeholder={
+                          referralSource === 'Referral from another company'
+                            ? 'Enter company name'
+                            : 'Please specify'
+                        }
+                        disabled={methods.formState.isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            <Alert variant="default" className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
+              <InfoIcon className="size-[18px] shrink-0 text-blue-600 dark:text-blue-400" />
+              <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
+                By creating an account, you acknowledge that you will receive marketing emails from SportsFest.
+              </AlertDescription>
+            </Alert>
             {errorMessage && (
               <Alert variant="destructive">
                 <AlertCircleIcon className="size-[18px] shrink-0" />

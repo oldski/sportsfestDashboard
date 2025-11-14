@@ -11,6 +11,7 @@ import { sendVerifyEmailAddressEmail } from '@workspace/email/send-verify-email-
 import { routes } from '@workspace/routes';
 
 import { actionClient } from '~/actions/safe-action';
+import { constantContactService } from '~/lib/constant-contact';
 import { signUpSchema } from '~/schemas/auth/sign-up-schema';
 
 export const signUp = actionClient
@@ -39,8 +40,28 @@ export const signUp = actionClient
       email: normalizedEmail,
       password: hashedPassword,
       locale: 'en-US',
-      completedOnboarding: false
+      completedOnboarding: false,
+      referralSource: parsedInput.referralSource,
+      referralSourceDetails: parsedInput.referralSourceDetails
     });
+
+    // Add user to Constant Contact admins/captains list
+    try {
+      // Parse name into first and last name (best effort)
+      const nameParts = parsedInput.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      await constantContactService.addAdmin({
+        email: normalizedEmail,
+        firstName,
+        lastName,
+        referralSource: parsedInput.referralSource
+      });
+    } catch (e) {
+      // Log error but don't fail signup if Constant Contact fails
+      console.error('Error adding user to Constant Contact:', e);
+    }
 
     try {
       const { otp, hashedOtp } = await createOtpTokens(normalizedEmail);
