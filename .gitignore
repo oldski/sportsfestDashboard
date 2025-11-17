@@ -41,3 +41,12 @@ yarn-error.log*
 
 # Ide
 .idea/
+
+# Database maintenance scripts (environment-specific)
+scripts/*.sql
+scripts/init-*.js
+
+# Project documentation and notes (not for version control)
+CONSTANT_CONTACT_SETUP.md
+team-management-video-script.md
+team-recruitment-video-script.md
