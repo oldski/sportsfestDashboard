@@ -13,7 +13,7 @@ export function initializeSentryServerClient(
 ) {
   return init({
     dsn: keys().NEXT_PUBLIC_MONITORING_SENTRY_DSN,
-    tracesSampleRate: props?.tracesSampleRate ?? 1.0,
+    tracesSampleRate: props?.tracesSampleRate ?? 0.1,
     ...props
   });
 }

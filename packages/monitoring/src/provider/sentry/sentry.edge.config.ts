@@ -16,7 +16,7 @@ export function initializeSentryEdgeClient(
     integrations: [
       // https://docs.sentry.io/platforms/javascript/configuration/integrations/
     ],
-    tracesSampleRate: props?.tracesSampleRate ?? 1.0,
+    tracesSampleRate: props?.tracesSampleRate ?? 0.1,
     ...props
   });
 }

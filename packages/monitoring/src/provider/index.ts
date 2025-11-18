@@ -1,2 +1,2 @@
-export { default as MonitoringProvider } from './console';
-// export { default as MonitoringProvider } from './sentry';
+// export { default as MonitoringProvider } from './console';
+export { default as MonitoringProvider } from './sentry';

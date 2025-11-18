@@ -53,6 +53,7 @@ export default async function HomeLayout({
             <OrganizationPageTitle
               title="Dashboard"
             />
+
             <PlayerSignUpButton
               organizationSlug={slug}
               organizationName={stats.organizationName}

@@ -16,9 +16,10 @@ export function initializeSentryBrowserClient(
     integrations: [
       // https://docs.sentry.io/platforms/javascript/configuration/integrations/
     ],
-    tracesSampleRate: props?.tracesSampleRate ?? 1.0,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
+    tracesSampleRate: props?.tracesSampleRate ?? 0.1,
+    // Session replay disabled - can be expensive
+    // replaysSessionSampleRate: 0.1,
+    // replaysOnErrorSampleRate: 1.0,
     ...props
   });
 }
