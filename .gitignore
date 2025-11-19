@@ -46,6 +46,14 @@ yarn-error.log*
 scripts/*.sql
 scripts/init-*.js
 
+# Supabase CLI
+supabase/
+
+# Database exports and backups (temporary data)
+scripts/supabase-*.json
+scripts/migrations/*.sql
+*.backup
+
 # Project documentation and notes (not for version control)
 CONSTANT_CONTACT_SETUP.md
 team-management-video-script.md

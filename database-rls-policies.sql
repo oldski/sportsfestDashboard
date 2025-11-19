@@ -492,3 +492,52 @@ CREATE POLICY "Super admins can manage all invoices" ON "orderInvoice"
   FOR ALL USING (
     EXISTS (SELECT 1 FROM "user" WHERE "id" = auth.uid() AND "isSportsFestAdmin" = true)
   );
+
+-- ========================================================================
+-- SETTINGS TABLE POLICIES
+-- ========================================================================
+-- The settings table stores sensitive application configuration values
+-- (API tokens, secrets, etc.) and should only be accessible by super admins.
+-- Service role automatically bypasses RLS for backend operations.
+
+ALTER TABLE "settings" ENABLE ROW LEVEL SECURITY;
+
+-- Only super admins can manage application settings
+CREATE POLICY "Only super admins can manage settings" ON "settings"
+FOR ALL USING (
+  EXISTS (SELECT 1 FROM "user" WHERE "id" = auth.uid() AND "isSportsFestAdmin" = true)
+);
+
+-- ========================================================================
+-- COUPON TABLE POLICIES
+-- ========================================================================
+-- Coupons are admin-managed but viewable by users during checkout
+
+ALTER TABLE "coupon" ENABLE ROW LEVEL SECURITY;
+
+-- Super admins can manage all coupons
+CREATE POLICY "Super admins can manage all coupons" ON "coupon"
+FOR ALL USING (
+  EXISTS (SELECT 1 FROM "user" WHERE "id" = auth.uid() AND "isSportsFestAdmin" = true)
+);
+
+-- Organization members can view active coupons that apply to them
+CREATE POLICY "Users can view applicable active coupons" ON "coupon"
+FOR SELECT USING (
+  "isActive" = true AND
+  (
+    -- Coupon is available to anyone
+    "organizationRestriction" = 'anyone' OR
+    -- Or user is in an organization that this coupon applies to
+    (
+      "organizationRestriction" = 'specific' AND
+      EXISTS (
+        SELECT 1 FROM "membership" m
+        WHERE m."userId" = auth.uid()
+        AND m."organizationId"::text IN (
+          SELECT jsonb_array_elements_text("restrictedOrganizations")
+        )
+      )
+    )
+  )
+);
