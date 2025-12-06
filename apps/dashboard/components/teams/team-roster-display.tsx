@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Users, Crown, Search, AlertTriangle } from 'lucide-react';
 import { toast } from '@workspace/ui/components/sonner';
+import { useRouter } from 'next/navigation';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { Button } from '@workspace/ui/components/button';
@@ -35,6 +36,7 @@ interface TeamRosterDisplayProps {
 }
 
 export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isRosterDialogOpen, setIsRosterDialogOpen] = React.useState(false);
   const [transferConfirmation, setTransferConfirmation] = React.useState<{
@@ -46,6 +48,14 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
     playerId: null,
     playerName: ''
   });
+
+  // Optimistic state for player data
+  const [optimisticPlayersData, setOptimisticPlayersData] = React.useState(playersData);
+
+  // Update optimistic data when server data changes
+  React.useEffect(() => {
+    setOptimisticPlayersData(playersData);
+  }, [playersData]);
 
   // Sort members to show captains first
   const sortedMembers = React.useMemo(() => {
@@ -69,22 +79,53 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
     );
   }, [sortedMembers, searchQuery]);
 
-  const handleEditPlayer = async (playerId: string, isCaptain: boolean) => {
-    // Toggle captain status when edit is clicked
-    const result = await togglePlayerCaptain(playerId, team.id, !isCaptain);
+  const handleToggleCaptain = async (playerId: string, newIsCaptain: boolean) => {
+    // Optimistic update: toggle captain status immediately
+    setOptimisticPlayersData(prev => ({
+      ...prev,
+      currentTeamMembers: prev.currentTeamMembers.map(p =>
+        p.id === playerId && p.currentTeam
+          ? {
+              ...p,
+              currentTeam: {
+                ...p.currentTeam,
+                isCaptain: newIsCaptain
+              }
+            }
+          : p
+      )
+    }));
+
+    const result = await togglePlayerCaptain(playerId, team.id, newIsCaptain);
     if (result.success) {
-      toast.success(`Captain status ${!isCaptain ? 'added' : 'removed'} successfully`);
+      toast.success(`Captain status ${newIsCaptain ? 'added' : 'removed'} successfully`);
+      router.refresh();
     } else {
       toast.error(result.error || 'Failed to update captain status');
+      // Revert optimistic update on failure
+      setOptimisticPlayersData(playersData);
     }
   };
 
   const handleRemovePlayer = async (playerId: string) => {
+    // Optimistic update: remove player from current team members
+    setOptimisticPlayersData(prev => ({
+      ...prev,
+      currentTeamMembers: prev.currentTeamMembers.filter(p => p.id !== playerId),
+      availablePlayers: [...prev.availablePlayers, ...prev.currentTeamMembers.filter(p => p.id === playerId).map(p => ({
+        ...p,
+        currentTeam: null
+      }))]
+    }));
+
     const result = await removePlayerFromTeam(playerId, team.id);
     if (result.success) {
       toast.success('Player removed from team successfully');
+      router.refresh();
     } else {
       toast.error(result.error || 'Failed to remove player');
+      // Revert optimistic update on failure
+      setOptimisticPlayersData(playersData);
     }
   };
 
@@ -92,6 +133,7 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
     const result = await addPlayerToTeam(playerId, team.id);
     if (result.success) {
       toast.success('Player added to team successfully');
+      router.refresh();
     } else {
       toast.error(result.error || 'Failed to add player');
     }
@@ -99,7 +141,7 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
 
   const handleTransferPlayer = async (playerId: string) => {
     // Find player details for confirmation dialog
-    const player = playersData.playersOnOtherTeams.find(p => p.id === playerId);
+    const player = optimisticPlayersData.playersOnOtherTeams.find(p => p.id === playerId);
     if (!player) {
       toast.error('Player not found');
       return;
@@ -130,6 +172,7 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
         ? ` (${result.eventRostersRemoved} event roster${result.eventRostersRemoved > 1 ? 's' : ''} automatically updated)`
         : '';
       toast.success(`Player transferred to team successfully${eventRostersMessage}`);
+      router.refresh();
     } else {
       toast.error(result.error || 'Failed to transfer player');
     }
@@ -207,8 +250,9 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleEditPlayer(member.id, member.isCaptain)}
+                          onClick={() => handleToggleCaptain(member.id, !member.isCaptain)}
                         >
+                          <Crown className="h-4 w-4 mr-1" />
                           {member.isCaptain ? 'Remove Captain' : 'Make Captain'}
                         </Button>
                       </div>
@@ -241,11 +285,11 @@ export function TeamRosterDisplay({ team, playersData }: TeamRosterDisplayProps)
         onOpenChange={setIsRosterDialogOpen}
         teamName={team.name || `Team ${team.teamNumber}`}
         teamNumber={team.teamNumber}
-        playersData={playersData}
+        playersData={optimisticPlayersData}
         onAddPlayer={handleAddPlayer}
         onRemovePlayer={handleRemovePlayer}
         onTransferPlayer={handleTransferPlayer}
-        onToggleCaptain={handleEditPlayer}
+        onToggleCaptain={handleToggleCaptain}
       />
 
       {/* Transfer Confirmation Dialog */}

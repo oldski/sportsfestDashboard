@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 import { AspectRatio } from '@workspace/ui/components/aspect-ratio';
-// import { HoverCard, HoverCardContent, HoverCardTrigger } from '@workspace/ui/components/hover-card'; // Uncomment when enabling clickable videos
+// import { HoverCard, HoverCardContent, HoverCardTrigger } from '@workspace/ui/components/hover-card';
 
 import type { WordPressDocument } from '~/data/wordpress/get-recruitment-documents';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@workspace/ui/components/card";
@@ -185,13 +185,11 @@ export function RecruitmentDocumentsSimple({
                   </span>
                 </div>
 
-                {/* Video Grid - Grayed out version */}
                 <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
                   {trainingVideos.map((video) => (
                     <div key={video.id} className="rounded-md border border-muted overflow-hidden opacity-50 cursor-not-allowed">
                       <AspectRatio ratio={16 / 9}>
                         <div className="relative h-full w-full">
-                          {/* Background Thumbnail - Grayscale */}
                           <Image
                             src="/assets/graphic-training-video-thumbnail.webp"
                             alt={video.title}
@@ -200,20 +198,15 @@ export function RecruitmentDocumentsSimple({
                             sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
                           />
 
-                          {/* Overlay with gradient for better text readability */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-                          {/* Content Overlay */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
-                            {/* Duration Badge */}
                             <div className="absolute top-2 right-2 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
                               {video.duration}
                             </div>
 
-                            {/* Play Icon - Grayed */}
                             <PlayIcon className="h-8 w-8 text-white drop-shadow-lg mb-2 opacity-50" />
 
-                            {/* Title */}
                             <p className="text-[11px] text-center text-white font-medium leading-tight line-clamp-2 drop-shadow-md">
                               {video.title}
                             </p>
@@ -230,8 +223,7 @@ export function RecruitmentDocumentsSimple({
                   </p>
                 </div>
 
-                {/* ========== ORIGINAL CLICKABLE VERSION (COMMENTED OUT) ========== */}
-                {/*
+                {/* ========== CLICKABLE VERSION (ACTIVE WHEN VIDEOS ARE READY) ==========
                 <div className="flex items-center space-x-2 mb-4">
                   <VideoIcon className="h-5 w-5 text-green-600" />
                   <h4 className="font-medium">Training Videos</h4>

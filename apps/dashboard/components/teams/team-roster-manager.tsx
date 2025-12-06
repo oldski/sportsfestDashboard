@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { UserPlus, AlertTriangle } from 'lucide-react';
 import { toast } from '@workspace/ui/components/sonner';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@workspace/ui/components/button';
 import {
@@ -39,6 +40,7 @@ export function TeamRosterManager({
   availablePlayerCount,
   playersData,
 }: TeamRosterManagerProps) {
+  const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [transferConfirmation, setTransferConfirmation] = React.useState<{
     isOpen: boolean;
@@ -50,27 +52,49 @@ export function TeamRosterManager({
     playerName: ''
   });
 
+  // Optimistic state for player data
+  const [optimisticPlayersData, setOptimisticPlayersData] = React.useState(playersData);
+
+  // Update optimistic data when server data changes
+  React.useEffect(() => {
+    setOptimisticPlayersData(playersData);
+  }, [playersData]);
+
   const handleAddPlayer = async (playerId: string) => {
     const result = await addPlayerToTeam(playerId, teamId);
     if (result.success) {
       toast.success('Player added to team successfully');
+      router.refresh(); // Refresh to get latest data
     } else {
       toast.error(result.error || 'Failed to add player');
     }
   };
 
   const handleRemovePlayer = async (playerId: string) => {
+    // Optimistic update: remove player from current team members
+    setOptimisticPlayersData(prev => ({
+      ...prev,
+      currentTeamMembers: prev.currentTeamMembers.filter(p => p.id !== playerId),
+      availablePlayers: [...prev.availablePlayers, ...prev.currentTeamMembers.filter(p => p.id === playerId).map(p => ({
+        ...p,
+        currentTeam: null
+      }))]
+    }));
+
     const result = await removePlayerFromTeam(playerId, teamId);
     if (result.success) {
       toast.success('Player removed from team successfully');
+      router.refresh(); // Refresh to get latest data
     } else {
       toast.error(result.error || 'Failed to remove player');
+      // Revert optimistic update on failure
+      setOptimisticPlayersData(playersData);
     }
   };
 
   const handleTransferPlayer = async (playerId: string) => {
     // Find player details for confirmation dialog
-    const player = playersData.playersOnOtherTeams.find(p => p.id === playerId);
+    const player = optimisticPlayersData.playersOnOtherTeams.find(p => p.id === playerId);
     if (!player) {
       toast.error('Player not found');
       return;
@@ -101,17 +125,37 @@ export function TeamRosterManager({
         ? ` (${result.eventRostersRemoved} event roster${result.eventRostersRemoved > 1 ? 's' : ''} automatically updated)`
         : '';
       toast.success(`Player transferred to team successfully${eventRostersMessage}`);
+      router.refresh(); // Refresh to get latest data
     } else {
       toast.error(result.error || 'Failed to transfer player');
     }
   };
 
   const handleToggleCaptain = async (playerId: string, isCaptain: boolean) => {
+    // Optimistic update: toggle captain status immediately
+    setOptimisticPlayersData(prev => ({
+      ...prev,
+      currentTeamMembers: prev.currentTeamMembers.map(p =>
+        p.id === playerId && p.currentTeam
+          ? {
+              ...p,
+              currentTeam: {
+                ...p.currentTeam,
+                isCaptain: isCaptain
+              }
+            }
+          : p
+      )
+    }));
+
     const result = await togglePlayerCaptain(playerId, teamId, isCaptain);
     if (result.success) {
       toast.success(`Captain status ${isCaptain ? 'added' : 'removed'} successfully`);
+      router.refresh(); // Refresh to get latest data
     } else {
       toast.error(result.error || 'Failed to update captain status');
+      // Revert optimistic update on failure
+      setOptimisticPlayersData(playersData);
     }
   };
 
@@ -133,7 +177,7 @@ export function TeamRosterManager({
         onOpenChange={setIsDialogOpen}
         teamName={teamName}
         teamNumber={teamNumber}
-        playersData={playersData}
+        playersData={optimisticPlayersData}
         onAddPlayer={handleAddPlayer}
         onRemovePlayer={handleRemovePlayer}
         onTransferPlayer={handleTransferPlayer}

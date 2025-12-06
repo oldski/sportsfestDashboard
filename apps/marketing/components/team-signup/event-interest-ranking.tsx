@@ -15,6 +15,7 @@ import {
   useSensors,
   DragEndEvent,
   DragOverlay,
+  DragStartEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -117,6 +118,12 @@ export function EventInterestRanking({
   });
 
   const [activeId, setActiveId] = React.useState<EventTypeValue | null>(null);
+  const [isTouchDevice, setIsTouchDevice] = React.useState(false);
+
+  // Detect if device supports touch
+  React.useEffect(() => {
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -144,7 +151,7 @@ export function EventInterestRanking({
     onChange(newValue);
   }, [rankings, onChange]);
 
-  const handleDragStart = (event: DragEndEvent) => {
+  const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as EventTypeValue);
   };
 
@@ -175,42 +182,47 @@ export function EventInterestRanking({
         </p>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-        <SortableContext
-          items={rankings}
-          strategy={verticalListSortingStrategy}
+      <div style={{ position: 'relative', isolation: 'isolate' }}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
-          <div className="space-y-3">
-            {rankings.map((eventType, index) => (
-              <SortableEventItem
-                key={eventType}
-                event={eventType}
-                index={index}
-              />
-            ))}
-          </div>
-        </SortableContext>
-        <DragOverlay>
-          {activeId ? (
-            <div className="flex items-center justify-between p-4 bg-background rounded-lg border shadow-lg">
-              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-semibold flex-shrink-0">
-                  {rankings.indexOf(activeId) + 1}
-                </div>
-                <span className="text-lg flex-shrink-0">{EVENT_DETAILS[activeId].emoji}</span>
-                <span className="font-medium truncate">{EVENT_DETAILS[activeId].name}</span>
-              </div>
-              <GripHorizontalIcon className="size-5 text-muted-foreground flex-shrink-0 ml-2" />
+          <SortableContext
+            items={rankings}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-3">
+              {rankings.map((eventType, index) => (
+                <SortableEventItem
+                  key={eventType}
+                  event={eventType}
+                  index={index}
+                />
+              ))}
             </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          </SortableContext>
+          {/* Only use DragOverlay on touch devices - desktop uses native drag */}
+          {isTouchDevice && (
+            <DragOverlay dropAnimation={null}>
+              {activeId ? (
+                <div className="flex items-center justify-between p-4 bg-background rounded-lg border shadow-lg w-full max-w-2xl">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-semibold flex-shrink-0">
+                      {rankings.indexOf(activeId) + 1}
+                    </div>
+                    <span className="text-lg flex-shrink-0">{EVENT_DETAILS[activeId].emoji}</span>
+                    <span className="font-medium truncate">{EVENT_DETAILS[activeId].name}</span>
+                  </div>
+                  <GripHorizontalIcon className="size-5 text-muted-foreground flex-shrink-0 ml-2" />
+                </div>
+              ) : null}
+            </DragOverlay>
+          )}
+        </DndContext>
+      </div>
 
       {error && <p className="text-sm text-destructive text-center mt-4">{error}</p>}
     </div>

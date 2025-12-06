@@ -9,7 +9,9 @@ export const keys = () =>
       EMAIL_NODEMAILER_URL: z.string().optional(),
       EMAIL_POSTMARK_SERVER_TOKEN: z.string().optional(),
       EMAIL_RESEND_API_KEY: z.string().optional(),
-      EMAIL_SENDGRID_API_KEY: z.string().optional()
+      EMAIL_SENDGRID_API_KEY: z.string().optional(),
+      // Provider selection: 'console' | 'resend' (auto-selects based on NODE_ENV if not set)
+      EMAIL_PROVIDER: z.enum(['console', 'resend']).optional()
     },
     runtimeEnv: {
       EMAIL_FROM: process.env.EMAIL_FROM,
@@ -17,6 +19,7 @@ export const keys = () =>
       EMAIL_NODEMAILER_URL: process.env.EMAIL_NODEMAILER_URL,
       EMAIL_POSTMARK_SERVER_TOKEN: process.env.EMAIL_POSTMARK_SERVER_TOKEN,
       EMAIL_RESEND_API_KEY: process.env.EMAIL_RESEND_API_KEY,
-      EMAIL_SENDGRID_API_KEY: process.env.EMAIL_SENDGRID_API_KEY
+      EMAIL_SENDGRID_API_KEY: process.env.EMAIL_SENDGRID_API_KEY,
+      EMAIL_PROVIDER: process.env.EMAIL_PROVIDER
     }
   });
