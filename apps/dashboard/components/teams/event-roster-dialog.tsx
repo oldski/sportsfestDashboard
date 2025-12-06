@@ -29,9 +29,10 @@ import { ScrollArea } from '@workspace/ui/components/scroll-area';
 import { Input } from '@workspace/ui/components/input';
 import { Separator } from '@workspace/ui/components/separator';
 import { Rating } from '@workspace/ui/components/rating';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@workspace/ui/components/tooltip';
 import { useMediaQuery } from '~/hooks/use-media-query';
 
-import { DragDropRoster, EventRequirements, RosterPlayer } from './drag-drop-roster';
+import { StaticRosterDisplay, EventRequirements, RosterPlayer } from './static-roster-display';
 
 import {
   addPlayerToEventRoster,
@@ -346,7 +347,7 @@ export function EventRosterDialog({
                 </div>
               ) : (
                 <div className="pr-4">
-                  <DragDropRoster
+                  <StaticRosterDisplay
                     teamId={teamId}
                     eventType={eventType}
                     players={sortedCurrentPlayers.map((player): RosterPlayer => ({
@@ -360,10 +361,6 @@ export function EventRosterDialog({
                       eventInterestRating: player.eventInterestRating,
                     }))}
                     eventRequirements={getEventRequirements(eventType)}
-                    onPlayerUpdate={() => {
-                      // Trigger a refresh - the parent component should handle this
-                      // For now, we can use the existing toast pattern
-                    }}
                   />
 
                   {/* Squad Leader and Remove Player Actions */}
@@ -390,24 +387,40 @@ export function EventRosterDialog({
                                 )}
                               </div>
                               <div className="flex items-center gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleToggleSquadLeader(player.id, player.squadLeader)}
-                                  className="h-7 px-2 text-xs"
-                                  title={player.squadLeader ? 'Remove as squad leader' : 'Make squad leader'}
-                                >
-                                  <Crown className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => handleRemovePlayer(player.id)}
-                                  className="h-7 w-7 p-0"
-                                  title="Remove from roster"
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleToggleSquadLeader(player.id, player.squadLeader)}
+                                        className="h-7 px-2 text-xs"
+                                      >
+                                        <Crown className="h-3 w-3" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      <p>{player.squadLeader ? 'Remove Squad Leader' : 'Make Squad Leader'}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => handleRemovePlayer(player.id)}
+                                        className="h-7 w-7 p-0"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      <p>Remove from Roster</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </div>
                             </div>
                           ))}
