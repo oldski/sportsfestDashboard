@@ -18,7 +18,7 @@
     "@workspace/api-keys": "workspace:*",
     "@workspace/common": "workspace:*",
     "@workspace/database": "workspace:*",
-    "next": "15.3.3",
+    "next": "15.3.6",
     "next-swagger-doc": "0.4.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
