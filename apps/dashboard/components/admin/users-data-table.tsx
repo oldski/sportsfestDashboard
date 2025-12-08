@@ -12,7 +12,7 @@ import {
   type SortingState,
   type VisibilityState
 } from '@tanstack/react-table';
-import { ExternalLinkIcon, ShieldIcon, UserIcon, DownloadIcon, UserPlusIcon, ShieldOffIcon } from 'lucide-react';
+import { ExternalLinkIcon, ShieldIcon, UserIcon, DownloadIcon, UserPlusIcon, ShieldOffIcon, MailIcon } from 'lucide-react';
 import Link from 'next/link';
 import NiceModal from '@ebay/nice-modal-react';
 import { useRouter } from 'next/navigation';
@@ -50,6 +50,7 @@ import { exportToCSV, exportToExcel } from '@workspace/ui/lib/data-table-utils';
 import { CreateSuperAdminDialog } from './users/create-super-admin-dialog';
 import { revokeSuperAdmin } from '~/actions/admin/revoke-super-admin';
 import { grantSuperAdmin } from '~/actions/admin/grant-super-admin';
+import { resendSuperAdminInvite } from '~/actions/admin/resend-super-admin-invite';
 
 const columnHelper = createColumnHelper<UserData>();
 
@@ -250,6 +251,7 @@ interface UserActionsCellProps {
 function UserActionsCell({ user }: UserActionsCellProps): React.JSX.Element {
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isResending, setIsResending] = React.useState(false);
 
   const handleToggleSuperAdmin = async () => {
     setIsLoading(true);
@@ -277,6 +279,22 @@ function UserActionsCell({ user }: UserActionsCellProps): React.JSX.Element {
       toast.error('An error occurred');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendInvite = async () => {
+    setIsResending(true);
+    try {
+      const result = await resendSuperAdminInvite({ targetUserId: user.id });
+      if (!result?.serverError && !result?.validationErrors) {
+        toast.success(`Sign-in link sent to ${user.email}`);
+      } else {
+        toast.error(result?.serverError || 'Failed to send sign-in link');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -328,6 +346,23 @@ function UserActionsCell({ user }: UserActionsCellProps): React.JSX.Element {
           </TooltipTrigger>
           <TooltipContent>
             <p>{user.isSportsFestAdmin ? 'Revoke Super Admin' : 'Grant Super Admin'}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={handleResendInvite}
+              disabled={isResending}
+            >
+              <MailIcon className="h-4 w-4 text-blue-500" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Resend Sign-in Link</p>
           </TooltipContent>
         </Tooltip>
       </div>
