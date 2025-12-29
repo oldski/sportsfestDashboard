@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { type Metadata } from 'next';
+import Link from 'next/link';
 
+import { routes } from '@workspace/routes';
 import {
   Page,
   PageBody,
@@ -92,28 +94,47 @@ export default async function HomeLayout({
                       <li className="flex gap-3 items-start">
                         <CalendarCheckIcon className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
                         <div>
-                          <strong className="block">Secure Your Spot</strong>
+                          <Link href={routes.dashboard.organizations.slug.registration.Index.replace('[slug]', slug)} className="block font-semibold hover:underline text-primary">
+                            Secure Your Spot
+                          </Link>
                           <span className="text-muted-foreground">Purchase team entries and reserve tents for your group.</span>
                         </div>
                       </li>
                       <li className="flex gap-3 items-start">
                         <MegaphoneIcon className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
                         <div>
-                          <strong className="block">Promote Your Team</strong>
+                          <Link href="#recruitment-tools" className="block font-semibold hover:underline text-primary">
+                            Promote Your Team
+                          </Link>
                           <span className="text-muted-foreground">Access a library of free marketing assets to drum up excitement.</span>
                         </div>
                       </li>
                       <li className="flex gap-3 items-start">
                         <UsersIcon className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
                         <div>
-                          <strong className="block">Grow Your Player Interest</strong>
+                          <PlayerSignUpButton
+                            asLink
+                            organizationSlug={slug}
+                            organizationName={stats.organizationName}
+                            eventYearName={stats.currentEventYear.name}
+                            eventDate={stats.currentEventYear.eventEndDate}
+                            locationName={stats.currentEventYear.locationName}
+                            address={stats.currentEventYear.address}
+                            city={stats.currentEventYear.city}
+                            state={stats.currentEventYear.state}
+                            zipCode={stats.currentEventYear.zipCode}
+                            latitude={stats.currentEventYear.latitude}
+                            longitude={stats.currentEventYear.longitude}
+                          />
                           <span className="text-muted-foreground">A custom recruitment link is provided to share with colleagues and watch your team fill up in real time.</span>
                         </div>
                       </li>
                       <li className="flex gap-3 items-start">
                         <ClipboardListIcon className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
                         <div>
-                          <strong className="block">Build Your Team &amp; Event Roster</strong>
+                          <Link href={routes.dashboard.organizations.slug.Teams.replace('[slug]', slug)} className="block font-semibold hover:underline text-primary">
+                            Build Your Team &amp; Event Roster
+                          </Link>
                           <span className="text-muted-foreground">Build your winning team(s) with the Team and Event rosters for game day.</span>
                         </div>
                       </li>
@@ -128,7 +149,7 @@ export default async function HomeLayout({
               {totalPlayers}
               {totalTents}
             </div>
-            <div className="grid grid-cols-1 gap-6">
+            <div id="recruitment-tools" className="grid grid-cols-1 gap-6 scroll-mt-24">
               <div className="col-span-1 md:col-span-3">
                 {recruitmentTools}
               </div>

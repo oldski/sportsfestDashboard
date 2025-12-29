@@ -19,6 +19,10 @@ interface PlayerSignUpButtonProps {
   zipCode: string;
   latitude: number | null;
   longitude: number | null;
+  /** Render as a text link instead of a button */
+  asLink?: boolean;
+  /** Custom text/children (only used when asLink is true) */
+  children?: React.ReactNode;
 }
 
 export function PlayerSignUpButton({
@@ -33,21 +37,33 @@ export function PlayerSignUpButton({
   zipCode,
   latitude,
   longitude,
-  className
+  className,
+  asLink,
+  children
 }: PlayerSignUpButtonProps) {
   const [showShareModal, setShowShareModal] = React.useState(false);
 
   return (
     <>
-      <Button
-        onClick={() => setShowShareModal(true)}
-        variant="default"
-        size="sm"
-        className={className}
-      >
-        <ShareIcon className="h-4 w-4 mr-2" />
-        Share Player Signup
-      </Button>
+      {asLink ? (
+        <button
+          type="button"
+          onClick={() => setShowShareModal(true)}
+          className={className ?? "block font-semibold hover:underline text-left text-primary"}
+        >
+          {children ?? 'Grow Your Player Interest'}
+        </button>
+      ) : (
+        <Button
+          onClick={() => setShowShareModal(true)}
+          variant="default"
+          size="sm"
+          className={className}
+        >
+          <ShareIcon className="h-4 w-4 mr-2" />
+          Share Player Signup
+        </Button>
+      )}
 
       <SignupShareModal
         open={showShareModal}

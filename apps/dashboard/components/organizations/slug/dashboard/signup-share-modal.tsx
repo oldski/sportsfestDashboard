@@ -45,7 +45,13 @@ export function SignupShareModal({
 }: SignupShareModalProps) {
   const [copiedUrl, setCopiedUrl] = React.useState(false);
   const [copiedImage, setCopiedImage] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  // Wait for hydration before rendering modal to prevent Dialog/Drawer flash
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { execute: generateQr, result, isPending } = useAction(generateSignupQr);
 
@@ -268,6 +274,11 @@ See you on the beach!`;
       )}
     </div>
   );
+
+  // Don't render until after hydration to prevent Dialog/Drawer flash
+  if (!mounted) {
+    return null;
+  }
 
   if (isDesktop) {
     return (

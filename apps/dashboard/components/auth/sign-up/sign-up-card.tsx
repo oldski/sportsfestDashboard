@@ -204,6 +204,9 @@ export function SignUpCard({
                       <SelectItem value="I'm a Previous Participating Company">
                         I&apos;m a Previous Participating Company
                       </SelectItem>
+                      <SelectItem value="Contacted by a SportsFest Representative">
+                        Contacted by a SportsFest Representative
+                      </SelectItem>
                       <SelectItem value="Referral from another company">
                         Referral from another company
                       </SelectItem>
