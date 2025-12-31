@@ -15,6 +15,13 @@
       "when": 1749340615681,
       "tag": "20250607235655_absurd_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1735689600000,
+      "tag": "20251231000000_add_sponsorship_column",
+      "breakpoints": true
     }
   ]
 }
