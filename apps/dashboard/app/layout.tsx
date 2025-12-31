@@ -3,12 +3,16 @@ import '@workspace/ui/globals.css';
 import * as React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 
 import { APP_DESCRIPTION, APP_NAME } from '@workspace/common/app';
 import { baseUrl } from '@workspace/routes';
 import { Toaster } from '@workspace/ui/components/sonner';
 
 import { Providers } from './providers';
+
+const GA_MEASUREMENT_ID = 'G-NXRNSHZ7HN';
+const isProduction = process.env.NODE_ENV === 'production';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -62,6 +66,26 @@ export default async function RootLayout({
       className="size-full min-h-screen"
       suppressHydrationWarning
     >
+      {isProduction && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+            strategy="afterInteractive"
+          />
+          <Script
+            id="google-analytics"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_MEASUREMENT_ID}');
+              `
+            }}
+          />
+        </>
+      )}
       <body className={`${inter.className} size-full`}>
         <Providers>
           {children}
