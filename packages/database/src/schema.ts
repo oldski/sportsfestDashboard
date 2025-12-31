@@ -1883,6 +1883,7 @@ export const orderTable = pgTable(
     stripeSessionId: varchar('stripeSessionId', { length: 255 }),
     stripePaymentIntentId: varchar('stripePaymentIntentId', { length: 255 }),
     isManuallyCreated: boolean('isManuallyCreated').default(false).notNull(),
+    isSponsorship: boolean('isSponsorship').default(false).notNull(),
     notes: text('notes'),
     metadata: jsonb('metadata').$type<{
       cartItems?: any[];
@@ -1896,6 +1897,11 @@ export const orderTable = pgTable(
         discountValue: number;
         calculatedDiscount: number;
       } | null;
+      sponsorship?: {
+        baseAmount: number;
+        processingFee: number;
+        description?: string;
+      };
     }>(),
     createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
       .defaultNow()
@@ -1921,6 +1927,10 @@ export const orderTable = pgTable(
     index('IX_order_status').using(
       'btree',
       table.status.asc().nullsLast()
+    ),
+    index('IX_order_isSponsorship').using(
+      'btree',
+      table.isSponsorship.asc().nullsLast()
     )
   ]
 );

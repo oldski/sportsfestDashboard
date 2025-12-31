@@ -36,6 +36,7 @@ export type InvoiceData = {
   createdAt: string;
   updatedAt: string;
   items: InvoiceItemData[];
+  isSponsorship?: boolean;
 };
 
 export type InvoiceItemData = {
@@ -100,6 +101,7 @@ export async function getInvoicesByStatus(status?: 'draft' | 'sent' | 'paid' | '
         notes: orderInvoiceTable.notes,
         createdAt: orderInvoiceTable.createdAt,
         updatedAt: orderInvoiceTable.updatedAt,
+        isSponsorship: orderTable.isSponsorship,
       })
       .from(orderInvoiceTable)
       .leftJoin(orderTable, eq(orderInvoiceTable.orderId, orderTable.id))
@@ -163,6 +165,7 @@ export async function getInvoicesByStatus(status?: 'draft' | 'sent' | 'paid' | '
             quantity: item.quantity,
             total: item.total,
           })),
+          isSponsorship: invoice.isSponsorship || false,
         };
       })
     );

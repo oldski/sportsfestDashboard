@@ -104,7 +104,12 @@ export function OrdersDataTable({
   // Apply event year filter and hide pending $0 orders
   const filteredOrders = React.useMemo(() => {
     // First filter out pending orders with nothing paid (abandoned cart orders)
+    // But keep sponsorship orders visible (they're pending but need payment)
     const validOrders = orders.filter(order => {
+      // Always show sponsorship orders
+      if (order.isSponsorship) {
+        return true;
+      }
       // Hide pending orders that haven't been paid (abandoned carts)
       // These are orders where status is pending AND no payments have been made
       if (order.status === 'pending') {
@@ -138,8 +143,15 @@ export function OrdersDataTable({
         <DataTableColumnHeader column={column} title="Order #" />
       ),
       cell: ({ row }) => (
-        <div className="font-mono text-sm">
-          {row.getValue('orderNumber')}
+        <div className="space-y-1">
+          <div className="font-mono text-sm">
+            {row.getValue('orderNumber')}
+          </div>
+          {row.original.isSponsorship && (
+            <Badge variant="secondary" className="text-xs">
+              Sponsorship
+            </Badge>
+          )}
         </div>
       )
     },

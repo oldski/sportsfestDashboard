@@ -20,7 +20,8 @@ import {
   TentIcon,
   CreditCardIcon,
   FileTextIcon, ActivityIcon, TrophyIcon,
-  UserCheckIcon, TagsIcon
+  UserCheckIcon, TagsIcon,
+  HeartHandshakeIcon
 } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
@@ -110,6 +111,11 @@ const adminNavItems: NavItem[] = [
         title: 'Invoices',
         href: '/admin/event-registration/invoices',
         icon: FileTextIcon
+      },
+      {
+        title: 'Sponsorships',
+        href: '/admin/event-registration/sponsorships',
+        icon: HeartHandshakeIcon
       }
     ]
   },

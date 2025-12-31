@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
           organizationId: orderTable.organizationId,
           totalAmount: orderTable.totalAmount,
           status: orderTable.status,
-          stripePaymentIntentId: orderTable.stripePaymentIntentId
+          stripePaymentIntentId: orderTable.stripePaymentIntentId,
+          isSponsorship: orderTable.isSponsorship
         },
         organization: {
           id: organizationTable.id,
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
       orderNumber: order.orderNumber,
       status: order.status,
       totalAmount: order.totalAmount,
+      isSponsorship: order.isSponsorship,
       organizationName: organization.name
     });
 
@@ -103,14 +105,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (order.status === OrderStatus.PENDING) {
+    // Allow pending sponsorship orders (they need first payment via this flow)
+    const isPendingSponsorship = order.status === OrderStatus.PENDING && order.isSponsorship;
+
+    if (order.status === OrderStatus.PENDING && !order.isSponsorship) {
       return NextResponse.json(
         { error: 'Order has no payments yet - use the regular checkout flow' },
         { status: 400 }
       );
     }
 
-    if (order.status !== OrderStatus.DEPOSIT_PAID) {
+    if (order.status !== OrderStatus.DEPOSIT_PAID && !isPendingSponsorship) {
       return NextResponse.json(
         { error: 'Order is not eligible for payment completion' },
         { status: 400 }
@@ -155,7 +160,8 @@ export async function POST(request: NextRequest) {
         orderId,
         organizationId: organization.id,
         organizationSlug: organization.slug,
-        paymentType: 'balance_completion',
+        paymentType: order.isSponsorship ? 'sponsorship' : 'balance_completion',
+        isSponsorship: order.isSponsorship ? 'true' : 'false',
         userId: session.user.id,
       },
     });

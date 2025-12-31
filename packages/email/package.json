@@ -52,6 +52,7 @@
     "./send-team-signup-notification-email": "./src/send-team-signup-notification-email.ts",
     "./send-purchase-confirmation-email": "./src/send-purchase-confirmation-email.ts",
     "./send-admin-purchase-notification-email": "./src/send-admin-purchase-notification-email.ts",
+    "./send-sponsorship-invoice-email": "./src/send-sponsorship-invoice-email.ts",
     "./templates/confirm-email-address-change-email": "./src/templates/confirm-email-address-change-email.tsx",
     "./templates/connected-account-security-alert-email": "./src/templates/connected-account-security-alert-email.tsx",
     "./templates/feedback-email": "./src/templates/feedback-email.tsx",
@@ -62,6 +63,7 @@
     "./templates/welcome-email": "./src/templates/welcome-email.tsx",
     "./templates/team-signup-notification-email": "./src/templates/team-signup-notification-email.tsx",
     "./templates/purchase-confirmation-email": "./src/templates/purchase-confirmation-email.tsx",
-    "./templates/admin-purchase-notification-email": "./src/templates/admin-purchase-notification-email.tsx"
+    "./templates/admin-purchase-notification-email": "./src/templates/admin-purchase-notification-email.tsx",
+    "./templates/sponsorship-invoice-email": "./src/templates/sponsorship-invoice-email.tsx"
   }
 }

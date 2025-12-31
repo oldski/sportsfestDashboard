@@ -218,6 +218,7 @@ export async function getAllInvoicesSimple(): Promise<InvoiceData[]> {
         notes: orderInvoiceTable.notes,
         createdAt: orderInvoiceTable.createdAt,
         updatedAt: orderInvoiceTable.updatedAt,
+        isSponsorship: orderTable.isSponsorship,
       })
       .from(orderInvoiceTable)
       .innerJoin(orderTable, eq(orderInvoiceTable.orderId, orderTable.id))
@@ -248,6 +249,7 @@ export async function getAllInvoicesSimple(): Promise<InvoiceData[]> {
       createdAt: formatLocalDate(row.createdAt),
       updatedAt: formatLocalDate(row.updatedAt),
       items: [],
+      isSponsorship: row.isSponsorship || false,
     }));
   } catch (error) {
     console.error('Error fetching all invoices:', error);
@@ -293,6 +295,7 @@ export async function getInvoicesByStatusSimple(status: InvoiceData['status']): 
         notes: orderInvoiceTable.notes,
         createdAt: orderInvoiceTable.createdAt,
         updatedAt: orderInvoiceTable.updatedAt,
+        isSponsorship: orderTable.isSponsorship,
       })
       .from(orderInvoiceTable)
       .innerJoin(orderTable, eq(orderInvoiceTable.orderId, orderTable.id))
@@ -326,6 +329,7 @@ export async function getInvoicesByStatusSimple(status: InvoiceData['status']): 
       createdAt: formatLocalDate(row.createdAt),
       updatedAt: formatLocalDate(row.updatedAt),
       items: [],
+      isSponsorship: row.isSponsorship || false,
     }));
   } catch (error) {
     console.error(`Error fetching ${status} invoices:`, error);

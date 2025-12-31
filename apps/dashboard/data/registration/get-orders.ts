@@ -34,6 +34,7 @@ export const getRegistrationOrders = cache(async (organizationSlug: string): Pro
         organizationId: orderTable.organizationId,
         orderTotalAmount: orderTable.totalAmount,
         orderStatus: orderTable.status,
+        orderIsSponsorship: orderTable.isSponsorship,
         orderCreatedAt: orderTable.createdAt,
         orderUpdatedAt: orderTable.updatedAt,
         orderMetadata: orderTable.metadata,
@@ -106,6 +107,7 @@ export const getRegistrationOrders = cache(async (organizationSlug: string): Pro
           totalAmount: row.orderTotalAmount,
           originalTotal,
           status: row.orderStatus as RegistrationOrderDto['status'],
+          isSponsorship: row.orderIsSponsorship,
           createdAt: row.orderCreatedAt,
           updatedAt: row.orderUpdatedAt,
           eventYear: {

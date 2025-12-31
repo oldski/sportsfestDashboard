@@ -94,20 +94,21 @@ export async function POST(request: NextRequest) {
     // Skip payment verification for free orders
     if (!isFreeOrder) {
       // Verify the payment intent belongs to this order
-      // For order completion payments, we may have a different payment intent ID
+      // For order completion payments or sponsorship payments, we may have a different payment intent ID
       const isOrderCompletionPayment = paymentIntent.metadata?.paymentType === 'balance_completion';
+      const isSponsorshipPayment = paymentIntent.metadata?.paymentType === 'sponsorship';
       const isOriginalPayment = order.stripePaymentIntentId === paymentIntentId;
 
 
-      if (!isOriginalPayment && !isOrderCompletionPayment) {
+      if (!isOriginalPayment && !isOrderCompletionPayment && !isSponsorshipPayment) {
         return NextResponse.json(
           { error: 'Payment intent does not belong to this order' },
           { status: 400 }
         );
       }
 
-      // For order completion payments, verify the order ID in metadata matches
-      if (isOrderCompletionPayment && paymentIntent.metadata?.orderId !== orderId) {
+      // For order completion or sponsorship payments, verify the order ID in metadata matches
+      if ((isOrderCompletionPayment || isSponsorshipPayment) && paymentIntent.metadata?.orderId !== orderId) {
         return NextResponse.json(
           { error: 'Payment intent order mismatch' },
           { status: 400 }
@@ -124,8 +125,8 @@ export async function POST(request: NextRequest) {
       // Free order with 100% coupon discount
       paymentType = PaymentType.BALANCE_PAYMENT;
       newOrderStatus = OrderStatus.FULLY_PAID;
-    } else if (paymentIntent.metadata?.paymentType === 'balance_completion') {
-      // This is a balance completion payment
+    } else if (paymentIntent.metadata?.paymentType === 'balance_completion' || paymentIntent.metadata?.paymentType === 'sponsorship') {
+      // This is a balance completion or sponsorship payment
       paymentType = PaymentType.BALANCE_PAYMENT;
       newOrderStatus = OrderStatus.FULLY_PAID;
     } else {
@@ -195,7 +196,7 @@ export async function POST(request: NextRequest) {
 
     if (isFreeOrder) {
       updateFields.stripePaymentIntentId = 'free_order';
-    } else if (paymentIntent.metadata?.paymentType === 'balance_completion') {
+    } else if (paymentIntent.metadata?.paymentType === 'balance_completion' || paymentIntent.metadata?.paymentType === 'sponsorship') {
       updateFields.stripePaymentIntentId = paymentIntentId;
     }
 

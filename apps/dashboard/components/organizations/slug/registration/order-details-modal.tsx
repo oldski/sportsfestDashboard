@@ -192,7 +192,11 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
 
     const totalPaid = order.payments.reduce((sum, payment) => sum + payment.amount, 0);
     const balanceOwed = order.totalAmount - totalPaid;
-    const canCompletePayment = balanceOwed > 0 && order.status === 'deposit_paid';
+    // Allow payment for deposit_paid orders OR pending sponsorship orders with balance
+    const canCompletePayment = balanceOwed > 0 && (
+      order.status === 'deposit_paid' ||
+      (order.status === 'pending' && order.isSponsorship)
+    );
 
     console.log('✅ Payment calculations done:', { totalPaid, balanceOwed, canCompletePayment });
 
@@ -244,10 +248,21 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
             <div className="flex items-start space-x-3">
               <CreditCardIcon className="size-5 text-blue-600 mt-0.5" />
               <div className="flex-1">
-                <h4 className="font-medium text-blue-900 mb-1">Complete Your Payment</h4>
+                <h4 className="font-medium text-blue-900 mb-1">
+                  {order.isSponsorship ? 'Complete Your Sponsorship Payment' : 'Complete Your Payment'}
+                </h4>
                 <p className="text-sm text-blue-700">
-                  You have a remaining balance of <span className="font-medium">{formatCurrency(balanceOwed)}</span> on this order.
-                  Complete your payment to finalize your purchase.
+                  {order.isSponsorship ? (
+                    <>
+                      Your sponsorship invoice total is <span className="font-medium">{formatCurrency(balanceOwed)}</span>.
+                      Complete your payment to finalize your sponsorship.
+                    </>
+                  ) : (
+                    <>
+                      You have a remaining balance of <span className="font-medium">{formatCurrency(balanceOwed)}</span> on this order.
+                      Complete your payment to finalize your purchase.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -374,10 +389,25 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
         <div>
           <div className="flex items-center space-x-2 mb-4">
             <PackageIcon className="size-4 text-muted-foreground" />
-            <h4 className="font-medium">Order Items</h4>
+            <h4 className="font-medium">{order.isSponsorship ? 'Sponsorship Details' : 'Order Items'}</h4>
           </div>
           <div className="space-y-3">
-            {order.items.length > 0 ? (
+            {order.isSponsorship ? (
+              <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <span className="text-lg">💜</span>
+                  <div className="flex-1">
+                    <h5 className="font-medium text-purple-900">Sponsorship Invoice</h5>
+                    <p className="text-sm text-purple-700 mt-1">
+                      Thank you for your sponsorship support! Your contribution helps make our event possible.
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-medium text-purple-900">{formatCurrency(order.totalAmount)}</span>
+                  </div>
+                </div>
+              </div>
+            ) : order.items.length > 0 ? (
               order.items.map((item) => (
                 <div key={item.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex-1">

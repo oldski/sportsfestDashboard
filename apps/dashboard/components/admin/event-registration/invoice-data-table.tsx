@@ -208,6 +208,30 @@ export function InvoiceDataTable({ data, status = 'all', showSearch = true }: In
           title: 'Order Number'
         }
       }),
+      columnHelper.accessor('isSponsorship', {
+        id: 'type',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Type" />
+        ),
+        cell: ({ row }) => {
+          const isSponsorship = row.original.isSponsorship;
+          return (
+            <Badge variant={isSponsorship ? 'secondary' : 'outline'} className="text-xs">
+              {isSponsorship ? 'Sponsorship' : 'Regular'}
+            </Badge>
+          );
+        },
+        filterFn: (row, id, value) => {
+          if (value === 'all') return true;
+          const isSponsorship = row.original.isSponsorship;
+          if (value === 'sponsorship') return isSponsorship === true;
+          if (value === 'regular') return !isSponsorship;
+          return true;
+        },
+        meta: {
+          title: 'Type'
+        }
+      }),
       columnHelper.accessor('totalAmount', {
         id: 'totalAmount',
         header: ({ column }) => (
@@ -411,12 +435,23 @@ export function InvoiceDataTable({ data, status = 'all', showSearch = true }: In
     <div className="space-y-4">
       {showSearch && (
         <div className="flex items-center justify-between">
-          <Input
-            placeholder="Search invoices..."
-            value={globalFilter}
-            onChange={(event) => setGlobalFilter(event.target.value)}
-            className="max-w-sm ml-5"
-          />
+          <div className="flex items-center gap-2 ml-5">
+            <Input
+              placeholder="Search invoices..."
+              value={globalFilter}
+              onChange={(event) => setGlobalFilter(event.target.value)}
+              className="max-w-sm"
+            />
+            <select
+              className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={(table.getColumn('type')?.getFilterValue() as string) ?? 'all'}
+              onChange={(e) => table.getColumn('type')?.setFilterValue(e.target.value)}
+            >
+              <option value="all">All Types</option>
+              <option value="regular">Regular</option>
+              <option value="sponsorship">Sponsorship</option>
+            </select>
+          </div>
           <div className="flex items-center space-x-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

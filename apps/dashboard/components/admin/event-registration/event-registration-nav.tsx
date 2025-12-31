@@ -10,7 +10,8 @@ import {
   CreditCardIcon,
   FileTextIcon,
   BarChart3Icon,
-  TagIcon
+  TagIcon,
+  HeartHandshakeIcon
 } from 'lucide-react';
 
 import { Button } from '@workspace/ui/components/button';
@@ -58,6 +59,12 @@ const navigationItems = [
     href: '/admin/event-registration/invoices',
     icon: FileTextIcon,
     description: 'Invoice management'
+  },
+  {
+    label: 'Sponsorships',
+    href: '/admin/event-registration/sponsorships',
+    icon: HeartHandshakeIcon,
+    description: 'Manage sponsorship invoices'
   }
 ];
 

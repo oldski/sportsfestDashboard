@@ -5,6 +5,7 @@ export type RegistrationOrderDto = {
   totalAmount: number;
   originalTotal?: number;
   status: 'pending' | 'deposit_paid' | 'fully_paid' | 'cancelled' | 'refunded';
+  isSponsorship: boolean;
   createdAt: Date;
   updatedAt: Date;
   eventYear: {
