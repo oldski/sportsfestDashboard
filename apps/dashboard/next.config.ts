@@ -60,6 +60,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'dashboard.sportsfest.com',
         pathname: '/api/**'
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.youtube.com',
+        pathname: '/vi/**'
       }
     ]
   },

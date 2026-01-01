@@ -6,11 +6,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 import { AspectRatio } from '@workspace/ui/components/aspect-ratio';
-// import { HoverCard, HoverCardContent, HoverCardTrigger } from '@workspace/ui/components/hover-card';
 
 import type { WordPressDocument } from '~/data/wordpress/get-recruitment-documents';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@workspace/ui/components/card";
 import { PlayerSignUpButton } from './player-signup-button';
+import { TrainingVideoModal, type TrainingVideo } from './training-video-modal';
 
 interface RecruitmentDocumentsSimpleProps {
   documents: WordPressDocument[];
@@ -87,18 +87,32 @@ export function RecruitmentDocumentsSimple({
     );
   }
 
-  // Training video data
-  const trainingVideos = [
-    { id: 1, title: 'Accessing Recruitment Tools', duration: '1:15' },
-    { id: 2, title: 'Sharing Your Signup Link & QR Code', duration: '1:45' },
-    { id: 3, title: 'Customizing Your Organization Logo', duration: '0:52' },
-    { id: 4, title: 'The Player Signup Experience', duration: '1:50' },
-    { id: 5, title: 'Purchasing Company Teams & Tents', duration: '2:15' },
-    { id: 6, title: 'Viewing Your Recruited Players', duration: '1:30' },
-    { id: 7, title: 'Building Team Rosters', duration: '2:30' },
-    { id: 8, title: 'Building Event Rosters', duration: '2:20' },
-    { id: 9, title: 'Best Practices & Tips', duration: '2:10' },
+  // Training video data with YouTube IDs
+  const trainingVideos: TrainingVideo[] = [
+    { id: 1, title: 'Accessing Recruitment Tools', duration: '1:15', youtubeId: 'pFsNdhgwOPA' },
+    { id: 2, title: 'Sharing Your Signup Link & QR Code', duration: '1:45', youtubeId: 'doafxc49ZCE' },
+    { id: 3, title: 'Customizing Your Organization Logo', duration: '0:52', youtubeId: 'aoslIvnDes8' },
+    { id: 4, title: 'The Player Signup Experience', duration: '1:50', youtubeId: '5ga6_YQzc_U' },
+    { id: 5, title: 'Purchasing Company Teams & Tents', duration: '2:15', youtubeId: 'p6bkoXMB150' },
+    { id: 6, title: 'Viewing Your Recruited Players', duration: '1:30', youtubeId: 'hfu1ro9Z3_s' },
+    { id: 7, title: 'Building Team Rosters', duration: '2:30', youtubeId: 'UXKHQYvH6MU' },
+    { id: 8, title: 'Building Event Rosters', duration: '2:20', youtubeId: 'UuFx-JhZ-yI' },
+    { id: 9, title: 'Best Practices & Tips', duration: '2:10', youtubeId: '1pbjKzNKrdE' },
   ];
+
+  // Video modal state
+  const [selectedVideo, setSelectedVideo] = React.useState<TrainingVideo | null>(null);
+  const [isVideoModalOpen, setIsVideoModalOpen] = React.useState(false);
+
+  const handleVideoClick = (video: TrainingVideo) => {
+    setSelectedVideo(video);
+    setIsVideoModalOpen(true);
+  };
+
+  const handleCloseVideoModal = () => {
+    setIsVideoModalOpen(false);
+    setSelectedVideo(null);
+  };
 
   return (
     <Card className="h-full">
@@ -174,27 +188,25 @@ export function RecruitmentDocumentsSimple({
             {/* Training Videos Section - Takes up 2/3 of the space */}
             <div className="lg:col-span-2 space-y-4">
               <div className="rounded-lg border bg-card p-4">
-                {/* ========== COMING SOON VERSION (ACTIVE) ========== */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <VideoIcon className="h-5 w-5 text-green-600" />
-                    <h4 className="font-medium">Training Videos</h4>
-                  </div>
-                  <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
-                    Coming Soon
-                  </span>
+                <div className="flex items-center space-x-2 mb-4">
+                  <VideoIcon className="h-5 w-5 text-green-600" />
+                  <h4 className="font-medium">Training Videos</h4>
                 </div>
 
                 <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
                   {trainingVideos.map((video) => (
-                    <div key={video.id} className="rounded-md border border-muted overflow-hidden opacity-50 cursor-not-allowed">
+                    <button
+                      key={video.id}
+                      onClick={() => handleVideoClick(video)}
+                      className="cursor-pointer rounded-md border border-muted overflow-hidden hover:border-green-600 transition-colors group text-left"
+                    >
                       <AspectRatio ratio={16 / 9}>
                         <div className="relative h-full w-full">
                           <Image
-                            src="/assets/graphic-training-video-thumbnail.webp"
+                            src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`}
                             alt={video.title}
                             fill
-                            className="object-cover grayscale"
+                            className="object-cover"
                             sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
                           />
 
@@ -205,7 +217,7 @@ export function RecruitmentDocumentsSimple({
                               {video.duration}
                             </div>
 
-                            <PlayIcon className="h-8 w-8 text-white drop-shadow-lg mb-2 opacity-50" />
+                            <PlayIcon className="h-8 w-8 text-white drop-shadow-lg mb-2 group-hover:text-green-400 transition-colors" />
 
                             <p className="text-[11px] text-center text-white font-medium leading-tight line-clamp-2 drop-shadow-md">
                               {video.title}
@@ -213,60 +225,7 @@ export function RecruitmentDocumentsSimple({
                           </div>
                         </div>
                       </AspectRatio>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-border">
-                  <p className="text-xs text-muted-foreground text-center">
-                    Training videos coming soon • {trainingVideos.length} videos in production
-                  </p>
-                </div>
-
-                {/* ========== CLICKABLE VERSION (ACTIVE WHEN VIDEOS ARE READY) ==========
-                <div className="flex items-center space-x-2 mb-4">
-                  <VideoIcon className="h-5 w-5 text-green-600" />
-                  <h4 className="font-medium">Training Videos</h4>
-                </div>
-
-                <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
-                  {trainingVideos.map((video) => (
-                    <HoverCard key={video.id}>
-                      <HoverCardTrigger asChild>
-                        <div className="cursor-pointer rounded-md border border-muted overflow-hidden hover:border-green-600 transition-colors group">
-                          <AspectRatio ratio={16 / 9}>
-                            <div className="relative h-full w-full">
-                              <Image
-                                src="/assets/graphic-training-video-thumbnail.webp"
-                                alt={video.title}
-                                fill
-                                className="object-cover"
-                                sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                              />
-
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-
-                              <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
-                                <div className="absolute top-2 right-2 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
-                                  {video.duration}
-                                </div>
-
-                                <PlayIcon className="h-8 w-8 text-white drop-shadow-lg mb-2 group-hover:text-green-400 transition-colors" />
-
-                                <p className="text-[11px] text-center text-white font-medium leading-tight line-clamp-2 drop-shadow-md">
-                                  {video.title}
-                                </p>
-                              </div>
-                            </div>
-                          </AspectRatio>
-                        </div>
-                      </HoverCardTrigger>
-                      <HoverCardContent side="top" className="w-64">
-                        <p className="text-sm font-medium">{video.title}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Duration: {video.duration}</p>
-                        <p className="text-xs text-muted-foreground mt-2">Click to watch this training video</p>
-                      </HoverCardContent>
-                    </HoverCard>
+                    </button>
                   ))}
                 </div>
 
@@ -275,9 +234,15 @@ export function RecruitmentDocumentsSimple({
                     Click any video to watch • {trainingVideos.length} videos available
                   </p>
                 </div>
-                */}
               </div>
             </div>
+
+            {/* Video Modal */}
+            <TrainingVideoModal
+              video={selectedVideo}
+              isOpen={isVideoModalOpen}
+              onClose={handleCloseVideoModal}
+            />
           </div>
         </div>
       </CardContent>
