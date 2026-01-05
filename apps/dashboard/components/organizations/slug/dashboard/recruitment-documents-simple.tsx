@@ -89,15 +89,15 @@ export function RecruitmentDocumentsSimple({
 
   // Training video data with YouTube IDs
   const trainingVideos: TrainingVideo[] = [
-    { id: 1, title: 'Accessing Recruitment Tools', duration: '1:15', youtubeId: 'pFsNdhgwOPA' },
-    { id: 2, title: 'Sharing Your Signup Link & QR Code', duration: '1:45', youtubeId: 'doafxc49ZCE' },
-    { id: 3, title: 'Customizing Your Organization Logo', duration: '0:52', youtubeId: 'aoslIvnDes8' },
-    { id: 4, title: 'The Player Signup Experience', duration: '1:50', youtubeId: '5ga6_YQzc_U' },
-    { id: 5, title: 'Purchasing Company Teams & Tents', duration: '2:15', youtubeId: 'p6bkoXMB150' },
-    { id: 6, title: 'Viewing Your Recruited Players', duration: '1:30', youtubeId: 'hfu1ro9Z3_s' },
-    { id: 7, title: 'Building Team Rosters', duration: '2:30', youtubeId: 'UXKHQYvH6MU' },
-    { id: 8, title: 'Building Event Rosters', duration: '2:20', youtubeId: 'UuFx-JhZ-yI' },
-    { id: 9, title: 'Best Practices & Tips', duration: '2:10', youtubeId: '1pbjKzNKrdE' },
+    { id: 1, title: 'Accessing Recruitment Tools', duration: '1:19', youtubeId: 'pFsNdhgwOPA' },
+    { id: 2, title: 'Sharing Your Signup Link & QR Code', duration: '2:04', youtubeId: 'doafxc49ZCE' },
+    { id: 3, title: 'Customizing Your Organization Logo', duration: '1:15', youtubeId: 'f6gaqiPTYY4' },
+    { id: 4, title: 'The Player Signup Experience', duration: '2:43', youtubeId: '5ga6_YQzc_U' },
+    { id: 5, title: 'Purchasing Company Teams & Tents', duration: '2:09', youtubeId: 'p6bkoXMB150' },
+    { id: 6, title: 'Viewing Your Recruited Players', duration: '1:00', youtubeId: 'IbGNa23kw6s' },
+    { id: 7, title: 'Building Team Rosters', duration: '2:24', youtubeId: 'puABOsoYdR4' },
+    { id: 8, title: 'Building Event Rosters', duration: '2:14', youtubeId: 'PNzhW-hVWq4' },
+    { id: 9, title: 'Best Practices & Tips', duration: '1:19', youtubeId: 'Gm-gQOaDO6k' },
   ];
 
   // Video modal state
