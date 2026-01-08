@@ -3,7 +3,8 @@
 import * as React from 'react';
 import NiceModal from '@ebay/nice-modal-react';
 import { TrashIcon, UploadIcon } from 'lucide-react';
-import { useFormContext } from 'react-hook-form';
+import { Controller, useFormContext } from 'react-hook-form';
+import { PatternFormat } from 'react-number-format';
 
 import { baseUrl, getPathname, routes } from '@workspace/routes';
 import { Avatar, AvatarFallback } from '@workspace/ui/components/avatar';
@@ -44,7 +45,12 @@ import { MAX_IMAGE_SIZE } from '~/lib/file-upload';
 import { type CompleteOnboardingSchema } from '~/schemas/onboarding/complete-onboarding-schema';
 
 function slugify(str: string): string {
-  return str.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
+  return str
+    .trim()
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
 }
 
 export type OnboardingOrganizationStepProps =
@@ -146,7 +152,7 @@ export function OnboardingOrganizationStep({
         name="organizationStep.name"
         render={({ field }) => (
           <FormItem className="flex w-full flex-col">
-            <FormLabel required>Name</FormLabel>
+            <FormLabel required>Organization name</FormLabel>
             <FormControl>
               <Input
                 type="text"
@@ -155,47 +161,37 @@ export function OnboardingOrganizationStep({
                 disabled={methods.formState.isSubmitting}
                 {...field}
                 onChange={(e) => {
-                  if (e.target.value && slug === slugify(field.value ?? '')) {
-                    methods.setValue(
-                      'organizationStep.slug',
-                      slugify(e.target.value ?? '')
-                    );
-                  }
                   field.onChange(e);
+                  methods.setValue(
+                    'organizationStep.slug',
+                    slugify(e.target.value ?? ''),
+                    { shouldValidate: true }
+                  );
                 }}
               />
             </FormControl>
+            {slug && (
+              <FormDescription className="break-all">
+                Your dashboard URL will be:{' '}
+                {getPathname(
+                  routes.dashboard.organizations.Index,
+                  baseUrl.Dashboard
+                )}
+                /{slug}
+              </FormDescription>
+            )}
             {(methods.formState.touchedFields.organizationStep?.name ||
               methods.formState.submitCount > 0) && <FormMessage />}
           </FormItem>
         )}
       />
 
+      {/* Hidden slug field - auto-generated from organization name */}
       <FormField
         control={methods.control}
         name="organizationStep.slug"
         render={({ field }) => (
-          <FormItem className="flex w-full flex-col">
-            <FormLabel required>Slug</FormLabel>
-            <FormControl>
-              <Input
-                type="text"
-                maxLength={255}
-                required
-                disabled={methods.formState.isSubmitting}
-                {...field}
-                // onChange={handleSlugChange}
-              />
-            </FormControl>
-            <FormDescription className="break-all">
-              {getPathname(
-                routes.dashboard.organizations.Index,
-                baseUrl.Dashboard
-              )}
-              /{slug}
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
+          <input type="hidden" {...field} />
         )}
       />
 
@@ -321,27 +317,30 @@ export function OnboardingOrganizationStep({
         />
       </div>
 
-      <FormField
-        control={methods.control}
-        name="organizationStep.phone"
-        render={({ field }) => (
-          <FormItem className="flex w-full flex-col">
-            <FormLabel required>Phone</FormLabel>
-            <FormControl>
-              <Input
-                type="tel"
-                maxLength={32}
-                required
-                placeholder="(727) 555-0123"
+      <FormItem className="flex w-full flex-col">
+        <FormLabel required>Phone</FormLabel>
+        <FormControl>
+          <Controller
+            name="organizationStep.phone"
+            control={methods.control}
+            render={({ field }) => (
+              <PatternFormat
+                format="(###) ###-####"
+                mask="_"
+                allowEmptyFormatting
+                customInput={Input}
+                value={field.value}
+                onValueChange={(values) => {
+                  field.onChange(values.value);
+                }}
                 disabled={methods.formState.isSubmitting}
-                {...field}
               />
-            </FormControl>
-            {(methods.formState.touchedFields.organizationStep?.phone ||
-              methods.formState.submitCount > 0) && <FormMessage />}
-          </FormItem>
-        )}
-      />
+            )}
+          />
+        </FormControl>
+        {(methods.formState.touchedFields.organizationStep?.phone ||
+          methods.formState.submitCount > 0) && <FormMessage />}
+      </FormItem>
 
       <NextButton
         loading={loading}

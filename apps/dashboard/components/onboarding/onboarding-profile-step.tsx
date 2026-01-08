@@ -3,7 +3,8 @@
 import * as React from 'react';
 import NiceModal from '@ebay/nice-modal-react';
 import { InfoIcon, TrashIcon } from 'lucide-react';
-import { useFormContext } from 'react-hook-form';
+import { Controller, useFormContext } from 'react-hook-form';
+import { PatternFormat } from 'react-number-format';
 
 import { Alert, AlertDescription } from '@workspace/ui/components/alert';
 import { Avatar, AvatarFallback } from '@workspace/ui/components/avatar';
@@ -145,24 +146,29 @@ export function OnboardingProfileStep({
             </FormItem>
           )}
         />
-        <FormField
-          control={methods.control}
-          name="profileStep.phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Phone</FormLabel>
-              <FormControl>
-                <Input
-                  type="tel"
-                  maxLength={32}
+        <FormItem>
+          <FormLabel>Phone</FormLabel>
+          <FormControl>
+            <Controller
+              name="profileStep.phone"
+              control={methods.control}
+              render={({ field }) => (
+                <PatternFormat
+                  format="(###) ###-####"
+                  mask="_"
+                  allowEmptyFormatting
+                  customInput={Input}
+                  value={field.value}
+                  onValueChange={(values) => {
+                    field.onChange(values.value);
+                  }}
                   disabled={loading}
-                  {...field}
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              )}
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
         <div className="mb-2 flex flex-col space-y-2">
           <FormLabel required>Email</FormLabel>
           <Input

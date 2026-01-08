@@ -28,7 +28,10 @@ export const profileOnboardingSchema = z.object({
       invalid_type_error: 'Phone must be a string.'
     })
     .trim()
-    .max(16, 'Maximum 16 characters allowed.')
+    .refine(
+      (val) => !val || val.length === 10,
+      'Please enter a valid 10-digit phone number.'
+    )
     .optional()
     .or(z.literal('')),
   // We are not using the email on the server
@@ -116,8 +119,8 @@ export const organizationOnboardingSchema = z.object({
       invalid_type_error: 'Phone must be a string.'
     })
     .trim()
-    .max(32, 'Maximum 32 characters allowed.')
-    .or(z.literal(''))
+    .min(10, 'Please enter a valid 10-digit phone number.')
+    .max(10, 'Please enter a valid 10-digit phone number.')
 });
 
 export const inviteTeamOnboardingSchema = z.object({
