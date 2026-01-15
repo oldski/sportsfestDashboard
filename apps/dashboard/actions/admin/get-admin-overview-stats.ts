@@ -162,7 +162,8 @@ export async function getAdminOverviewStats(): Promise<AdminOverviewStats> {
     const tentTracking = await db
       .select({
         totalPurchases: sql<number>`COUNT(*)`,
-        quotaMet: sql<number>`COUNT(*) FILTER (WHERE "remainingAllowed" = 0)`,
+        // Orgs at quota: where tents purchased >= companyTeamCount * 2 (2 tents per team)
+        quotaMet: sql<number>`COUNT(*) FILTER (WHERE "quantityPurchased" >= "companyTeamCount" * 2)`,
         totalQuantityPurchased: sql<number>`COALESCE(SUM("quantityPurchased"), 0)`
       })
       .from(tentPurchaseTrackingTable)

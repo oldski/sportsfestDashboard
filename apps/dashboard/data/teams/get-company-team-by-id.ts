@@ -2,11 +2,12 @@ import 'server-only';
 
 import { getAuthOrganizationContext } from '@workspace/auth/context';
 import { db, eq, and, sql, inArray } from '@workspace/database/client';
-import { 
+import {
   companyTeamTable,
   teamRosterTable,
   playerTable,
-  eventYearTable
+  eventYearTable,
+  PlayerStatus
 } from '@workspace/database/schema';
 
 export interface TeamMember {
@@ -85,7 +86,7 @@ export async function getCompanyTeamById(teamId: string): Promise<CompanyTeamDet
     .innerJoin(playerTable, eq(teamRosterTable.playerId, playerTable.id))
     .where(eq(teamRosterTable.companyTeamId, teamId));
 
-  // Get available players count (players not assigned to any team for this event year)
+  // Get available players count (players not assigned to any team for this event year, excluding inactive)
   const availablePlayersResult = await db
     .select({
       count: sql<number>`COUNT(*)`
@@ -95,9 +96,10 @@ export async function getCompanyTeamById(teamId: string): Promise<CompanyTeamDet
       and(
         eq(playerTable.organizationId, ctx.organization.id),
         eq(playerTable.eventYearId, team.eventYearId),
+        sql`${playerTable.status} != ${PlayerStatus.INACTIVE}`, // Exclude inactive players
         // Player not assigned to any team
         sql`NOT EXISTS (
-          SELECT 1 FROM ${teamRosterTable} tr 
+          SELECT 1 FROM ${teamRosterTable} tr
           WHERE tr."playerId" = ${playerTable.id}
         )`
       )

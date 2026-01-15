@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getAuthOrganizationContext } from '@workspace/auth/context';
-import { db, eq, and, sql } from '@workspace/database/client';
+import { db, eq, and, sql, ne } from '@workspace/database/client';
 import {
   eventRosterTable,
   companyTeamTable,
@@ -10,7 +10,8 @@ import {
   teamRosterTable,
   playerEventInterestTable,
   eventYearTable,
-  EventType
+  EventType,
+  PlayerStatus
 } from '@workspace/database/schema';
 
 export interface EventRosterActionResult {
@@ -57,7 +58,8 @@ export async function addPlayerToEventRoster(
     const player = await db
       .select({
         id: playerTable.id,
-        gender: playerTable.gender
+        gender: playerTable.gender,
+        status: playerTable.status
       })
       .from(playerTable)
       .innerJoin(teamRosterTable, eq(playerTable.id, teamRosterTable.playerId))
@@ -72,6 +74,11 @@ export async function addPlayerToEventRoster(
 
     if (player.length === 0) {
       return { success: false, error: 'Player not found on team roster' };
+    }
+
+    // Prevent adding inactive players to event roster
+    if (player[0].status === PlayerStatus.INACTIVE) {
+      return { success: false, error: 'Cannot add inactive player to event roster' };
     }
 
     // Check if player is already in this event roster
@@ -381,6 +388,7 @@ export async function autoGenerateEventRoster(
         and(
           eq(teamRosterTable.companyTeamId, teamId),
           eq(playerTable.organizationId, ctx.organization.id),
+          ne(playerTable.status, PlayerStatus.INACTIVE), // Exclude inactive players
           sql`${eventRosterTable.playerId} IS NULL` // Not already assigned to this event
         )
       )

@@ -4,8 +4,14 @@ export type RegistrationOrderDto = {
   organizationId: string;
   totalAmount: number;
   originalTotal?: number;
-  status: 'pending' | 'deposit_paid' | 'fully_paid' | 'cancelled' | 'refunded';
+  status: 'pending' | 'payment_processing' | 'deposit_paid' | 'fully_paid' | 'cancelled' | 'refunded';
   isSponsorship: boolean;
+  // Sponsorship-specific details (only present for sponsorship orders)
+  sponsorshipDetails?: {
+    baseAmount: number;
+    processingFee: number;
+    description?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
   eventYear: {

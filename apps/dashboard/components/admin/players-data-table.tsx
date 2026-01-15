@@ -37,6 +37,7 @@ import { Input } from '@workspace/ui/components/input';
 import type { PlayerData } from '~/actions/admin/get-players';
 import { generateAdminPlayersReactPDF } from './generate-players-pdf';
 import { exportToCSV, exportToExcel } from '@workspace/ui/lib/data-table-utils';
+import { formatPhoneNumber } from '~/lib/formatters';
 
 const columnHelper = createColumnHelper<PlayerData>();
 
@@ -156,7 +157,7 @@ const columns = [
       const phone = row.getValue('phone') as string | null;
       return (
         <div className="font-mono text-sm text-muted-foreground">
-          {phone || 'Not provided'}
+          {formatPhoneNumber(phone)}
         </div>
       );
     },
@@ -190,7 +191,7 @@ const columns = [
       const size = row.getValue('tshirtSize') as string;
       return (
         <Badge variant="secondary">
-          {size}
+          {size.toUpperCase()}
         </Badge>
       );
     },

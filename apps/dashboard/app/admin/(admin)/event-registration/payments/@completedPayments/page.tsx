@@ -28,7 +28,6 @@ export default async function CompletedPaymentsPage(): Promise<React.JSX.Element
     );
   }
 
-  console.log(9999999, completedPayments)
   return (
     <PaymentsDataTable data={completedPayments} status="completed" />
   );

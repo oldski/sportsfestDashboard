@@ -1,8 +1,12 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { PieChartIcon } from 'lucide-react';
+import { PieChart } from '~/components/admin/charts/pie-chart';
+import { getGenderDistribution } from '~/actions/admin/get-player-analytics';
 
-export default function PlayersByGenderPage(): React.JSX.Element {
+export default async function PlayersByGenderPage(): Promise<React.JSX.Element> {
+  const genderData = await getGenderDistribution();
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -12,9 +16,7 @@ export default function PlayersByGenderPage(): React.JSX.Element {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-48 flex items-center justify-center border border-dashed border-muted-foreground/25 rounded-lg">
-          <p className="text-xs text-muted-foreground">Players by Gender Chart</p>
-        </div>
+        <PieChart data={genderData} height={200} donut />
       </CardContent>
     </Card>
   );

@@ -1,22 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@workspace/auth';
 import { db, eq, and, sql } from '@workspace/database/client';
-import { 
+import {
   orderTable,
   orderPaymentTable,
   organizationTable,
   OrderStatus
 } from '@workspace/database/schema';
-import { stripe, STRIPE_CONFIG } from '~/lib/stripe';
+import { stripe, STRIPE_CONFIG, SPONSORSHIP_CONFIG } from '~/lib/stripe';
+
+export type SponsorshipPaymentMethodType = 'card' | 'us_bank_account';
 
 export interface CompleteOrderPaymentRequest {
   orderId: string;
+  // For sponsorships: which payment method was selected (affects fee calculation)
+  paymentMethodType?: SponsorshipPaymentMethodType;
 }
 
 export interface CompleteOrderPaymentResponse {
   clientSecret: string;
   orderId: string;
   remainingAmount: number;
+  // For sponsorships: the breakdown of the payment
+  sponsorshipDetails?: {
+    baseAmount: number;
+    processingFee: number;
+    totalAmount: number;
+    paymentMethodType: SponsorshipPaymentMethodType;
+  };
 }
 
 
@@ -36,7 +47,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ User authenticated:', session.user.id);
 
     const body: CompleteOrderPaymentRequest = await request.json();
-    const { orderId } = body;
+    const { orderId, paymentMethodType } = body;
 
     console.log('📥 Request body:', body);
 
@@ -58,7 +69,8 @@ export async function POST(request: NextRequest) {
           totalAmount: orderTable.totalAmount,
           status: orderTable.status,
           stripePaymentIntentId: orderTable.stripePaymentIntentId,
-          isSponsorship: orderTable.isSponsorship
+          isSponsorship: orderTable.isSponsorship,
+          metadata: orderTable.metadata
         },
         organization: {
           id: organizationTable.id,
@@ -131,9 +143,65 @@ export async function POST(request: NextRequest) {
       .where(eq(orderPaymentTable.orderId, orderId))
       .then(result => result[0]?.totalPaid || 0);
 
-    const remainingAmount = order.totalAmount - totalPaid;
+    // For sponsorships, calculate amount based on payment method
+    let paymentAmount: number;
+    let sponsorshipDetails: CompleteOrderPaymentResponse['sponsorshipDetails'] | undefined;
 
-    if (remainingAmount <= 0) {
+    if (order.isSponsorship) {
+      // Validate payment method type is provided for sponsorships
+      if (!paymentMethodType) {
+        return NextResponse.json(
+          { error: 'Payment method type is required for sponsorship payments' },
+          { status: 400 }
+        );
+      }
+
+      // Get base amount from order metadata
+      const orderMetadata = order.metadata as any;
+      const baseAmount = orderMetadata?.sponsorship?.baseAmount;
+
+      if (!baseAmount || baseAmount <= 0) {
+        console.error('❌ Invalid sponsorship base amount:', baseAmount);
+        return NextResponse.json(
+          { error: 'Invalid sponsorship configuration' },
+          { status: 400 }
+        );
+      }
+
+      // Calculate amount based on payment method
+      if (paymentMethodType === 'card') {
+        // Card payment: include processing fee
+        const processingFee = SPONSORSHIP_CONFIG.calculateProcessingFee(baseAmount);
+        paymentAmount = SPONSORSHIP_CONFIG.calculateTotalWithFee(baseAmount);
+        sponsorshipDetails = {
+          baseAmount,
+          processingFee,
+          totalAmount: paymentAmount,
+          paymentMethodType: 'card'
+        };
+      } else {
+        // Bank payment: no processing fee
+        paymentAmount = baseAmount;
+        sponsorshipDetails = {
+          baseAmount,
+          processingFee: 0,
+          totalAmount: baseAmount,
+          paymentMethodType: 'us_bank_account'
+        };
+      }
+
+      console.log('💳 Sponsorship payment calculation:', {
+        baseAmount,
+        paymentMethodType,
+        paymentAmount,
+        sponsorshipDetails
+      });
+    } else {
+      // Non-sponsorship: use standard remaining amount calculation
+      paymentAmount = order.totalAmount - totalPaid;
+    }
+
+    if (paymentAmount <= 0) {
       return NextResponse.json(
         { error: 'No remaining balance on this order' },
         { status: 400 }
@@ -145,15 +213,24 @@ export async function POST(request: NextRequest) {
       organizationName: organization.name,
       totalAmount: order.totalAmount,
       totalPaid,
-      remainingAmount
+      paymentAmount,
+      isSponsorship: order.isSponsorship,
+      paymentMethodType
     });
+
+    // Determine which payment methods to allow
+    // For sponsorships, only allow the selected method
+    // For regular orders, allow all configured methods
+    const allowedPaymentMethods = order.isSponsorship && paymentMethodType
+      ? [paymentMethodType]
+      : [...STRIPE_CONFIG.paymentMethodTypes];
 
     // Always create a new Stripe Payment Intent for order completion
     // This ensures compatibility with the Payment Element which requires automatic confirmation
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(remainingAmount * 100), // Convert to cents
+      amount: Math.round(paymentAmount * 100), // Convert to cents
       currency: STRIPE_CONFIG.currency,
-      payment_method_types: [...STRIPE_CONFIG.paymentMethodTypes],
+      payment_method_types: allowedPaymentMethods,
       capture_method: STRIPE_CONFIG.captureMethod,
       confirmation_method: STRIPE_CONFIG.confirmationMethod,
       metadata: {
@@ -163,6 +240,12 @@ export async function POST(request: NextRequest) {
         paymentType: order.isSponsorship ? 'sponsorship' : 'balance_completion',
         isSponsorship: order.isSponsorship ? 'true' : 'false',
         userId: session.user.id,
+        // Store sponsorship payment details for later invoice update
+        ...(sponsorshipDetails && {
+          sponsorshipBaseAmount: sponsorshipDetails.baseAmount.toString(),
+          sponsorshipProcessingFee: sponsorshipDetails.processingFee.toString(),
+          sponsorshipPaymentMethod: sponsorshipDetails.paymentMethodType,
+        }),
       },
     });
 
@@ -176,7 +259,8 @@ export async function POST(request: NextRequest) {
     const response: CompleteOrderPaymentResponse = {
       clientSecret: paymentIntent.client_secret!,
       orderId,
-      remainingAmount,
+      remainingAmount: paymentAmount,
+      ...(sponsorshipDetails && { sponsorshipDetails }),
     };
 
     return NextResponse.json(response);

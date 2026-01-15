@@ -12,6 +12,7 @@ export const baseUrl = {
 
 export const routes = {
   dashboard: {
+    Admin: `${baseUrl.Dashboard}/admin`,
     Api: `${baseUrl.Dashboard}/api`,
     auth: {
       changeEmail: {

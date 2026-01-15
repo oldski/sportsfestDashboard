@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { CompleteOrderPaymentRequest, CompleteOrderPaymentResponse } from '~/app/api/orders/complete-payment/route';
+import type { CompleteOrderPaymentRequest, CompleteOrderPaymentResponse, SponsorshipPaymentMethodType } from '~/app/api/orders/complete-payment/route';
 import type { OrderSummary } from '~/types/order';
 
 interface UseOrderPaymentCompletionProps {
@@ -7,14 +7,27 @@ interface UseOrderPaymentCompletionProps {
   onError?: (error: string) => void;
 }
 
-export type { OrderSummary };
+export type { OrderSummary, SponsorshipPaymentMethodType };
+
+interface CreatePaymentIntentOptions {
+  orderId: string;
+  orderItems: Array<{productName: string, quantity: number, unitPrice: number, totalPrice: number}>;
+  originalTotal: number;
+  // For sponsorships: the selected payment method type
+  paymentMethodType?: SponsorshipPaymentMethodType;
+  // For sponsorships: override the display amount (used when payment method affects price)
+  overrideAmount?: number;
+}
 
 interface UseOrderPaymentCompletionResult {
   isLoading: boolean;
   clientSecret: string | null;
   orderId: string | null;
   orderSummary: OrderSummary | null;
-  createPaymentIntent: (orderId: string, orderItems: Array<{productName: string, quantity: number, unitPrice: number, totalPrice: number}>, originalTotal: number) => Promise<void>;
+  sponsorshipDetails: CompleteOrderPaymentResponse['sponsorshipDetails'] | null;
+  createPaymentIntent: (options: CreatePaymentIntentOptions) => Promise<void>;
+  // Legacy signature for backwards compatibility
+  createPaymentIntentLegacy: (orderId: string, orderItems: Array<{productName: string, quantity: number, unitPrice: number, totalPrice: number}>, originalTotal: number) => Promise<void>;
   resetPayment: () => void;
 }
 
@@ -26,18 +39,18 @@ export function useOrderPaymentCompletion({
   const [clientSecret, setClientSecret] = React.useState<string | null>(null);
   const [orderId, setOrderId] = React.useState<string | null>(null);
   const [orderSummary, setOrderSummary] = React.useState<OrderSummary | null>(null);
+  const [sponsorshipDetails, setSponsorshipDetails] = React.useState<CompleteOrderPaymentResponse['sponsorshipDetails'] | null>(null);
 
-  const createPaymentIntent = React.useCallback(async (
-    orderIdParam: string, 
-    orderItems: Array<{productName: string, quantity: number, unitPrice: number, totalPrice: number}>,
-    originalTotal: number
-  ) => {
-    console.log('🔄 Creating payment intent for order:', orderIdParam);
+  const createPaymentIntent = React.useCallback(async (options: CreatePaymentIntentOptions) => {
+    const { orderId: orderIdParam, orderItems, originalTotal, paymentMethodType, overrideAmount } = options;
+
+    console.log('🔄 Creating payment intent for order:', orderIdParam, { paymentMethodType });
     setIsLoading(true);
-    
+
     try {
       const requestBody: CompleteOrderPaymentRequest = {
-        orderId: orderIdParam
+        orderId: orderIdParam,
+        ...(paymentMethodType && { paymentMethodType })
       };
 
       console.log('📤 Sending request to /api/orders/complete-payment:', requestBody);
@@ -59,13 +72,25 @@ export function useOrderPaymentCompletion({
       }
 
       const data: CompleteOrderPaymentResponse = await response.json();
-      
+
       console.log('✅ Payment intent response:', data);
-      
+
       if (!data.clientSecret) {
         throw new Error('No client secret received from payment intent');
       }
-      
+
+      // Use override amount if provided, otherwise use response amount
+      const displayAmount = overrideAmount ?? data.remainingAmount;
+
+      // Check if this is a bank payment with fee waived (for sponsorships)
+      const isBankPayment = data.sponsorshipDetails?.paymentMethodType === 'us_bank_account';
+      const processingFeeWaived = isBankPayment && data.sponsorshipDetails?.processingFee === 0
+        ? (originalTotal - displayAmount) // The difference is the waived fee
+        : undefined;
+
+      // For bank payments, use the base amount as subtotal (not the amount with fee)
+      const displaySubtotal = isBankPayment ? displayAmount : originalTotal;
+
       // Create order summary for the remaining balance
       const summary: OrderSummary = {
         items: orderItems.map(item => ({
@@ -74,41 +99,59 @@ export function useOrderPaymentCompletion({
           unitPrice: item.unitPrice,
           totalPrice: item.totalPrice
         })),
-        subtotal: originalTotal,
-        totalAmount: data.remainingAmount, // Only paying the remaining amount
-        dueToday: data.remainingAmount,
+        subtotal: displaySubtotal,
+        totalAmount: displayAmount,
+        dueToday: displayAmount,
         futurePayments: 0,
-        paymentType: 'full', // This is the completion of the order balance
+        paymentType: 'full',
         couponDiscount: 0,
-        discountedSubtotal: originalTotal,
-        discountedTotal: data.remainingAmount
+        discountedSubtotal: displaySubtotal,
+        discountedTotal: displayAmount,
+        processingFeeWaived,
+        isBankPayment
       };
-      
+
       setClientSecret(data.clientSecret);
       setOrderId(data.orderId);
       setOrderSummary(summary);
+      setSponsorshipDetails(data.sponsorshipDetails || null);
 
       console.log('✅ Order payment completion setup successful:', {
         orderId: data.orderId,
         remainingAmount: data.remainingAmount,
         hasClientSecret: !!data.clientSecret,
-        orderSummary: summary
+        orderSummary: summary,
+        sponsorshipDetails: data.sponsorshipDetails
       });
 
     } catch (error) {
       console.error('❌ Error setting up order payment completion:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       onError?.(errorMessage);
-      throw error; // Re-throw so the caller can handle it
+      throw error;
     } finally {
       setIsLoading(false);
     }
   }, [onError]);
 
+  // Legacy function for backwards compatibility
+  const createPaymentIntentLegacy = React.useCallback(async (
+    orderIdParam: string,
+    orderItems: Array<{productName: string, quantity: number, unitPrice: number, totalPrice: number}>,
+    originalTotal: number
+  ) => {
+    return createPaymentIntent({
+      orderId: orderIdParam,
+      orderItems,
+      originalTotal
+    });
+  }, [createPaymentIntent]);
+
   const resetPayment = React.useCallback(() => {
     setClientSecret(null);
     setOrderId(null);
     setOrderSummary(null);
+    setSponsorshipDetails(null);
     setIsLoading(false);
   }, []);
 
@@ -117,7 +160,9 @@ export function useOrderPaymentCompletion({
     clientSecret,
     orderId,
     orderSummary,
+    sponsorshipDetails,
     createPaymentIntent,
+    createPaymentIntentLegacy,
     resetPayment
   };
 }

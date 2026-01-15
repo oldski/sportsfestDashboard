@@ -1,8 +1,17 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
-import { DollarSignIcon } from 'lucide-react';
+import { DollarSignIcon, TrendingUpIcon, TrendingDownIcon } from 'lucide-react';
+import { getRevenueStats } from '~/actions/admin/get-revenue-stats';
+import { formatCurrency } from '~/lib/formatters';
 
-export default function RevenueStatsPage(): React.JSX.Element {
+export default async function RevenueStatsPage(): Promise<React.JSX.Element> {
+  const stats = await getRevenueStats();
+
+  const growthIsPositive = stats.growthRate !== null && stats.growthRate >= 0;
+  const growthDisplay = stats.growthRate !== null
+    ? `${growthIsPositive ? '+' : ''}${stats.growthRate.toFixed(1)}%`
+    : 'N/A';
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -18,17 +27,40 @@ export default function RevenueStatsPage(): React.JSX.Element {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Total Revenue</p>
-              <p className="text-2xl font-bold">$125,340</p>
+              <p className="text-xs text-muted-foreground">
+                Total Revenue {stats.currentYear ? `(${stats.currentYear})` : ''}
+              </p>
+              <p className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</p>
             </div>
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Growth Rate</p>
-              <p className="text-2xl font-bold text-green-600">+12.5%</p>
+              <p className="text-xs text-muted-foreground">
+                YoY Growth {stats.priorYear ? `vs ${stats.priorYear}` : ''}
+              </p>
+              <div className="flex items-center gap-1">
+                {stats.growthRate !== null && (
+                  growthIsPositive
+                    ? <TrendingUpIcon className="h-5 w-5 text-green-600" />
+                    : <TrendingDownIcon className="h-5 w-5 text-red-600" />
+                )}
+                <p className={`text-2xl font-bold ${
+                  stats.growthRate === null
+                    ? 'text-muted-foreground'
+                    : growthIsPositive
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                }`}>
+                  {growthDisplay}
+                </p>
+              </div>
             </div>
           </div>
-          <div className="h-32 flex items-center justify-center border border-dashed border-muted-foreground/25 rounded-lg">
-            <p className="text-xs text-muted-foreground">Revenue Trend Chart</p>
-          </div>
+          {stats.priorYearRevenue !== null && (
+            <div className="pt-2 border-t">
+              <p className="text-xs text-muted-foreground">
+                Prior Year Revenue ({stats.priorYear}): {formatCurrency(stats.priorYearRevenue)}
+              </p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

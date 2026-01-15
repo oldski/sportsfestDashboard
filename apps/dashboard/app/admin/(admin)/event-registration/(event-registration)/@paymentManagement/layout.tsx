@@ -23,7 +23,7 @@ export default function PaymentManagementLayout({
             Track deposits, balance payments, and Stripe transactions
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-3">
           {children}
         </CardContent>
       </Link>

@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency: STRIPE_CONFIG.currency,
-      payment_method_types: ['card'],
+      payment_method_types: [...STRIPE_CONFIG.paymentMethodTypes],
       capture_method: STRIPE_CONFIG.captureMethod,
       confirmation_method: STRIPE_CONFIG.confirmationMethod,
       metadata: {

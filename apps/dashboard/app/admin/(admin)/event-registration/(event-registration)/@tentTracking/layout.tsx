@@ -12,8 +12,8 @@ export default function TentTrackingLayout({
 }: React.PropsWithChildren): React.JSX.Element {
   // TODO: more of a ux component
   return(
-    <Card className="cursor-pointer hover:shadow-md transition-shadow">
-      <Link href="/admin/event-registration/tent-tracking" className="block">
+    <Card className="flex flex-col cursor-pointer hover:shadow-md transition-shadow">
+      <Link href="/admin/event-registration/tent-tracking" className="flex flex-col flex-1">
         <CardHeader>
           <div className="flex items-center space-x-2">
             <TentIcon className="h-5 w-5 text-primary" />
@@ -23,7 +23,7 @@ export default function TentTrackingLayout({
             Monitor tent purchases and enforce 2-tent limit per organization
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1">
           {children}
         </CardContent>
       </Link>

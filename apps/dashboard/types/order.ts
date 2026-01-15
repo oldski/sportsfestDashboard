@@ -37,4 +37,7 @@ export interface OrderSummary {
   couponDiscount: number;
   discountedSubtotal: number;
   discountedTotal: number;
+  // For bank payments where processing fee is waived
+  processingFeeWaived?: number;
+  isBankPayment?: boolean;
 }

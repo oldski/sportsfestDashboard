@@ -1,8 +1,11 @@
 'use server';
 
 import { auth } from '@workspace/auth';
+import { checkEmailHealth, type EmailHealthStatus } from '@workspace/email/provider';
+
 import { isSuperAdmin } from '~/lib/admin-utils';
 import { getActiveEventYear } from './get-event-year';
+import { getSentryStats, type SentryStats } from './get-sentry-stats';
 import { db, sql, eq, and, gte, lte } from '@workspace/database/client';
 import {
   orderPaymentTable,
@@ -41,10 +44,10 @@ export interface SystemHealthData {
   // Database Performance
   databaseHealth: {
     responseTime: number; // in milliseconds
+    avgQueryTime: number; // average query time in milliseconds
     totalUsers: number;
     totalOrganizations: number;
-    activeConnections: number;
-    querySuccessRate: number;
+    activeConnections: number; // actual PostgreSQL connections
   };
 
   // Overall System Status
@@ -61,6 +64,14 @@ export interface SystemHealthData {
     registration: 'healthy' | 'degraded' | 'down';
     email: 'healthy' | 'degraded' | 'down';
   };
+
+  // Service Messages (reasons for status)
+  serviceMessages: {
+    database: string;
+    payments: string;
+    registration: string;
+    email: string;
+  };
 }
 
 export async function getSystemHealth(): Promise<SystemHealthData> {
@@ -74,6 +85,15 @@ export async function getSystemHealth(): Promise<SystemHealthData> {
   }
 
   const startTime = Date.now();
+  const queryTimes: number[] = [];
+
+  // Helper to track query execution time
+  const trackQuery = async <T>(queryFn: () => Promise<T>): Promise<T> => {
+    const start = Date.now();
+    const result = await queryFn();
+    queryTimes.push(Date.now() - start);
+    return result;
+  };
 
   try {
     const activeEvent = await getActiveEventYear();
@@ -83,7 +103,7 @@ export async function getSystemHealth(): Promise<SystemHealthData> {
     const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
     // 1. PAYMENT PROCESSING HEALTH (Priority #1)
-    const paymentHealthQuery = await db
+    const paymentHealthQuery = await trackQuery(() => db
       .select({
         totalPayments: sql<number>`COUNT(*)`,
         completedPayments: sql<number>`COUNT(CASE WHEN ${orderPaymentTable.status} = 'completed' THEN 1 END)`,
@@ -100,9 +120,10 @@ export async function getSystemHealth(): Promise<SystemHealthData> {
               gte(orderPaymentTable.createdAt, weekAgo)
             )
           : gte(orderPaymentTable.createdAt, weekAgo)
-      );
+      )
+    );
 
-    const recentPaymentsQuery = await db
+    const recentPaymentsQuery = await trackQuery(() => db
       .select({
         recentCount: sql<number>`COUNT(*)`
       })
@@ -115,36 +136,53 @@ export async function getSystemHealth(): Promise<SystemHealthData> {
               gte(orderPaymentTable.createdAt, hourAgo)
             )
           : gte(orderPaymentTable.createdAt, hourAgo)
-      );
+      )
+    );
 
     // 2. REGISTRATION SYSTEM STATUS (Priority #2)
-    const [registrationHealthQuery] = await db
+    const [registrationHealthQuery] = await trackQuery(() => db
       .select({
         newUsersToday: sql<number>`(SELECT COUNT(*) FROM ${userTable} WHERE ${userTable.createdAt} >= ${today})`,
         newUsersThisWeek: sql<number>`(SELECT COUNT(*) FROM ${userTable} WHERE ${userTable.createdAt} >= ${weekAgo})`,
         newTeamsToday: sql<number>`(SELECT COUNT(*) FROM ${companyTeamTable} WHERE ${companyTeamTable.createdAt} >= ${today} ${activeEvent?.id ? sql`AND ${companyTeamTable.eventYearId} = ${activeEvent.id}` : sql``})`,
         newPlayersToday: sql<number>`(SELECT COUNT(*) FROM ${playerTable} WHERE ${playerTable.createdAt} >= ${today} ${activeEvent?.id ? sql`AND ${playerTable.eventYearId} = ${activeEvent.id}` : sql``})`
       })
-      .from(sql`(SELECT 1) as dummy`);
+      .from(sql`(SELECT 1) as dummy`)
+    );
 
     // 3. DATABASE PERFORMANCE (Priority #3)
-    const [databaseHealthQuery] = await db
+    const [databaseHealthQuery] = await trackQuery(() => db
       .select({
         totalUsers: sql<number>`(SELECT COUNT(*) FROM ${userTable})`,
         totalOrganizations: sql<number>`(SELECT COUNT(*) FROM ${organizationTable})`,
-        activeMemberships: sql<number>`(SELECT COUNT(*) FROM ${membershipTable})`
       })
-      .from(sql`(SELECT 1) as dummy`);
+      .from(sql`(SELECT 1) as dummy`)
+    );
 
-    // Execute all queries
-    const [paymentHealth, recentPayments, registrationHealth, databaseHealth] = await Promise.all([
-      paymentHealthQuery,
-      recentPaymentsQuery,
-      Promise.resolve([registrationHealthQuery]), // Wrap in array since we destructured above
-      Promise.resolve([databaseHealthQuery]) // Wrap in array since we destructured above
+    // 4. Get actual PostgreSQL connection count
+    const [connectionCount] = await trackQuery(() => db
+      .select({
+        count: sql<number>`(SELECT COUNT(*) FROM pg_stat_activity WHERE datname = current_database())`
+      })
+      .from(sql`(SELECT 1) as dummy`)
+    );
+
+    // 5. Check email service status using the email package
+    const emailHealth = await checkEmailHealth();
+
+    // Execute remaining queries and get Sentry stats for uptime
+    const [paymentHealth, recentPayments, registrationHealth, databaseHealth, sentryStats] = await Promise.all([
+      Promise.resolve(paymentHealthQuery),
+      Promise.resolve(recentPaymentsQuery),
+      Promise.resolve([registrationHealthQuery]),
+      Promise.resolve([databaseHealthQuery]),
+      getSentryStats().catch(() => null)
     ]);
 
     const dbResponseTime = Date.now() - startTime;
+    const avgQueryTime = queryTimes.length > 0
+      ? Math.round(queryTimes.reduce((a, b) => a + b, 0) / queryTimes.length)
+      : 0;
 
     // Process payment health data
     const paymentData = paymentHealth[0];
@@ -160,13 +198,35 @@ export async function getSystemHealth(): Promise<SystemHealthData> {
 
     const databaseData = databaseHealth[0];
 
-    // Determine service status with development environment handling
+    // Determine service status with real data
+    const databaseStatus = dbResponseTime < 1000 ? 'healthy' : dbResponseTime < 3000 ? 'degraded' : 'down';
+    const paymentsStatus = paymentData.totalPayments > 0 ? (successRate >= 95 ? 'healthy' : successRate >= 85 ? 'degraded' : 'down') : 'healthy';
+    const registrationStatus = sentryStats?.isConnected && sentryStats.status === 'critical' ? 'degraded' : 'healthy';
+
     const services = {
-      database: dbResponseTime < 1000 ? 'healthy' : dbResponseTime < 3000 ? 'degraded' : 'down',
-      payments: paymentData.totalPayments > 0 ? (successRate >= 95 ? 'healthy' : successRate >= 85 ? 'degraded' : 'down') : 'healthy', // Healthy if no payments to process
-      registration: 'healthy', // If queries succeed, registration system is working
-      email: 'healthy' // Assume healthy unless we implement email monitoring
+      database: databaseStatus,
+      payments: paymentsStatus,
+      registration: registrationStatus,
+      email: emailHealth.status
     } as const;
+
+    // Generate meaningful messages for each service
+    const serviceMessages = {
+      database: databaseStatus === 'healthy'
+        ? `Response time: ${dbResponseTime}ms (avg query: ${avgQueryTime}ms)`
+        : databaseStatus === 'degraded'
+          ? `Slow response time: ${dbResponseTime}ms - performance degraded`
+          : `Database not responding (${dbResponseTime}ms timeout)`,
+      payments: paymentsStatus === 'healthy'
+        ? paymentData.totalPayments > 0
+          ? `${successRate}% success rate (${paymentData.completedPayments}/${paymentData.totalPayments} payments)`
+          : 'No recent payments to process'
+        : `${successRate}% success rate - ${paymentData.failedPayments} failed payments`,
+      registration: registrationStatus === 'healthy'
+        ? `System operational - ${registrationData.newUsersToday} new users today`
+        : 'Elevated error rate detected in Sentry',
+      email: emailHealth.message
+    };
 
     // Calculate overall health score with development environment handling
     const paymentScore = paymentData.totalPayments > 0 ? Math.min(successRate, 100) : 95; // Default to good if no payments exist
@@ -198,21 +258,25 @@ export async function getSystemHealth(): Promise<SystemHealthData> {
         newTeamsToday: registrationData.newTeamsToday,
         newPlayersToday: registrationData.newPlayersToday,
         registrationRate,
-        systemUptime: 99.5 // Mock for now, would need external monitoring
+        // Use Sentry crash-free rate as proxy for system uptime, fallback to 99.5 if not connected
+        systemUptime: sentryStats?.isConnected
+          ? Math.max(0, 100 - (sentryStats.errors.total24h * 0.5))
+          : 99.5
       },
       databaseHealth: {
         responseTime: dbResponseTime,
+        avgQueryTime,
         totalUsers: databaseData.totalUsers,
         totalOrganizations: databaseData.totalOrganizations,
-        activeConnections: databaseData.activeMemberships,
-        querySuccessRate: 99.8 // Mock for now
+        activeConnections: connectionCount?.count ?? 0
       },
       overallHealth: {
         score: overallScore,
         status,
         lastUpdated: now
       },
-      services
+      services,
+      serviceMessages
     };
 
   } catch (error) {
@@ -241,10 +305,10 @@ export async function getSystemHealth(): Promise<SystemHealthData> {
       },
       databaseHealth: {
         responseTime: 5000,
+        avgQueryTime: 0,
         totalUsers: 0,
         totalOrganizations: 0,
-        activeConnections: 0,
-        querySuccessRate: 0
+        activeConnections: 0
       },
       overallHealth: {
         score: 0,
@@ -256,6 +320,12 @@ export async function getSystemHealth(): Promise<SystemHealthData> {
         payments: 'down',
         registration: 'down',
         email: 'down'
+      },
+      serviceMessages: {
+        database: 'Failed to connect to database',
+        payments: 'Unable to fetch payment data',
+        registration: 'Unable to fetch registration data',
+        email: 'Unable to check email service status'
       }
     };
   }

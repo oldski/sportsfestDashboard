@@ -1,13 +1,14 @@
 import 'server-only';
 
 import { getAuthOrganizationContext } from '@workspace/auth/context';
-import { db, eq, and, sql, inArray } from '@workspace/database/client';
-import { 
+import { db, eq, and, sql, inArray, ne } from '@workspace/database/client';
+import {
   playerTable,
   teamRosterTable,
   companyTeamTable,
   eventYearTable,
-  playerEventInterestTable
+  playerEventInterestTable,
+  PlayerStatus
 } from '@workspace/database/schema';
 
 export interface PlayerForRoster {
@@ -95,7 +96,8 @@ export async function getPlayersForRosterManagement(currentTeamId: string): Prom
     .where(
       and(
         eq(playerTable.organizationId, ctx.organization.id),
-        eq(playerTable.eventYearId, activeEventYear.id)
+        eq(playerTable.eventYearId, activeEventYear.id),
+        ne(playerTable.status, PlayerStatus.INACTIVE)
       )
     )
     .orderBy(playerTable.firstName, playerTable.lastName);

@@ -23,7 +23,7 @@ export default function ProductManagementLayout({
             Manage product catalog, categories, pricing, and deposit settings
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-3">
           {children}
         </CardContent>
       </Link>

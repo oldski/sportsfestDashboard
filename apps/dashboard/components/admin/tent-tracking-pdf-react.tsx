@@ -164,7 +164,7 @@ export function TentTrackingReactPDF({
                   {tracking.eventYear || ''}
                 </Text>
                 <Text style={[styles.cell, styles.colTents]}>
-                  {tracking.tentCount} / {tracking.maxAllowed} max
+                  {tracking.tentCount} / {tracking.companyTeamCount * 2} max
                 </Text>
                 <Text style={[styles.cell, styles.colAmount]}>
                   {formatCurrency(tracking.totalAmount)}

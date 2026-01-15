@@ -1,8 +1,12 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { BarChart3Icon } from 'lucide-react';
+import { PieChart } from '~/components/admin/charts/pie-chart';
+import { getAgeDistribution } from '~/actions/admin/get-player-analytics';
 
-export default function PlayersByAgeGroupPage(): React.JSX.Element {
+export default async function PlayersByAgeGroupPage(): Promise<React.JSX.Element> {
+  const ageData = await getAgeDistribution();
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -12,9 +16,7 @@ export default function PlayersByAgeGroupPage(): React.JSX.Element {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-48 flex items-center justify-center border border-dashed border-muted-foreground/25 rounded-lg">
-          <p className="text-xs text-muted-foreground">Players by Age Group Chart</p>
-        </div>
+        <PieChart data={ageData} height={200} donut />
       </CardContent>
     </Card>
   );

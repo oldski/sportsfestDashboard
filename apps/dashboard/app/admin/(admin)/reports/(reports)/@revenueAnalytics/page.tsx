@@ -1,25 +1,32 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { DollarSignIcon } from 'lucide-react';
-import { RevenueWaterfallChart } from '~/components/admin/charts/revenue-waterfall-chart';
+import { RevenueByProductChart } from '~/components/admin/charts/revenue-by-product-chart';
 import { getRevenueAnalytics } from '~/actions/admin/get-revenue-analytics';
+import { formatCurrency } from '~/lib/formatters';
 
 export default async function RevenueAnalyticsPage(): Promise<React.JSX.Element> {
-  const revenueData = await getRevenueAnalytics();
+  const { byProductType, netRevenue } = await getRevenueAnalytics();
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center">
-          <DollarSignIcon className="mr-2 h-4 w-4" />
-          Revenue Analytics
-        </CardTitle>
-        <CardDescription>
-          Revenue waterfall showing income sources and deductions
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div>
+          <CardTitle className="text-base flex items-center">
+            <DollarSignIcon className="mr-2 h-4 w-4" />
+            Revenue by Product Type
+          </CardTitle>
+          <CardDescription>
+            Revenue breakdown by product category
+          </CardDescription>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold">{formatCurrency(netRevenue)}</p>
+          <p className="text-xs text-muted-foreground">Net Revenue</p>
+        </div>
       </CardHeader>
       <CardContent>
-        <RevenueWaterfallChart data={revenueData} />
+        <RevenueByProductChart data={byProductType} />
       </CardContent>
     </Card>
   );

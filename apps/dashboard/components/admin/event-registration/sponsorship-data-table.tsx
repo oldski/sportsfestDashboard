@@ -20,7 +20,9 @@ import {
   ExternalLinkIcon,
   EyeIcon,
   MailIcon,
-  LoaderIcon
+  LoaderIcon,
+  PencilIcon,
+  Trash2Icon
 } from 'lucide-react';
 
 import { replaceOrgSlug, routes } from '@workspace/routes';
@@ -53,10 +55,17 @@ import type { SponsorshipData } from '~/actions/admin/get-sponsorships';
 import { resendSponsorshipEmail } from '~/actions/admin/resend-sponsorship-email';
 import { InvoiceDetailsModal } from '~/components/organizations/slug/registration/invoice-details-modal';
 import { useCreateSponsorshipDialog } from './create-sponsorship-dialog-provider';
+import { EditSponsorshipDialog } from './edit-sponsorship-dialog';
+import { DeleteSponsorshipDialog } from './delete-sponsorship-dialog';
 
 // Action cell component to handle resend state
 function SponsorshipActionCell({ sponsorship }: { sponsorship: SponsorshipData }) {
   const [isResending, setIsResending] = React.useState(false);
+
+  // Can only edit if no payments have been made
+  const canEdit = sponsorship.paidAmount === 0 && sponsorship.status !== 'paid' && sponsorship.status !== 'partial' && sponsorship.status !== 'cancelled';
+  // Can delete/cancel any sponsorship that isn't already cancelled or fully paid
+  const canDelete = sponsorship.status !== 'cancelled' && sponsorship.status !== 'paid';
 
   const handleResendEmail = async () => {
     setIsResending(true);
@@ -72,6 +81,24 @@ function SponsorshipActionCell({ sponsorship }: { sponsorship: SponsorshipData }
     } finally {
       setIsResending(false);
     }
+  };
+
+  const handleEdit = () => {
+    NiceModal.show(EditSponsorshipDialog, {
+      sponsorship,
+      onSuccess: () => {
+        window.location.reload();
+      }
+    });
+  };
+
+  const handleDelete = () => {
+    NiceModal.show(DeleteSponsorshipDialog, {
+      sponsorship,
+      onSuccess: () => {
+        window.location.reload();
+      }
+    });
   };
 
   return (
@@ -104,8 +131,25 @@ function SponsorshipActionCell({ sponsorship }: { sponsorship: SponsorshipData }
               variant="ghost"
               size="sm"
               className="h-8 w-8 p-0"
+              onClick={handleEdit}
+              disabled={!canEdit}
+            >
+              <PencilIcon className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{canEdit ? 'Edit Sponsorship' : 'Cannot edit after payment received'}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
               onClick={handleResendEmail}
-              disabled={isResending}
+              disabled={isResending || sponsorship.status === 'cancelled' || sponsorship.status === 'paid'}
             >
               {isResending ? (
                 <LoaderIcon className="h-4 w-4 animate-spin" />
@@ -115,7 +159,7 @@ function SponsorshipActionCell({ sponsorship }: { sponsorship: SponsorshipData }
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Resend Email</p>
+            <p>{sponsorship.status === 'cancelled' ? 'Cannot resend cancelled invoice' : sponsorship.status === 'paid' ? 'Invoice already paid' : 'Resend Email'}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -141,6 +185,26 @@ function SponsorshipActionCell({ sponsorship }: { sponsorship: SponsorshipData }
           </TooltipTrigger>
           <TooltipContent>
             <p>View Organization</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              onClick={handleDelete}
+              disabled={!canDelete}
+            >
+              <Trash2Icon className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{!canDelete
+              ? (sponsorship.status === 'paid' ? 'Cannot cancel paid sponsorship' : 'Already cancelled')
+              : (sponsorship.paidAmount > 0 ? 'Cancel Sponsorship' : 'Delete Sponsorship')
+            }</p>
           </TooltipContent>
         </Tooltip>
       </div>

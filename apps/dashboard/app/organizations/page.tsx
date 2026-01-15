@@ -33,7 +33,7 @@ export default async function OrganizationsPage(): Promise<React.JSX.Element> {
     <div className="flex min-h-svh">
       <div className="relative flex w-full min-w-80 max-w-lg flex-col items-stretch justify-start gap-6 h-screen overflow-hidden">
         <div className="p-4 mx-auto">
-          <Link href={routes.marketing.Index}>
+          <Link href={routes.dashboard.Admin}>
             <Logo />
           </Link>
         </div>

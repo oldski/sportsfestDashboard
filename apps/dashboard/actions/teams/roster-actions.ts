@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { getAuthOrganizationContext } from '@workspace/auth/context';
-import { db, eq, and, sql } from '@workspace/database/client';
-import { teamRosterTable, companyTeamTable, playerTable, eventYearTable, eventRosterTable } from '@workspace/database/schema';
+import { db, eq, and, sql, ne } from '@workspace/database/client';
+import { teamRosterTable, companyTeamTable, playerTable, eventYearTable, eventRosterTable, PlayerStatus } from '@workspace/database/schema';
 import { resolveAllTransferWarningsForPlayer } from '~/actions/teams/transfer-warning-actions';
 
 export interface RosterActionResult {
@@ -44,7 +44,7 @@ export async function addPlayerToTeam(playerId: string, teamId: string): Promise
 
     // Verify the player belongs to the organization and is not already on a team
     const player = await db
-      .select({ id: playerTable.id })
+      .select({ id: playerTable.id, status: playerTable.status })
       .from(playerTable)
       .where(
         and(
@@ -56,6 +56,11 @@ export async function addPlayerToTeam(playerId: string, teamId: string): Promise
 
     if (player.length === 0) {
       return { success: false, error: 'Player not found or access denied' };
+    }
+
+    // Prevent adding inactive players to team roster
+    if (player[0].status === PlayerStatus.INACTIVE) {
+      return { success: false, error: 'Cannot add inactive player to team roster' };
     }
 
     // Check if player is already on a team (one-player-per-team constraint)
@@ -169,11 +174,31 @@ export async function transferPlayerToTeam(playerId: string, newTeamId: string):
       return { success: false, error: 'Team not found or access denied' };
     }
 
+    // Verify the player is not inactive
+    const player = await db
+      .select({ id: playerTable.id, status: playerTable.status })
+      .from(playerTable)
+      .where(
+        and(
+          eq(playerTable.id, playerId),
+          eq(playerTable.organizationId, ctx.organization.id)
+        )
+      )
+      .limit(1);
+
+    if (player.length === 0) {
+      return { success: false, error: 'Player not found or access denied' };
+    }
+
+    if (player[0].status === PlayerStatus.INACTIVE) {
+      return { success: false, error: 'Cannot transfer inactive player' };
+    }
+
     // Find current team assignment
     const currentAssignment = await db
-      .select({ 
+      .select({
         rosterItemId: teamRosterTable.id,
-        teamId: companyTeamTable.id 
+        teamId: companyTeamTable.id
       })
       .from(teamRosterTable)
       .innerJoin(companyTeamTable, eq(teamRosterTable.companyTeamId, companyTeamTable.id))
@@ -281,7 +306,7 @@ export async function autoGenerateRosters(): Promise<AutoGenerateRosterResult> {
       return { success: false, error: 'No active event year found' };
     }
 
-    // Get all available players (not assigned to any team)
+    // Get all available players (not assigned to any team, excluding inactive)
     const availablePlayers = await db
       .select({
         id: playerTable.id,
@@ -295,6 +320,7 @@ export async function autoGenerateRosters(): Promise<AutoGenerateRosterResult> {
         and(
           eq(playerTable.organizationId, ctx.organization.id),
           eq(playerTable.eventYearId, activeEventYear[0].id),
+          ne(playerTable.status, PlayerStatus.INACTIVE), // Exclude inactive players
           sql`${teamRosterTable.playerId} IS NULL` // Not assigned to any team
         )
       )

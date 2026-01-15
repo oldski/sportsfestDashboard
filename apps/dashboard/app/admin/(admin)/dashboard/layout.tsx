@@ -22,8 +22,6 @@ export type DashboardLayoutProps = {
   tentRentals: React.ReactNode;
   topOrganizations: React.ReactNode;
   systemHealth: React.ReactNode;
-  organizationGrowthChart : React.ReactNode;
-  userGrowthChart : React.ReactNode;
   accountGrowthCharts: React.ReactNode;
 };
 
@@ -33,8 +31,6 @@ export default async function DashboardLayout({
   revenueStats,
   tentRentals,
   topOrganizations,
-  organizationGrowthChart,
-  userGrowthChart,
   accountGrowthCharts,
   systemHealth
 }: DashboardLayoutProps & NextPageProps): Promise<React.JSX.Element> {

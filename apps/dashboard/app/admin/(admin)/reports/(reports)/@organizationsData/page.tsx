@@ -1,8 +1,12 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { Building2Icon } from 'lucide-react';
+import { OrganizationStatusChart } from '~/components/admin/charts/organization-status-chart';
+import { getOrganizationStats } from '~/actions/admin/get-organization-stats';
 
-export default function OrganizationsDataPage(): React.JSX.Element {
+export default async function OrganizationsDataPage(): Promise<React.JSX.Element> {
+  const stats = await getOrganizationStats();
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -11,27 +15,25 @@ export default function OrganizationsDataPage(): React.JSX.Element {
           Organizations Overview
         </CardTitle>
         <CardDescription>
-          Comprehensive organizational metrics and growth trends
+          Organizational metrics and registration status
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="text-center space-y-1">
             <p className="text-xs text-muted-foreground">Total Orgs</p>
-            <p className="text-xl font-bold">24</p>
+            <p className="text-xl font-bold">{stats.totalOrganizations}</p>
           </div>
           <div className="text-center space-y-1">
             <p className="text-xs text-muted-foreground">Active</p>
-            <p className="text-xl font-bold text-green-600">22</p>
+            <p className="text-xl font-bold text-green-600">{stats.activeOrganizations}</p>
           </div>
           <div className="text-center space-y-1">
-            <p className="text-xs text-muted-foreground">New</p>
-            <p className="text-xl font-bold text-blue-600">3</p>
+            <p className="text-xs text-muted-foreground">New This Year</p>
+            <p className="text-xl font-bold text-blue-600">{stats.newOrganizations}</p>
           </div>
         </div>
-        <div className="h-48 flex items-center justify-center border border-dashed border-muted-foreground/25 rounded-lg">
-          <p className="text-xs text-muted-foreground">Organizations Growth Chart</p>
-        </div>
+        <OrganizationStatusChart data={stats.byRegistrationStatus} />
       </CardContent>
     </Card>
   );

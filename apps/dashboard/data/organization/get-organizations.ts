@@ -8,9 +8,11 @@ import { membershipTable, organizationTable } from '@workspace/database/schema';
 
 import {
   Caching,
-  defaultRevalidateTimeInSeconds,
   UserCacheKey
 } from '~/data/caching';
+
+// Shorter cache time for organizations list to ensure fresh data during onboarding
+const ORGANIZATIONS_CACHE_TIME_SECONDS = 60;
 import type { OrganizationDto } from '~/types/dtos/organization-dto';
 
 export async function getOrganizations(): Promise<OrganizationDto[]> {
@@ -98,7 +100,7 @@ export async function getOrganizations(): Promise<OrganizationDto[]> {
     },
     Caching.createUserKeyParts(UserCacheKey.Organizations, ctx.session.user.id),
     {
-      revalidate: defaultRevalidateTimeInSeconds,
+      revalidate: ORGANIZATIONS_CACHE_TIME_SECONDS,
       tags: [
         Caching.createUserTag(UserCacheKey.Organizations, ctx.session.user.id)
       ]

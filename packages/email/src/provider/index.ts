@@ -1,4 +1,4 @@
-import type { EmailProvider as IEmailProvider } from './types';
+import type { EmailProvider as IEmailProvider, EmailHealthStatus } from './types';
 
 /**
  * Email Provider Selection
@@ -38,3 +38,33 @@ const getEmailProvider = (): IEmailProvider => {
 };
 
 export const EmailProvider = getEmailProvider();
+
+/**
+ * Check email service health
+ * Returns status, message, and details about the configured email provider
+ */
+export async function checkEmailHealth(): Promise<EmailHealthStatus> {
+  try {
+    const provider = getEmailProvider();
+    if (provider.checkHealth) {
+      return await provider.checkHealth();
+    }
+    return {
+      status: 'healthy',
+      message: 'Email provider configured (health check not available)',
+      details: {
+        provider: 'unknown'
+      }
+    };
+  } catch (error) {
+    return {
+      status: 'down',
+      message: error instanceof Error ? error.message : 'Email provider not configured',
+      details: {
+        provider: 'none'
+      }
+    };
+  }
+}
+
+export type { EmailHealthStatus } from './types';

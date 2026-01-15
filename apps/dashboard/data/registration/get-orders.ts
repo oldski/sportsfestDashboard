@@ -100,6 +100,14 @@ export const getRegistrationOrders = cache(async (organizationSlug: string): Pro
         const couponDiscount = metadata?.couponDiscount || 0;
         const originalTotal = metadata?.originalTotal;
 
+        // Extract sponsorship details from metadata
+        const sponsorshipData = metadata?.sponsorship;
+        const sponsorshipDetails = row.orderIsSponsorship && sponsorshipData ? {
+          baseAmount: sponsorshipData.baseAmount || row.orderTotalAmount,
+          processingFee: sponsorshipData.processingFee || 0,
+          description: sponsorshipData.description
+        } : undefined;
+
         orderMap.set(row.orderId, {
           id: row.orderId,
           orderNumber: row.orderNumber,
@@ -108,6 +116,7 @@ export const getRegistrationOrders = cache(async (organizationSlug: string): Pro
           originalTotal,
           status: row.orderStatus as RegistrationOrderDto['status'],
           isSponsorship: row.orderIsSponsorship,
+          sponsorshipDetails,
           createdAt: row.orderCreatedAt,
           updatedAt: row.orderUpdatedAt,
           eventYear: {

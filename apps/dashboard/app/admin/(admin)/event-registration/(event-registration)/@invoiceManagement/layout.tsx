@@ -19,7 +19,7 @@ export default function InvoiceManagementLayout({
             Generate and manage organization invoices and PDF exports
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-3">
           {children}
         </CardContent>
       </Link>

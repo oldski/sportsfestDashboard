@@ -46,7 +46,8 @@ export async function getTentTrackingSimple(): Promise<TentTrackingData[]> {
         tentProductName: product.name,
         createdAt: tentPurchaseTracking.createdAt,
         updatedAt: tentPurchaseTracking.updatedAt,
-        isAtLimit: sql`${tentPurchaseTracking.remainingAllowed} = 0`,
+        // At limit when tents purchased >= companyTeamCount * 2 (2 tents per team)
+        isAtLimit: sql`${tentPurchaseTracking.quantityPurchased} >= ${tentPurchaseTracking.companyTeamCount} * 2`,
       })
       .from(tentPurchaseTracking)
       .innerJoin(organizationTable, eq(tentPurchaseTracking.organizationId, organizationTable.id))
@@ -239,7 +240,7 @@ export async function getTentAvailabilitySimple(): Promise<TentAvailabilityData 
     let pendingPayments = 0;
 
     try {
-      // Count organizations at limit for active event year
+      // Count organizations at limit for active event year (tents purchased >= companyTeamCount * 2)
       const limitQuery = await db
         .select({
           count: sql`cast(count(*) as int)`.mapWith(Number),
@@ -248,7 +249,7 @@ export async function getTentAvailabilitySimple(): Promise<TentAvailabilityData 
         .where(
           and(
             eq(tentPurchaseTracking.eventYearId, activeEventYear.id),
-            eq(tentPurchaseTracking.remainingAllowed, 0)
+            sql`${tentPurchaseTracking.quantityPurchased} >= ${tentPurchaseTracking.companyTeamCount} * 2`
           )
         );
 

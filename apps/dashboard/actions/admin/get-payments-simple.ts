@@ -7,6 +7,13 @@ import { isSuperAdmin } from '~/lib/admin-utils';
 import { getCurrentEventYear } from '~/data/event-years/get-current-event-year';
 import type { PaymentData } from './get-payments';
 
+// Helper function to format date in local timezone
+const formatLocalDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export async function getPendingPaymentsSimple(): Promise<PaymentData[]> {
   const session = await auth();
@@ -21,12 +28,8 @@ export async function getPendingPaymentsSimple(): Promise<PaymentData[]> {
   try {
     const currentEventYear = await getCurrentEventYear();
     if (!currentEventYear) {
-      console.log('No active event year found, returning empty array');
       return [];
     }
-
-    // Simplified query for debugging
-    console.log('Attempting to query pending payments for event year:', currentEventYear.id);
 
     const result = await db
       .select({
@@ -56,16 +59,6 @@ export async function getPendingPaymentsSimple(): Promise<PaymentData[]> {
         eq(orderTable.eventYearId, currentEventYear.id as string)
       ));
 
-    console.log('Query executed successfully, found', result.length, 'records');
-
-    // Helper function to format date in local timezone
-    const formatLocalDate = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
     return result.map(row => ({
       id: row.id,
       organizationId: row.organizationId,
@@ -87,7 +80,6 @@ export async function getPendingPaymentsSimple(): Promise<PaymentData[]> {
     }));
   } catch (error) {
     console.error('Error fetching pending payments:', error);
-    console.error('Error details:', error instanceof Error ? error.message : String(error));
     return [];
   }
 }
@@ -105,12 +97,8 @@ export async function getCompletedPaymentsSimple(): Promise<PaymentData[]> {
   try {
     const currentEventYear = await getCurrentEventYear();
     if (!currentEventYear) {
-      console.log('No active event year found, returning empty array');
       return [];
     }
-
-    // Simplified query for debugging
-    console.log('Attempting to query completed payments for event year:', currentEventYear.id);
 
     const result = await db
       .select({
@@ -140,17 +128,6 @@ export async function getCompletedPaymentsSimple(): Promise<PaymentData[]> {
         eq(orderTable.eventYearId, currentEventYear.id as string)
       ));
 
-    console.log('Query executed successfully, found', result.length, 'records');
-    console.log('Completed payments raw result:', JSON.stringify(result, null, 2));
-
-    // Helper function to format date in local timezone
-    const formatLocalDate = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
     return result.map(row => ({
       id: row.id,
       organizationId: row.organizationId,
@@ -172,7 +149,6 @@ export async function getCompletedPaymentsSimple(): Promise<PaymentData[]> {
     }));
   } catch (error) {
     console.error('Error fetching completed payments:', error);
-    console.error('Error details:', error instanceof Error ? error.message : String(error));
     return [];
   }
 }
@@ -190,12 +166,8 @@ export async function getFailedPaymentsSimple(): Promise<PaymentData[]> {
   try {
     const currentEventYear = await getCurrentEventYear();
     if (!currentEventYear) {
-      console.log('No active event year found, returning empty array');
       return [];
     }
-
-    // Simplified query for debugging
-    console.log('Attempting to query failed payments for event year:', currentEventYear.id);
 
     const result = await db
       .select({
@@ -226,16 +198,6 @@ export async function getFailedPaymentsSimple(): Promise<PaymentData[]> {
         eq(orderTable.eventYearId, currentEventYear.id as string)
       ));
 
-    console.log('Query executed successfully, found', result.length, 'records');
-
-    // Helper function to format date in local timezone
-    const formatLocalDate = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
     return result.map(row => ({
       id: row.id,
       organizationId: row.organizationId,
@@ -258,7 +220,6 @@ export async function getFailedPaymentsSimple(): Promise<PaymentData[]> {
     }));
   } catch (error) {
     console.error('Error fetching failed payments:', error);
-    console.error('Error details:', error instanceof Error ? error.message : String(error));
     return [];
   }
 }
@@ -276,12 +237,8 @@ export async function getAllPaymentsSimple(): Promise<PaymentData[]> {
   try {
     const currentEventYear = await getCurrentEventYear();
     if (!currentEventYear) {
-      console.log('No active event year found, returning empty array');
       return [];
     }
-
-    // Simplified query for debugging
-    console.log('Attempting to query all payments for event year:', currentEventYear.id);
 
     const result = await db
       .select({
@@ -310,16 +267,6 @@ export async function getAllPaymentsSimple(): Promise<PaymentData[]> {
       .where(eq(orderTable.eventYearId, currentEventYear.id as string))
       .limit(50);
 
-    console.log('Query executed successfully, found', result.length, 'records');
-
-    // Helper function to format date in local timezone
-    const formatLocalDate = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
     return result.map(row => ({
       id: row.id,
       organizationId: row.organizationId,
@@ -342,7 +289,6 @@ export async function getAllPaymentsSimple(): Promise<PaymentData[]> {
     }));
   } catch (error) {
     console.error('Error fetching all payments:', error);
-    console.error('Error details:', error instanceof Error ? error.message : String(error));
     return [];
   }
 }

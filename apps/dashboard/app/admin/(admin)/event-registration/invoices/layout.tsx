@@ -21,12 +21,10 @@ export const metadata: Metadata = {
 
 export type InvoicesLayoutProps = {
   invoiceTable: React.ReactNode;
-  quickActions: React.ReactNode;
 };
 
 export default async function InvoicesLayout({
-  invoiceTable,
-  quickActions
+  invoiceTable
 }: InvoicesLayoutProps & NextPageProps): Promise<React.JSX.Element> {
   return (
     <RecordPaymentDialogProvider>

@@ -1,5 +1,5 @@
 import { keys } from '../../../keys';
-import { type EmailPayload, type EmailProvider } from '../types';
+import { type EmailPayload, type EmailProvider, type EmailHealthStatus } from '../types';
 
 class ConsoleEmailProvider implements EmailProvider {
   private readonly from: string;
@@ -28,6 +28,16 @@ class ConsoleEmailProvider implements EmailProvider {
     console.log('📧 ====================================================\n');
 
     return { id: 'console-email-' + Date.now() };
+  }
+
+  public async checkHealth(): Promise<EmailHealthStatus> {
+    return {
+      status: 'healthy',
+      message: 'Console provider active (development mode - emails logged, not sent)',
+      details: {
+        provider: 'console'
+      }
+    };
   }
 }
 

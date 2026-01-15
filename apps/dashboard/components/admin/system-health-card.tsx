@@ -10,24 +10,34 @@ import {
   Users,
   Database,
   TrendingUp,
-  Clock
+  TrendingDown,
+  Clock,
+  Bug,
+  AlertCircle
 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { Badge } from '@workspace/ui/components/badge';
 import { Progress } from '@workspace/ui/components/progress';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@workspace/ui/components/tooltip';
 
 import { getSystemHealth, type SystemHealthData } from '~/actions/admin/get-system-health';
+import { getSentryStats, type SentryStats } from '~/actions/admin/get-sentry-stats';
 
 export function SystemHealthCard(): React.JSX.Element {
   const [healthData, setHealthData] = React.useState<SystemHealthData | null>(null);
+  const [sentryData, setSentryData] = React.useState<SentryStats | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
     const fetchHealthData = async () => {
       try {
-        const data = await getSystemHealth();
-        setHealthData(data);
+        const [systemData, sentryStats] = await Promise.all([
+          getSystemHealth(),
+          getSentryStats()
+        ]);
+        setHealthData(systemData);
+        setSentryData(sentryStats);
       } catch (error) {
         console.error('Error fetching system health:', error);
       } finally {
@@ -78,7 +88,7 @@ export function SystemHealthCard(): React.JSX.Element {
     );
   }
 
-  const { overallHealth, paymentHealth, registrationHealth, databaseHealth, services } = healthData;
+  const { overallHealth, paymentHealth, registrationHealth, databaseHealth, services, serviceMessages } = healthData;
 
   const getHealthStatus = (status: string) => {
     switch (status) {
@@ -242,10 +252,10 @@ export function SystemHealthCard(): React.JSX.Element {
             </div>
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs">Query Success</span>
-                <span className="text-xs font-medium">{databaseHealth.querySuccessRate}%</span>
+                <span className="text-xs">Avg Query Time</span>
+                <span className="text-xs font-medium">{databaseHealth.avgQueryTime}ms</span>
               </div>
-              <Progress value={databaseHealth.querySuccessRate} className="h-1" />
+              <Progress value={Math.max(0, 100 - (databaseHealth.avgQueryTime / 5))} className="h-1" />
             </div>
           </div>
 
@@ -265,6 +275,134 @@ export function SystemHealthCard(): React.JSX.Element {
           </div>
         </div>
 
+        {/* Error Monitoring (Sentry) */}
+        {sentryData && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bug className="h-4 w-4 text-orange-600" />
+                <span className="text-sm font-medium">Error Monitoring</span>
+              </div>
+              {sentryData.isConnected ? (
+                <Badge variant={sentryData.status === 'healthy' ? 'secondary' : sentryData.status === 'degraded' ? 'outline' : 'destructive'}>
+                  {getServiceIcon(sentryData.status)}
+                  <span className="ml-1 capitalize">{sentryData.status}</span>
+                </Badge>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Badge variant="outline" className="text-muted-foreground">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Not Connected
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Configure Sentry environment variables to enable error monitoring</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+
+            {sentryData.isConnected ? (
+              <>
+                <div className="grid grid-cols-2 gap-4 pl-6">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs">Errors (24h)</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium">{sentryData.errors.total24h}</span>
+                        {sentryData.errors.trend === 'up' && (
+                          <TrendingUp className="h-3 w-3 text-red-500" />
+                        )}
+                        {sentryData.errors.trend === 'down' && (
+                          <TrendingDown className="h-3 w-3 text-green-500" />
+                        )}
+                      </div>
+                    </div>
+                    <Progress
+                      value={Math.max(0, 100 - sentryData.errors.total24h)}
+                      className="h-1"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs">Unhandled (24h)</span>
+                      <span className="text-xs font-medium text-red-600">{sentryData.unhandled.total24h}</span>
+                    </div>
+                    <Progress
+                      value={Math.max(0, 100 - sentryData.unhandled.total24h * 10)}
+                      className="h-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 pl-6 text-xs">
+                  <div className="text-center">
+                    <p className="font-medium">{sentryData.errors.total24h}</p>
+                    <p className="text-muted-foreground">24h Errors</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-medium">{sentryData.errors.total7d}</p>
+                    <p className="text-muted-foreground">7d Errors</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-medium flex items-center justify-center gap-1">
+                      {sentryData.errors.trendPercent}%
+                      {sentryData.errors.trend === 'up' ? (
+                        <TrendingUp className="h-3 w-3 text-red-500" />
+                      ) : sentryData.errors.trend === 'down' ? (
+                        <TrendingDown className="h-3 w-3 text-green-500" />
+                      ) : null}
+                    </p>
+                    <p className="text-muted-foreground">Trend</p>
+                  </div>
+                </div>
+
+                {sentryData.recentIssues.length > 0 && (
+                  <div className="pl-6 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Recent Issues</p>
+                    <div className="space-y-1">
+                      {sentryData.recentIssues.slice(0, 3).map((issue) => (
+                        <Tooltip key={issue.id}>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-between text-xs p-1.5 rounded bg-muted/50 cursor-pointer hover:bg-muted">
+                              <div className="flex items-center gap-2 truncate flex-1">
+                                {issue.level === 'error' || issue.level === 'fatal' ? (
+                                  <XCircle className="h-3 w-3 text-red-500 shrink-0" />
+                                ) : (
+                                  <AlertTriangle className="h-3 w-3 text-yellow-500 shrink-0" />
+                                )}
+                                <span className="truncate">{issue.shortId}: {issue.title}</span>
+                              </div>
+                              <Badge variant="outline" className="ml-2 shrink-0 text-[10px] h-5">
+                                {issue.count}x
+                              </Badge>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-xs">
+                            <p className="font-medium">{issue.title}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {issue.count} events • {issue.userCount} users affected
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Last seen: {new Date(issue.lastSeen).toLocaleString()}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="pl-6 text-xs text-muted-foreground">
+                <p>Error monitoring is not configured.</p>
+                <p className="mt-1">Set MONITORING_SENTRY_* environment variables to enable.</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Service Status */}
         <div className="pt-4 border-t space-y-2">
           <h4 className="text-sm font-medium flex items-center gap-1">
@@ -272,22 +410,65 @@ export function SystemHealthCard(): React.JSX.Element {
             Service Status
           </h4>
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs">Database</span>
-              {getServiceIcon(services.database)}
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs">Payment Processing</span>
-              {getServiceIcon(services.payments)}
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs">Registration</span>
-              {getServiceIcon(services.registration)}
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs">Email Service</span>
-              {getServiceIcon(services.email)}
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center justify-between cursor-help">
+                  <span className="text-xs">Database</span>
+                  {getServiceIcon(services.database)}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">{serviceMessages.database}</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center justify-between cursor-help">
+                  <span className="text-xs">Payment Processing</span>
+                  {getServiceIcon(services.payments)}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">{serviceMessages.payments}</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center justify-between cursor-help">
+                  <span className="text-xs">Registration</span>
+                  {getServiceIcon(services.registration)}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">{serviceMessages.registration}</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center justify-between cursor-help">
+                  <span className="text-xs">Email Service</span>
+                  {getServiceIcon(services.email)}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">{serviceMessages.email}</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center justify-between cursor-help">
+                  <span className="text-xs">Error Monitoring</span>
+                  {sentryData?.isConnected ? getServiceIcon(sentryData.status) : getServiceIcon('down')}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">
+                  {sentryData?.isConnected
+                    ? `${sentryData.errors.total24h} errors in last 24h`
+                    : 'Sentry not configured - set MONITORING_SENTRY_* env vars'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </CardContent>

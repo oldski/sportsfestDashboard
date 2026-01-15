@@ -55,6 +55,8 @@ const getStatusVariant = (status: RegistrationOrderDto['status']) => {
       return 'default'; // Green
     case 'deposit_paid':
       return 'secondary'; // Blue
+    case 'payment_processing':
+      return 'secondary'; // Blue - indicates payment is in progress
     case 'pending':
       return 'outline'; // Gray
     case 'cancelled':

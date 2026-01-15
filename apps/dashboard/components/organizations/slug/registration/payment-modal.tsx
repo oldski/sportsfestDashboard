@@ -56,6 +56,9 @@ export interface PaymentModalProps {
     couponDiscount: number;
     discountedSubtotal: number;
     discountedTotal: number;
+    // For bank payments where processing fee is waived
+    processingFeeWaived?: number;
+    isBankPayment?: boolean;
   };
   organizationName: string;
   userEmail: string;
@@ -79,6 +82,7 @@ export function PaymentModal({
   const [state, setState] = React.useState<PaymentState>('idle');
   const [error, setError] = React.useState<string | null>(null);
   const [isPaymentReady, setIsPaymentReady] = React.useState(false);
+  const [isBankPayment, setIsBankPayment] = React.useState(false);
 
   const isLoading = state === 'processing';
   const isSucceeded = state === 'succeeded';
@@ -204,8 +208,55 @@ export function PaymentModal({
           setState('failed');
           setError('Payment succeeded but failed to update order. Please contact support.');
         }
+      } else if (result.paymentIntent?.status === 'processing') {
+        // ACH/Bank payments return 'processing' status - they don't settle instantly
+        console.log('🏦 Payment is processing (ACH/Bank transfer)');
+        setIsBankPayment(true); // Mark as bank payment for different success messaging
+
+        // Update order status to 'payment_processing' via confirm-payment API
+        console.log('🏦 Calling confirm-payment API for ACH processing...');
+        const achResponse = await fetch('/api/stripe/confirm-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            paymentIntentId: result.paymentIntent.id,
+            orderId,
+            isAchProcessing: true, // Flag to indicate this is an ACH payment in processing
+          }),
+        });
+
+        if (achResponse.ok) {
+          const achData = await achResponse.json();
+          console.log('✅ ACH processing order status updated:', achData);
+          setState('succeeded'); // Show success state to user
+          setError(null);
+          // Show success message and close - the webhook will handle the final confirmation when payment clears
+          setTimeout(() => {
+            onSuccess(orderId);
+            onClose();
+          }, 3000); // Give more time to read the bank payment message
+        } else {
+          const achError = await achResponse.text();
+          console.error('❌ Failed to update order for ACH processing:', achError);
+          // Still show success since the payment is processing, but log the error
+          setState('succeeded');
+          setError(null);
+          setTimeout(() => {
+            onSuccess(orderId);
+            onClose();
+          }, 3000);
+        }
+      } else if (result.paymentIntent?.status === 'requires_action') {
+        // This happens when additional verification is needed (e.g., microdeposits for manual bank entry)
+        console.log('⏳ Payment requires additional action:', result.paymentIntent.next_action);
+        setState('failed');
+        setError('Your bank account requires additional verification. Please check your email for instructions from Stripe to complete the verification process.');
       } else {
         console.log('⚠️ Payment intent status is not "succeeded":', result.paymentIntent?.status);
+        setState('failed');
+        setError(`Unexpected payment status: ${result.paymentIntent?.status}. Please contact support.`);
       }
     } catch (err) {
       setState('failed');
@@ -279,6 +330,14 @@ export function PaymentModal({
                   </div>
                 )}
 
+                {/* Show processing fee waived for bank payments */}
+                {orderSummary.isBankPayment && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Processing Fee (Bank Transfer)</span>
+                    <span>Waived</span>
+                  </div>
+                )}
+
                 {/* Show breakdown for items with deposits vs full payments */}
                 {orderSummary.futurePayments > 0 && (
                   <>
@@ -310,6 +369,15 @@ export function PaymentModal({
                   <InfoIcon className="h-4 w-4" />
                   <AlertDescription>
                     This is a deposit payment. The remaining balance will be due later.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {orderSummary.isBankPayment && (
+                <Alert className="border-green-200 bg-green-50">
+                  <InfoIcon className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-700">
+                    Bank transfers take 3-5 business days to process. No processing fees apply.
                   </AlertDescription>
                 </Alert>
               )}
@@ -353,7 +421,15 @@ export function PaymentModal({
                         <Alert className="border-green-200 bg-green-50">
                           <CheckCircleIcon className="h-4 w-4 text-green-600" />
                           <AlertDescription className="text-green-700">
-                            Payment successful! Redirecting...
+                            {isBankPayment ? (
+                              <>
+                                <span className="font-medium">Bank transfer initiated!</span>
+                                <br />
+                                <span className="text-sm">Your payment is processing and typically takes 3-5 business days to complete. You&apos;ll receive a confirmation email once the transfer clears.</span>
+                              </>
+                            ) : (
+                              'Payment successful! Redirecting...'
+                            )}
                           </AlertDescription>
                         </Alert>
                       )}
@@ -380,7 +456,7 @@ export function PaymentModal({
               <CheckCircleIcon className="mr-2 h-4 w-4" />
             )}
             {isLoading ? 'Processing...' :
-             isSucceeded ? 'Payment Complete' :
+             isSucceeded ? (isBankPayment ? 'Transfer Initiated' : 'Payment Complete') :
              `Pay ${formatCurrency(orderSummary.dueToday)}`}
           </Button>
 

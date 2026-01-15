@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import NiceModal from '@ebay/nice-modal-react';
 import {
   ColumnDef,
   getCoreRowModel,
@@ -11,7 +12,9 @@ import {
   type Table as ReactTable,
 } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import {DownloadIcon} from 'lucide-react';
+import { DownloadIcon, EyeIcon, PencilIcon, UserXIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Badge } from '@workspace/ui/components/badge';
 import { Button } from '@workspace/ui/components/button';
 import {
   DataTable,
@@ -29,8 +32,11 @@ import {
 } from '@workspace/ui/components/dropdown-menu';
 import type { PlayerWithDetails, GetPlayersResult } from '~/data/players/get-players';
 import { formatPhoneNumber } from '~/lib/formatters';
-import {Input} from "@workspace/ui/components/input";
+import { Input } from "@workspace/ui/components/input";
 import { generatePlayersReactPDF } from './generate-players-pdf';
+import { ViewPlayerDialog } from './view-player-dialog';
+import { EditPlayerDialog } from './edit-player-dialog';
+import { DeletePlayerDialog } from './delete-player-dialog';
 
 interface PlayersDataTableProps {
   data: GetPlayersResult;
@@ -179,7 +185,12 @@ function PlayersDataTableExport({
 }
 
 export function PlayersDataTable({ data, organization, eventYears }: PlayersDataTableProps) {
+  const router = useRouter();
   const [globalFilter, setGlobalFilter] = React.useState('');
+
+  const handleRefresh = () => {
+    router.refresh();
+  };
 
   const columns: ColumnDef<PlayerWithDetails>[] = [
     {
@@ -261,6 +272,10 @@ export function PlayersDataTable({ data, organization, eventYears }: PlayersData
       accessorKey: 'createdAt',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Registered" />,
       cell: ({ row }) => {
+        const player = row.original;
+        if (player.status === 'inactive') {
+          return <Badge variant="destructive">Inactive</Badge>;
+        }
         const date = row.getValue('createdAt') as Date;
         return format(new Date(date), 'MMM dd, yyyy');
       },
@@ -268,10 +283,83 @@ export function PlayersDataTable({ data, organization, eventYears }: PlayersData
         title: 'Registered'
       }
     },
+    {
+      id: 'actions',
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => {
+        const player = row.original;
+        const isInactive = player.status === 'inactive';
+
+        return (
+          <div className="text-right flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                NiceModal.show(ViewPlayerDialog, {
+                  player,
+                  organizationId: organization.id
+                });
+              }}
+            >
+              <EyeIcon className="size-4" />
+              <span className="sr-only">View Details</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isInactive}
+              onClick={() => {
+                NiceModal.show(EditPlayerDialog, {
+                  player,
+                  organizationId: organization.id,
+                  onSuccess: handleRefresh
+                });
+              }}
+            >
+              <PencilIcon className="size-4" />
+              <span className="sr-only">Edit Player</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isInactive}
+              onClick={() => {
+                NiceModal.show(DeletePlayerDialog, {
+                  player,
+                  organizationId: organization.id,
+                  onSuccess: handleRefresh
+                });
+              }}
+              className="text-destructive hover:text-destructive"
+            >
+              <UserXIcon className="size-4" />
+              <span className="sr-only">Deactivate Player</span>
+            </Button>
+          </div>
+        );
+      },
+      meta: {
+        title: 'Actions'
+      },
+      enableSorting: false,
+      enableHiding: false,
+    },
   ];
 
+  // Sort players so inactive ones are at the bottom
+  const sortedPlayers = React.useMemo(() => {
+    return [...data.players].sort((a, b) => {
+      // Inactive players go to the bottom
+      if (a.status === 'inactive' && b.status !== 'inactive') return 1;
+      if (a.status !== 'inactive' && b.status === 'inactive') return -1;
+      // Otherwise maintain original order (by createdAt desc from server)
+      return 0;
+    });
+  }, [data.players]);
+
   const table = useReactTable({
-    data: data.players,
+    data: sortedPlayers,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),

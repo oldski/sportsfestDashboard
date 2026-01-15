@@ -40,7 +40,7 @@
   "prettier": "@workspace/prettier-config",
   "exports": {
     "./keys": "./keys.ts",
-    "./provider": "./src/provider",
+    "./provider": "./src/provider/index.ts",
     "./send-confirm-email-address-change-email": "./src/send-confirm-email-address-change-email.ts",
     "./send-connected-account-security-alert-email": "./src/send-connected-account-security-alert-email.ts",
     "./send-feedback-email": "./src/send-feedback-email.ts",

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { type Metadata } from 'next';
 
 import {
-  Page, PageActions,
+  Page,
   PageBody,
   PageHeader,
   PagePrimaryBar, PageSecondaryBar
@@ -11,9 +11,11 @@ import {
 import { createTitle } from '~/lib/formatters';
 import { AdminPageTitle } from "~/components/admin/admin-page-title";
 import { ReportsNav } from "~/components/admin/reports/reports-nav";
+import { EventYearSelector } from "~/components/admin/reports/event-year-selector";
+import { getEventYearsSimple } from "~/actions/admin/get-event-years-simple";
 
 export const metadata: Metadata = {
-  title: createTitle('Organizations')
+  title: createTitle('Reports & Analytics')
 };
 
 
@@ -38,6 +40,8 @@ export default async function ReportsAnalyticsLayout({
   revenueStats,
   topOrganizations,
 }: ReportsAnalyticsLayoutProps & React.PropsWithChildren & NextPageProps): Promise<React.JSX.Element> {
+  const eventYears = await getEventYearsSimple();
+  const currentYear = eventYears.find(y => y.isActive);
 
   return (
     <Page>
@@ -48,7 +52,13 @@ export default async function ReportsAnalyticsLayout({
           />
         </PagePrimaryBar>
         <PageSecondaryBar>
-          <ReportsNav />
+          <div className="flex items-center justify-between w-full">
+            <ReportsNav />
+            <EventYearSelector
+              eventYears={eventYears}
+              currentYearId={currentYear?.id}
+            />
+          </div>
         </PageSecondaryBar>
       </PageHeader>
       <PageBody>

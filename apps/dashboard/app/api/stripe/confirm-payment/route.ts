@@ -26,6 +26,7 @@ export interface ConfirmPaymentRequest {
   paymentIntentId: string;
   orderId: string;
   isFreeOrder?: boolean;
+  isAchProcessing?: boolean; // True when ACH payment is initiated but not yet cleared
 }
 
 export interface ConfirmPaymentResponse {
@@ -40,9 +41,9 @@ export async function POST(request: NextRequest) {
     const session = await auth();
 
     const body: ConfirmPaymentRequest = await request.json();
-    const { paymentIntentId, orderId, isFreeOrder } = body;
+    const { paymentIntentId, orderId, isFreeOrder, isAchProcessing } = body;
 
-    console.log('📋 Confirm payment request:', { paymentIntentId, orderId, isFreeOrder });
+    console.log('📋 Confirm payment request:', { paymentIntentId, orderId, isFreeOrder, isAchProcessing });
 
     // Validate input
     if (!paymentIntentId || !orderId) {
@@ -64,7 +65,16 @@ export async function POST(request: NextRequest) {
       // Retrieve the payment intent from Stripe for paid orders
       paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-      if (paymentIntent.status !== 'succeeded') {
+      // For ACH payments, status will be 'processing' until the bank transfer completes
+      if (isAchProcessing) {
+        if (paymentIntent.status !== 'processing') {
+          return NextResponse.json(
+            { error: `Expected ACH processing status, got: ${paymentIntent.status}` },
+            { status: 400 }
+          );
+        }
+        console.log('🏦 ACH payment is processing, will update order status to payment_processing');
+      } else if (paymentIntent.status !== 'succeeded') {
         return NextResponse.json(
           { error: 'Payment not successful' },
           { status: 400 }
@@ -117,11 +127,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine payment type and new order status
-    
+
     let paymentType: PaymentType;
     let newOrderStatus: OrderStatus;
 
-    if (isFreeOrder) {
+    if (isAchProcessing) {
+      // ACH payment initiated but not yet cleared - set to processing status
+      paymentType = PaymentType.BALANCE_PAYMENT; // Will be confirmed when payment clears
+      newOrderStatus = OrderStatus.PAYMENT_PROCESSING;
+      console.log('🏦 Setting order status to PAYMENT_PROCESSING for ACH payment');
+    } else if (isFreeOrder) {
       // Free order with 100% coupon discount
       paymentType = PaymentType.BALANCE_PAYMENT;
       newOrderStatus = OrderStatus.FULLY_PAID;
@@ -143,9 +158,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create payment record
-    console.log('💳 Creating payment record for orderId:', orderId);
-    if (isFreeOrder) {
+    // Create payment record (skip for ACH processing - will be created when payment clears via webhook)
+    if (isAchProcessing) {
+      console.log('🏦 Skipping payment record creation for ACH processing payment - will be created when payment clears');
+    } else if (isFreeOrder) {
+      console.log('💳 Creating payment record for orderId:', orderId);
       const couponData = order.metadata && typeof order.metadata === 'object'
         ? (order.metadata as any).appliedCoupon
         : null;
@@ -187,6 +204,25 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // For sponsorship bank payments, we need to update the order's total amount
+    // since bank payments don't include processing fees
+    let adjustedOrderTotal = order.totalAmount;
+    const isSponsorshipBankPayment = paymentIntent?.metadata?.paymentType === 'sponsorship' &&
+      paymentIntent?.metadata?.sponsorshipPaymentMethod === 'us_bank_account';
+
+    if (isSponsorshipBankPayment) {
+      // Get the base amount from metadata (this is the amount without processing fee)
+      const sponsorshipBaseAmount = parseFloat(paymentIntent.metadata.sponsorshipBaseAmount || '0');
+      if (sponsorshipBaseAmount > 0) {
+        adjustedOrderTotal = sponsorshipBaseAmount;
+        console.log('💳 Sponsorship bank payment detected, adjusting order total:', {
+          originalTotal: order.totalAmount,
+          adjustedTotal: adjustedOrderTotal,
+          savedFee: order.totalAmount - adjustedOrderTotal
+        });
+      }
+    }
+
     // Update order status and payment info
     // For completion payments, also update the payment intent ID
     const updateFields: any = {
@@ -200,6 +236,24 @@ export async function POST(request: NextRequest) {
       updateFields.stripePaymentIntentId = paymentIntentId;
     }
 
+    // For sponsorship bank payments, update the total amount to reflect no processing fee
+    if (isSponsorshipBankPayment && adjustedOrderTotal !== order.totalAmount) {
+      updateFields.totalAmount = adjustedOrderTotal;
+      updateFields.balanceOwed = 0; // Fully paid with bank transfer
+      // Update metadata to reflect the bank payment
+      const existingMetadata = order.metadata || {};
+      updateFields.metadata = {
+        ...existingMetadata,
+        sponsorship: {
+          ...(existingMetadata as any)?.sponsorship,
+          paymentMethod: 'us_bank_account',
+          processingFeeWaived: true,
+          originalTotalWithFee: order.totalAmount,
+          finalTotal: adjustedOrderTotal
+        }
+      };
+    }
+
     console.log('📝 Updating order with fields:', updateFields);
     await db
       .update(orderTable)
@@ -207,14 +261,19 @@ export async function POST(request: NextRequest) {
       .where(eq(orderTable.id, orderId));
     console.log('✅ Order updated successfully');
 
-    // Create or update invoice
-    console.log('📄 Creating invoice for order:', { orderId, paymentAmount, orderTotal: order.totalAmount, isFreeOrder });
+    // Create or update invoice (skip for ACH processing - will be created when payment clears via webhook)
+    if (isAchProcessing) {
+      console.log('🏦 Skipping invoice creation for ACH processing payment - will be created when payment clears');
+    } else {
+    // Use adjusted total for sponsorship bank payments
+    const invoiceOrderTotal = isSponsorshipBankPayment ? adjustedOrderTotal : order.totalAmount;
+    console.log('📄 Creating invoice for order:', { orderId, paymentAmount, orderTotal: invoiceOrderTotal, isFreeOrder, isSponsorshipBankPayment });
     const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
     const currentPaidAmount = paymentAmount;
 
     // For free orders, the balance owed should be 0 since the order total is already discounted
-    const balanceOwed = isFreeOrder ? 0 : (order.totalAmount - currentPaidAmount);
-    
+    const balanceOwed = isFreeOrder ? 0 : (invoiceOrderTotal - currentPaidAmount);
+
     // Check if invoice already exists for this order
     const [existingInvoice] = await db
       .select({ id: orderInvoiceTable.id, paidAmount: orderInvoiceTable.paidAmount })
@@ -224,19 +283,37 @@ export async function POST(request: NextRequest) {
     if (existingInvoice) {
       // Update existing invoice
       const newPaidAmount = existingInvoice.paidAmount + paymentAmount;
-      const newBalanceOwed = order.totalAmount - newPaidAmount;
+      const newBalanceOwed = invoiceOrderTotal - newPaidAmount;
       const invoiceStatus = newBalanceOwed <= 0 ? 'paid' : 'sent';
+
+      const invoiceUpdateFields: any = {
+        paidAmount: newPaidAmount,
+        balanceOwed: Math.max(0, newBalanceOwed),
+        status: invoiceStatus,
+        paidAt: newBalanceOwed <= 0 ? new Date() : undefined,
+        updatedAt: new Date()
+      };
+
+      // For sponsorship bank payments, also update the total amount
+      if (isSponsorshipBankPayment) {
+        invoiceUpdateFields.totalAmount = invoiceOrderTotal;
+        invoiceUpdateFields.notes = `Sponsorship payment of ${paymentAmount.toFixed(2)} received via bank transfer (ACH). Processing fee waived.`;
+        // Update metadata to reflect the payment method
+        invoiceUpdateFields.metadata = {
+          isSponsorship: true,
+          baseAmount: adjustedOrderTotal,
+          processingFee: 0,
+          paymentMethod: 'us_bank_account',
+          processingFeeWaived: true
+        };
+      }
 
       await db
         .update(orderInvoiceTable)
-        .set({
-          paidAmount: newPaidAmount,
-          balanceOwed: newBalanceOwed,
-          status: invoiceStatus,
-          paidAt: newBalanceOwed <= 0 ? new Date() : undefined,
-          updatedAt: new Date()
-        })
+        .set(invoiceUpdateFields)
         .where(eq(orderInvoiceTable.id, existingInvoice.id));
+
+      console.log('✅ Invoice updated successfully', { isSponsorshipBankPayment, invoiceOrderTotal });
     } else {
       // Create new invoice
       const invoiceStatus = balanceOwed <= 0 ? 'paid' : 'sent';
@@ -245,24 +322,43 @@ export async function POST(request: NextRequest) {
 
       console.log('📄 Creating new invoice with status:', invoiceStatus, 'balanceOwed:', balanceOwed);
 
+      // Build invoice notes based on payment type
+      let invoiceNotes: string;
+      if (isFreeOrder) {
+        invoiceNotes = `Free order completed with 100% coupon discount (${order.metadata?.appliedCoupon?.code || 'Unknown coupon'})`;
+      } else if (isSponsorshipBankPayment) {
+        invoiceNotes = `Sponsorship payment of ${paymentAmount.toFixed(2)} received via bank transfer (ACH). Processing fee waived.`;
+      } else {
+        invoiceNotes = `Payment of ${paymentAmount.toFixed(2)} received via ${paymentIntent.payment_method_types[0]}`;
+      }
+
+      // Build invoice metadata for sponsorship bank payments
+      const invoiceMetadata = isSponsorshipBankPayment ? {
+        isSponsorship: true,
+        baseAmount: adjustedOrderTotal,
+        processingFee: 0,
+        paymentMethod: 'us_bank_account',
+        processingFeeWaived: true
+      } : undefined;
+
       await db.insert(orderInvoiceTable).values({
         orderId,
         invoiceNumber,
-        totalAmount: order.totalAmount,
+        totalAmount: invoiceOrderTotal,
         paidAmount: currentPaidAmount,
-        balanceOwed,
+        balanceOwed: Math.max(0, balanceOwed),
         status: invoiceStatus,
         dueDate: balanceOwed > 0 ? dueDate : undefined,
         paidAt: balanceOwed <= 0 ? new Date() : undefined,
         sentAt: new Date(),
         stripeInvoiceId: isFreeOrder ? 'free_order' : paymentIntentId,
-        notes: isFreeOrder
-          ? `Free order completed with 100% coupon discount (${order.metadata?.appliedCoupon?.code || 'Unknown coupon'})`
-          : `Payment of ${paymentAmount.toFixed(2)} received via ${paymentIntent.payment_method_types[0]}`
+        notes: invoiceNotes,
+        metadata: invoiceMetadata
       });
 
       console.log('✅ Invoice created successfully');
     }
+    } // End of !isAchProcessing block for invoice creation
 
     // Confirm inventory sales - move from reserved to sold
     // Only confirm sales when payment is fully completed
@@ -324,8 +420,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Mark coupon as used if this was a coupon order
-    if (order.metadata?.appliedCoupon?.id) {
+    // Mark coupon as used if this was a coupon order (skip for ACH processing - will be marked when payment clears)
+    if (!isAchProcessing && order.metadata?.appliedCoupon?.id) {
       try {
         const couponId = order.metadata.appliedCoupon.id;
         console.log('🎟️ Marking coupon as used:', couponId);
@@ -345,7 +441,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Send email notifications
+    // Send email notifications (skip for ACH processing - will be sent when payment clears via webhook)
+    if (isAchProcessing) {
+      console.log('🏦 Skipping email notifications for ACH processing payment - will be sent when payment clears');
+    } else {
     try {
       // If no session, try to get user info from Stripe metadata
       let userInfo: { email: string | null; name: string | null } | null = session?.user ? {
@@ -382,6 +481,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error sending email notifications:', emailError);
       // Don't fail the payment confirmation if email sending fails
     }
+    } // End of !isAchProcessing block for email notifications
 
     const response: ConfirmPaymentResponse = {
       success: true,

@@ -19,7 +19,7 @@ export default function EventYearsManagementLayout({
             Manage SportsFest event years and associated products
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-3">
           {children}
         </CardContent>
       </Link>

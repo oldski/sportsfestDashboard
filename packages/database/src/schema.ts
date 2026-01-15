@@ -125,7 +125,8 @@ export enum PlayerStatus {
   REGISTERED = 'registered',
   CONFIRMED = 'confirmed',
   CHECKED_IN = 'checked_in',
-  NO_SHOW = 'no_show'
+  NO_SHOW = 'no_show',
+  INACTIVE = 'inactive'
 }
 
 // TEMPORARILY REMOVED - PaymentType, PaymentStatus, ProductType, ProductStatus, OrderStatus enums
@@ -179,6 +180,7 @@ export enum ProductStatus {
 
 export enum OrderStatus {
   PENDING = 'pending',
+  PAYMENT_PROCESSING = 'payment_processing',
   CONFIRMED = 'confirmed',
   DEPOSIT_PAID = 'deposit_paid',
   FULLY_PAID = 'fully_paid',
@@ -1901,6 +1903,11 @@ export const orderTable = pgTable(
         baseAmount: number;
         processingFee: number;
         description?: string;
+      };
+      lastPaymentFailure?: {
+        paymentIntentId: string;
+        failedAt: string;
+        error: string;
       };
     }>(),
     createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })

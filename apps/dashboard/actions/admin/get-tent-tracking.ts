@@ -168,7 +168,7 @@ export async function getTentTracking(eventYearId?: string): Promise<TentTrackin
       purchaseDate: item.purchaseDate.toISOString().split('T')[0],
       createdAt: item.createdAt.toISOString().split('T')[0],
       updatedAt: item.updatedAt.toISOString().split('T')[0],
-      isAtLimit: Number(item.tentCount) >= item.maxAllowed,
+      isAtLimit: Number(item.tentCount) >= item.companyTeamCount * 2,
       orderNumber: `TENT-${item.id.substring(0, 8).toUpperCase()}`, // Generate tent tracking reference
     }));
   } catch (error) {

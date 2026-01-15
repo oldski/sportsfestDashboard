@@ -1,8 +1,11 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
-import { UserIcon } from 'lucide-react';
+import { UserIcon, UsersIcon, UserPlusIcon } from 'lucide-react';
+import { getUserStats } from '~/actions/admin/get-user-stats';
 
-export default function UsersDataPage(): React.JSX.Element {
+export default async function UsersDataPage(): Promise<React.JSX.Element> {
+  const stats = await getUserStats();
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -15,19 +18,27 @@ export default function UsersDataPage(): React.JSX.Element {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Total Users</p>
-              <p className="text-2xl font-bold">1,284</p>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center space-y-1">
+            <div className="flex items-center justify-center">
+              <UsersIcon className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Active This Week</p>
-              <p className="text-2xl font-bold text-green-600">892</p>
-            </div>
+            <p className="text-xs text-muted-foreground">Total Users</p>
+            <p className="text-2xl font-bold">{stats.totalUsers}</p>
           </div>
-          <div className="h-40 flex items-center justify-center border border-dashed border-muted-foreground/25 rounded-lg">
-            <p className="text-xs text-muted-foreground">User Activity Chart</p>
+          <div className="text-center space-y-1">
+            <div className="flex items-center justify-center">
+              <UserIcon className="h-4 w-4 text-green-600" />
+            </div>
+            <p className="text-xs text-muted-foreground">Active (7d)</p>
+            <p className="text-2xl font-bold text-green-600">{stats.activeThisWeek}</p>
+          </div>
+          <div className="text-center space-y-1">
+            <div className="flex items-center justify-center">
+              <UserPlusIcon className="h-4 w-4 text-blue-600" />
+            </div>
+            <p className="text-xs text-muted-foreground">New This Month</p>
+            <p className="text-2xl font-bold text-blue-600">{stats.newThisMonth}</p>
           </div>
         </div>
       </CardContent>

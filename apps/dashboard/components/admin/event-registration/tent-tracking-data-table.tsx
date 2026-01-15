@@ -13,7 +13,7 @@ import {
   type SortingState,
   type VisibilityState
 } from '@tanstack/react-table';
-import { ExternalLinkIcon, FilterIcon, TentIcon, DownloadIcon, CalendarIcon } from 'lucide-react';
+import { ExternalLinkIcon, FilterIcon, TentIcon, DownloadIcon, CalendarIcon, UsersIcon } from 'lucide-react';
 
 import { replaceOrgSlug, routes } from '@workspace/routes';
 import { Badge } from '@workspace/ui/components/badge';
@@ -106,11 +106,6 @@ const columns = [
     cell: ({ row }) => (
       <div className="flex items-center space-x-2">
         <span className="font-medium">{row.getValue('organization')}</span>
-        {row.original.isAtLimit && (
-          <Badge variant="destructive" className="text-xs">
-            At Limit
-          </Badge>
-        )}
       </div>
     ),
     meta: {
@@ -129,20 +124,62 @@ const columns = [
       title: 'Event Year'
     }
   }),
+  columnHelper.accessor('companyTeamCount', {
+    id: 'teams',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Teams" />
+    ),
+    cell: ({ row }) => {
+      const teamCount = row.getValue('teams') as number;
+      return (
+        <div className="flex items-center space-x-2">
+          <UsersIcon className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">{teamCount}</span>
+        </div>
+      );
+    },
+    meta: {
+      title: 'Teams'
+    }
+  }),
+  columnHelper.accessor((row) => row.companyTeamCount * 2, {
+    id: 'maxAllowed',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Max Allowed" />
+    ),
+    cell: ({ row }) => {
+      const maxAllowed = row.getValue('maxAllowed') as number;
+      return (
+        <div className="text-sm text-muted-foreground">
+          {maxAllowed} tents
+        </div>
+      );
+    },
+    meta: {
+      title: 'Max Allowed'
+    }
+  }),
   columnHelper.accessor('tentCount', {
     id: 'tentsPurchased',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Tents Purchased" />
     ),
-    cell: ({ row }) => (
-      <div className="flex items-center space-x-2">
-        <TentIcon className="h-4 w-4 text-muted-foreground" />
-        <span className="font-medium">{row.getValue('tentsPurchased')}</span>
-        <span className="text-muted-foreground text-sm">
-          / {row.original.maxAllowed} max
-        </span>
-      </div>
-    ),
+    cell: ({ row }) => {
+      const tentCount = row.getValue('tentsPurchased') as number;
+      const maxAllowed = row.getValue('maxAllowed') as number;
+      const isAtLimit = tentCount >= maxAllowed;
+      return (
+        <div className="flex items-center space-x-2">
+          <TentIcon className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">{tentCount}</span>
+          {isAtLimit && (
+            <Badge variant="destructive" className="text-xs ml-1">
+              At Limit
+            </Badge>
+          )}
+        </div>
+      );
+    },
     meta: {
       title: 'Tents Purchased'
     }
@@ -294,7 +331,7 @@ export function TentTrackingDataTable({ data }: TentTrackingDataTableProps): Rea
 
     // Apply quick filter
     if (quickFilter === 'at-limit') {
-      filtered = filtered.filter(item => item.isAtLimit);
+      filtered = filtered.filter(item => item.tentCount >= item.companyTeamCount * 2);
     } else if (quickFilter === 'pending-payment') {
       filtered = filtered.filter(item => item.status === 'pending_payment');
     } else if (quickFilter === 'confirmed') {
@@ -323,7 +360,7 @@ export function TentTrackingDataTable({ data }: TentTrackingDataTableProps): Rea
     }
   });
 
-  const atLimitCount = data.filter(item => item.isAtLimit).length;
+  const atLimitCount = data.filter(item => item.tentCount >= item.companyTeamCount * 2).length;
   const pendingPaymentCount = data.filter(item => item.status === 'pending_payment').length;
 
   return (

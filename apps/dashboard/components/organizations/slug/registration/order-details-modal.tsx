@@ -10,7 +10,9 @@ import {
   DollarSignIcon,
   PackageIcon,
   CreditCardIcon,
-  ReceiptIcon
+  ReceiptIcon,
+  HeartHandshakeIcon,
+  ClockIcon
 } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
@@ -39,13 +41,19 @@ import { cn } from '@workspace/ui/lib/utils';
 
 import { useEnhancedModal } from '~/hooks/use-enhanced-modal';
 import { generateOrderPDF } from '~/components/organizations/slug/registration/generate-order-pdf';
-import { useOrderPaymentCompletion } from '~/hooks/use-order-payment-completion';
+import { useOrderPaymentCompletion, type SponsorshipPaymentMethodType } from '~/hooks/use-order-payment-completion';
 import { PaymentModal } from '~/components/organizations/slug/registration/payment-modal';
+import { SponsorshipPaymentMethodSelector } from '~/components/organizations/slug/registration/sponsorship-payment-method-selector';
 import { StripeElementsProvider } from '~/contexts/stripe-context';
 import { useParams } from 'next/navigation';
 import { useActiveOrganization } from '~/hooks/use-active-organization';
 import { useSession } from 'next-auth/react';
 import type { RegistrationOrderDto } from '~/types/dtos/registration-order-dto';
+
+// Helper to calculate processing fee (mirrors server-side logic)
+function calculateProcessingFee(baseAmount: number): number {
+  return Math.round((baseAmount * 0.029 + 0.30) * 100) / 100;
+}
 
 export type OrderDetailsModalProps = NiceModalHocProps & {
   order: RegistrationOrderDto;
@@ -58,6 +66,8 @@ const getStatusVariant = (status: RegistrationOrderDto['status']) => {
       return 'default'; // Green
     case 'deposit_paid':
       return 'secondary'; // Blue
+    case 'payment_processing':
+      return 'secondary'; // Blue - indicates bank payment is processing
     case 'pending':
       return 'outline'; // Gray
     case 'cancelled':
@@ -106,11 +116,13 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
     }, [organizationSlug, organization]);
 
     const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
+    const [sponsorshipMethodSelectorOpen, setSponsorshipMethodSelectorOpen] = React.useState(false);
 
     // Reset payment modal state on component mount to ensure clean state
     React.useEffect(() => {
       console.log('🔄 Component mounted, resetting payment modal state');
       setPaymentModalOpen(false);
+      setSponsorshipMethodSelectorOpen(false);
     }, []);
 
     const {
@@ -118,6 +130,7 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
       clientSecret,
       orderId: paymentOrderId,
       orderSummary,
+      sponsorshipDetails,
       createPaymentIntent,
       resetPayment
     } = useOrderPaymentCompletion({
@@ -156,15 +169,62 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
 
     const [shouldOpenModal, setShouldOpenModal] = React.useState(false);
 
+    // Get sponsorship details from order
+    const sponsorshipBaseAmount = order.isSponsorship
+      ? (order.sponsorshipDetails?.baseAmount || order.totalAmount)
+      : 0;
+    const sponsorshipProcessingFee = order.isSponsorship
+      ? (order.sponsorshipDetails?.processingFee || calculateProcessingFee(sponsorshipBaseAmount))
+      : 0;
+
     const handleCompletePayment = async () => {
+      // For sponsorships, show the payment method selector first
+      if (order.isSponsorship) {
+        console.log('🔄 Opening sponsorship payment method selector');
+        setSponsorshipMethodSelectorOpen(true);
+        return;
+      }
+
+      // For regular orders, proceed directly to payment
       try {
         console.log('🔄 Starting payment completion for order:', order.id);
-        setShouldOpenModal(false); // Reset flag
-        await createPaymentIntent(order.id, order.items, order.totalAmount);
+        setShouldOpenModal(false);
+        await createPaymentIntent({
+          orderId: order.id,
+          orderItems: order.items,
+          originalTotal: order.totalAmount
+        });
         console.log('✅ Payment intent created, setting flag to open modal');
         setShouldOpenModal(true);
       } catch (error) {
         console.error('❌ Error in handleCompletePayment:', error);
+        toast.error('Failed to initiate payment. Please try again.');
+      }
+    };
+
+    const handleSponsorshipPaymentMethodSelect = async (paymentMethodType: SponsorshipPaymentMethodType) => {
+      try {
+        console.log('🔄 Sponsorship payment method selected:', paymentMethodType);
+        setSponsorshipMethodSelectorOpen(false);
+        setShouldOpenModal(false);
+
+        // Calculate the amount based on payment method
+        const paymentAmount = paymentMethodType === 'card'
+          ? sponsorshipBaseAmount + sponsorshipProcessingFee
+          : sponsorshipBaseAmount;
+
+        await createPaymentIntent({
+          orderId: order.id,
+          orderItems: order.items,
+          originalTotal: order.totalAmount,
+          paymentMethodType,
+          overrideAmount: paymentAmount
+        });
+
+        console.log('✅ Sponsorship payment intent created, setting flag to open modal');
+        setShouldOpenModal(true);
+      } catch (error) {
+        console.error('❌ Error creating sponsorship payment intent:', error);
         toast.error('Failed to initiate payment. Please try again.');
       }
     };
@@ -221,6 +281,22 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
         </div>
 
         <Separator />
+
+        {/* Payment Processing Alert */}
+        {order.status === 'payment_processing' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <ClockIcon className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-medium text-blue-900 mb-1">Bank Transfer Processing</h4>
+                <p className="text-sm text-blue-700">
+                  Your bank payment has been initiated and is being processed. Bank transfers typically take 3-5 business days to complete.
+                  You&apos;ll receive a confirmation email once the payment clears.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Coupon Applied Alert */}
         {order.appliedCoupon && order.couponDiscount && order.couponDiscount > 0 && (
@@ -395,7 +471,7 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
             {order.isSponsorship ? (
               <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
                 <div className="flex items-start space-x-3">
-                  <span className="text-lg">💜</span>
+                  <HeartHandshakeIcon className="h-5 w-5 text-purple-600 mt-0.5 shrink-0" />
                   <div className="flex-1">
                     <h5 className="font-medium text-purple-900">Sponsorship Invoice</h5>
                     <p className="text-sm text-purple-700 mt-1">
@@ -595,6 +671,17 @@ export const OrderDetailsModal = NiceModal.create<OrderDetailsModalProps>(
       <>
         {orderDetailsComponent}
         {paymentModalComponent}
+        {/* Sponsorship Payment Method Selector */}
+        {order.isSponsorship && (
+          <SponsorshipPaymentMethodSelector
+            isOpen={sponsorshipMethodSelectorOpen}
+            onClose={() => setSponsorshipMethodSelectorOpen(false)}
+            onSelect={handleSponsorshipPaymentMethodSelect}
+            baseAmount={sponsorshipBaseAmount}
+            processingFee={sponsorshipProcessingFee}
+            isLoading={isPaymentLoading}
+          />
+        )}
       </>
     );
   }
