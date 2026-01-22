@@ -38,7 +38,7 @@ export function RevenueProgressionChart({ data }: RevenueProgressionChartProps):
   }
 
   return (
-    <ResponsiveContainer width="100%" height={150}>
+    <ResponsiveContainer width="100%" height={260}>
       <AreaChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
         <defs>
           <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">

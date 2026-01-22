@@ -23,7 +23,7 @@ export default async function CompanyLeaderboardPage(): Promise<React.JSX.Elemen
         </div>
         <div className="text-right">
           <p className="text-2xl font-bold">{totalCompanies}</p>
-          <p className="text-xs text-muted-foreground">Companies</p>
+          <p className="text-xs text-muted-foreground">Companies Participating</p>
         </div>
       </CardHeader>
       <CardContent>
