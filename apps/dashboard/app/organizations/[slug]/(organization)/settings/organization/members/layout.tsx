@@ -21,11 +21,13 @@ export const metadata: Metadata = {
 export type MembersLayoutProps = {
   team: React.ReactNode;
   invitations: React.ReactNode;
+  joinRequests: React.ReactNode;
 };
 
 export default function MembersLayout({
   team,
-  invitations
+  invitations,
+  joinRequests
 }: MembersLayoutProps): React.JSX.Element {
   return (
     <Page>
@@ -46,6 +48,8 @@ export default function MembersLayout({
           {team}
           <Separator />
           {invitations}
+          <Separator />
+          {joinRequests}
         </AnnotatedLayout>
       </PageBody>
     </Page>

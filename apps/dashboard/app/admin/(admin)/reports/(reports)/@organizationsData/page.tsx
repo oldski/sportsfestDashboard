@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
-import { Building2Icon } from 'lucide-react';
-import { OrganizationStatusChart } from '~/components/admin/charts/organization-status-chart';
+import { CreditCardIcon } from 'lucide-react';
+import { PaymentPipelineChart } from '~/components/admin/charts/payment-pipeline-chart';
 import { getOrganizationStats } from '~/actions/admin/get-organization-stats';
 
 export default async function OrganizationsDataPage(): Promise<React.JSX.Element> {
@@ -9,31 +9,23 @@ export default async function OrganizationsDataPage(): Promise<React.JSX.Element
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center">
-          <Building2Icon className="mr-2 h-4 w-4" />
-          Organizations Overview
-        </CardTitle>
-        <CardDescription>
-          Organizational metrics and registration status
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div>
+          <CardTitle className="text-base flex items-center">
+            <CreditCardIcon className="mr-2 h-4 w-4" />
+            Company Payment Pipeline
+          </CardTitle>
+          <CardDescription>
+            Companies at each payment stage
+          </CardDescription>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold">{stats.activeOrganizations}</p>
+          <p className="text-xs text-muted-foreground">Active Companies</p>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          <div className="text-center space-y-1">
-            <p className="text-xs text-muted-foreground">Total Orgs</p>
-            <p className="text-xl font-bold">{stats.totalOrganizations}</p>
-          </div>
-          <div className="text-center space-y-1">
-            <p className="text-xs text-muted-foreground">Active</p>
-            <p className="text-xl font-bold text-green-600">{stats.activeOrganizations}</p>
-          </div>
-          <div className="text-center space-y-1">
-            <p className="text-xs text-muted-foreground">New This Year</p>
-            <p className="text-xl font-bold text-blue-600">{stats.newOrganizations}</p>
-          </div>
-        </div>
-        <OrganizationStatusChart data={stats.byRegistrationStatus} />
+        <PaymentPipelineChart data={stats.byRegistrationStatus} />
       </CardContent>
     </Card>
   );

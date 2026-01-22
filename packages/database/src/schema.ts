@@ -101,6 +101,12 @@ export enum InvitationStatus {
   REVOKED = 'revoked'
 }
 
+export enum JoinRequestStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected'
+}
+
 export enum Role {
   MEMBER = 'member',
   ADMIN = 'admin'
@@ -231,6 +237,10 @@ export const feedbackCategoryEnum = pgEnum(
 export const invitationStatusEnum = pgEnum(
   'invitationstatus',
   enumToPgEnum(InvitationStatus)
+);
+export const joinRequestStatusEnum = pgEnum(
+  'joinrequeststatus',
+  enumToPgEnum(JoinRequestStatus)
 );
 export const roleEnum = pgEnum('Role', enumToPgEnum(Role));
 export const webhookTriggerEnum = pgEnum(
@@ -1052,6 +1062,57 @@ export const organizationTable = pgTable(
   ]
 );
 
+export const organizationJoinRequestTable = pgTable(
+  'organizationJoinRequest',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    organizationId: uuid('organizationId')
+      .notNull()
+      .references(() => organizationTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    userId: uuid('userId')
+      .notNull()
+      .references(() => userTable.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    status: joinRequestStatusEnum('status')
+      .default(JoinRequestStatus.PENDING)
+      .notNull(),
+    message: text('message'),
+    respondedBy: uuid('respondedBy')
+      .references(() => userTable.id, {
+        onDelete: 'set null',
+        onUpdate: 'cascade'
+      }),
+    respondedAt: timestamp('respondedAt', { precision: 3, mode: 'date' }),
+    rejectionReason: text('rejectionReason'),
+    createdAt: timestamp('createdAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updatedAt', { precision: 3, mode: 'date' })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  (table) => [
+    index('IX_organizationJoinRequest_organizationId').using(
+      'btree',
+      table.organizationId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_organizationJoinRequest_userId').using(
+      'btree',
+      table.userId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('IX_organizationJoinRequest_status').using(
+      'btree',
+      table.status.asc().nullsLast()
+    )
+  ]
+);
+
 export const subscriptionTable = pgTable('subscription', {
   id: text('id').primaryKey(),
   organizationId: uuid('organizationId').notNull(),
@@ -1444,6 +1505,7 @@ export const organizationRelations = relations(
     apiKeys: many(apiKeyTable),
     contacts: many(contactTable),
     invitations: many(invitationTable),
+    joinRequests: many(organizationJoinRequestTable),
     feedbacks: many(feedbackTable),
     workHours: many(workHoursTable),
     webhooks: many(webhookTable),
@@ -1477,7 +1539,26 @@ export const userRelations = relations(userTable, ({ many }) => ({
   notifications: many(notificationTable),
   sessions: many(sessionTable),
   memberships: many(membershipTable),
+  joinRequests: many(organizationJoinRequestTable),
 }));
+
+export const organizationJoinRequestRelations = relations(
+  organizationJoinRequestTable,
+  ({ one }) => ({
+    organization: one(organizationTable, {
+      fields: [organizationJoinRequestTable.organizationId],
+      references: [organizationTable.id]
+    }),
+    user: one(userTable, {
+      fields: [organizationJoinRequestTable.userId],
+      references: [userTable.id]
+    }),
+    responder: one(userTable, {
+      fields: [organizationJoinRequestTable.respondedBy],
+      references: [userTable.id]
+    })
+  })
+);
 
 export const changeEmailRequestRelations = relations(
   changeEmailRequestTable,

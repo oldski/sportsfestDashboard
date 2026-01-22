@@ -34,9 +34,50 @@ const EVENT_DISPLAY_NAMES: Record<string, string> = {
   [EventType.BEACH_VOLLEYBALL]: 'Beach Volleyball',
   [EventType.TUG_OF_WAR]: 'Tug of War',
   [EventType.CORN_TOSS]: 'Corn Toss',
-  [EventType.BOTE_BEACH_CHALLENGE]: 'BOTE Beach Challenge',
+  [EventType.BOTE_BEACH_CHALLENGE]: 'Surf & Turf Relay',
   [EventType.BEACH_DODGEBALL]: 'Beach Dodgeball',
 };
+
+export async function getTotalPlayerCount(eventYearId?: string): Promise<{ count: number; eventYearName: string | null }> {
+  const { session } = await getAuthContext();
+
+  if (!isSuperAdmin(session.user)) {
+    throw new ForbiddenError('Unauthorized: Only super admins can access player analytics');
+  }
+
+  try {
+    // Get the event year to filter by
+    let targetEventYearId = eventYearId;
+    let eventYearName: string | null = null;
+
+    if (!targetEventYearId) {
+      const currentEventYear = await getCurrentEventYear();
+      targetEventYearId = currentEventYear?.id as string | undefined;
+      eventYearName = currentEventYear?.year ? String(currentEventYear.year) : null;
+    }
+
+    // Build the where clause
+    const whereClause = targetEventYearId
+      ? eq(playerTable.eventYearId, targetEventYearId)
+      : sql`1=1`;
+
+    // Query total player count
+    const result = await db
+      .select({
+        count: sql<number>`cast(count(*) as int)`.mapWith(Number),
+      })
+      .from(playerTable)
+      .where(whereClause);
+
+    return {
+      count: result[0]?.count || 0,
+      eventYearName,
+    };
+  } catch (error) {
+    console.error('Failed to get total player count:', error);
+    return { count: 0, eventYearName: null };
+  }
+}
 
 export async function getAgeDistribution(eventYearId?: string): Promise<AgeDistributionData[]> {
   const { session } = await getAuthContext();

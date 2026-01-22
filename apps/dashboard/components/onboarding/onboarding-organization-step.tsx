@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import NiceModal from '@ebay/nice-modal-react';
-import { TrashIcon, UploadIcon } from 'lucide-react';
+import { TrashIcon, UploadIcon, Loader2Icon } from 'lucide-react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { PatternFormat } from 'react-number-format';
 
@@ -35,10 +35,20 @@ import {
   TooltipTrigger
 } from '@workspace/ui/components/tooltip';
 import { cn } from '@workspace/ui/lib/utils';
+import { useDebounce } from '@workspace/ui/hooks/use-debounce';
+import { CenteredSpinner } from '@workspace/ui/components/spinner';
 
 import { checkIfSlugIsAvailable } from '~/actions/organization/check-if-slug-is-available';
+import {
+  findExistingOrganizations,
+  findOrganizationsByEmailDomain,
+  type FoundOrganization,
+} from '~/actions/organization/find-existing-organizations';
+import { getUserPendingJoinRequests } from '~/actions/organization/request-to-join-organization';
 import { NextButton } from '~/components/onboarding/next-button';
 import type { OnboardingStepProps } from '~/components/onboarding/onboarding-step-props';
+import { ExistingOrganizationPrompt } from '~/components/onboarding/existing-organization-prompt';
+import { PendingJoinRequestNotice } from '~/components/onboarding/pending-join-request-notice';
 import { CropPhotoModal } from '~/components/organizations/slug/settings/account/profile/crop-photo-modal';
 import { US_STATES } from '~/lib/constants';
 import { MAX_IMAGE_SIZE } from '~/lib/file-upload';
@@ -56,6 +66,18 @@ function slugify(str: string): string {
 export type OnboardingOrganizationStepProps =
   React.HtmlHTMLAttributes<HTMLDivElement> & OnboardingStepProps;
 
+type ViewMode = 'form' | 'existing-orgs' | 'pending-requests';
+
+interface PendingRequest {
+  id: string;
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  organizationLogo: string | null;
+  status: string;
+  createdAt: Date;
+}
+
 export function OnboardingOrganizationStep({
   canNext,
   loading,
@@ -67,6 +89,110 @@ export function OnboardingOrganizationStep({
   const methods = useFormContext<CompleteOnboardingSchema>();
   const logo = methods.watch('organizationStep.logo');
   const slug = methods.watch('organizationStep.slug');
+  const orgName = methods.watch('organizationStep.name');
+
+  // Duplicate detection state
+  const [viewMode, setViewMode] = React.useState<ViewMode>('form');
+  const [existingOrgs, setExistingOrgs] = React.useState<FoundOrganization[]>([]);
+  const [pendingRequests, setPendingRequests] = React.useState<PendingRequest[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [isCheckingInitial, setIsCheckingInitial] = React.useState(true);
+  const [hasCheckedForDuplicates, setHasCheckedForDuplicates] = React.useState(false);
+  const [skipDuplicateCheck, setSkipDuplicateCheck] = React.useState(false);
+
+  const debouncedOrgName = useDebounce(orgName, 500);
+  const debouncedSlug = useDebounce(slug, 500);
+
+  // Slug availability state
+  const [isSlugAvailable, setIsSlugAvailable] = React.useState<boolean | null>(null);
+  const [isCheckingSlug, setIsCheckingSlug] = React.useState(false);
+
+  // Check for pending requests and email domain matches on mount
+  React.useEffect(() => {
+    const checkInitialState = async () => {
+      setIsCheckingInitial(true);
+      try {
+        // First check for pending requests
+        const requests = await getUserPendingJoinRequests();
+        setPendingRequests(requests);
+        if (requests.length > 0) {
+          setViewMode('pending-requests');
+          return;
+        }
+
+        // If no pending requests, check for email domain matches
+        const domainMatches = await findOrganizationsByEmailDomain();
+        if (domainMatches.length > 0) {
+          setExistingOrgs(domainMatches);
+          setHasCheckedForDuplicates(true);
+          setViewMode('existing-orgs');
+        }
+      } catch (error) {
+        console.error('Failed to check initial state:', error);
+      } finally {
+        setIsCheckingInitial(false);
+      }
+    };
+    checkInitialState();
+  }, []);
+
+  // Search for existing organizations when name changes
+  React.useEffect(() => {
+    if (skipDuplicateCheck || !debouncedOrgName || debouncedOrgName.length < 3) {
+      setExistingOrgs([]);
+      return;
+    }
+
+    const searchOrgs = async () => {
+      setIsSearching(true);
+      try {
+        const orgs = await findExistingOrganizations(debouncedOrgName);
+        setExistingOrgs(orgs);
+        setHasCheckedForDuplicates(true);
+      } catch (error) {
+        console.error('Failed to search organizations:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    searchOrgs();
+  }, [debouncedOrgName, skipDuplicateCheck]);
+
+  // Check slug availability when it changes
+  React.useEffect(() => {
+    if (!debouncedSlug || debouncedSlug.length < 2) {
+      setIsSlugAvailable(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const checkSlug = async () => {
+      setIsCheckingSlug(true);
+      try {
+        const result = await checkIfSlugIsAvailable({ slug: debouncedSlug });
+        if (cancelled) return;
+        setIsSlugAvailable(result?.data?.isAvailable ?? false);
+      } catch (error) {
+        console.error('Failed to check slug availability:', error);
+        if (!cancelled) {
+          setIsSlugAvailable(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsCheckingSlug(false);
+        }
+      }
+    };
+
+    checkSlug();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSlug]);
+
   const handleDrop = async (files: File[]): Promise<void> => {
     if (files && files.length > 0) {
       const file = files[0];
@@ -86,6 +212,7 @@ export function OnboardingOrganizationStep({
       }
     }
   };
+
   const handleRemoveLogo = (): void => {
     methods.setValue('organizationStep.logo', undefined, {
       shouldValidate: true,
@@ -93,16 +220,90 @@ export function OnboardingOrganizationStep({
     });
   };
 
+  const handleContinueWithNew = () => {
+    setSkipDuplicateCheck(true);
+    setViewMode('form');
+    setExistingOrgs([]);
+  };
+
+  const handleRequestSent = async () => {
+    // Refresh pending requests
+    const requests = await getUserPendingJoinRequests();
+    setPendingRequests(requests);
+    setViewMode('pending-requests');
+  };
+
+  const handleRequestCancelled = async () => {
+    const requests = await getUserPendingJoinRequests();
+    setPendingRequests(requests);
+    if (requests.length === 0) {
+      setViewMode('form');
+    }
+  };
+
+  // Show pending requests view
+  if (viewMode === 'pending-requests' && pendingRequests.length > 0) {
+    return (
+      <div
+        className={cn('flex w-full flex-col gap-4', className)}
+        {...other}
+      >
+        <h1 className="text-xl font-semibold leading-none tracking-tight lg:text-2xl">
+          Pending Join Requests
+        </h1>
+        <p className="text-sm text-muted-foreground lg:text-base">
+          You've requested to join an organization. We're waiting for the admin to approve.
+        </p>
+        <PendingJoinRequestNotice
+          requests={pendingRequests}
+          onRequestCancelled={handleRequestCancelled}
+          onContinueWithNew={handleContinueWithNew}
+        />
+      </div>
+    );
+  }
+
+  // Show existing organizations view
+  if (viewMode === 'existing-orgs' || (existingOrgs.length > 0 && !skipDuplicateCheck && hasCheckedForDuplicates)) {
+    return (
+      <div
+        className={cn('flex w-full flex-col gap-4', className)}
+        {...other}
+      >
+        <h1 className="text-xl font-semibold leading-none tracking-tight lg:text-2xl">
+          Is this your organization?
+        </h1>
+        <p className="text-sm text-muted-foreground lg:text-base">
+          We found some organizations that might match. Would you like to join one of them instead?
+        </p>
+        <ExistingOrganizationPrompt
+          organizations={existingOrgs}
+          onContinueWithNew={handleContinueWithNew}
+          onRequestSent={handleRequestSent}
+        />
+      </div>
+    );
+  }
+
+  // Show main form
   return (
     <div
-      className={cn('flex w-full flex-col gap-4', className)}
+      className={cn('relative flex w-full flex-col gap-4', className)}
       {...other}
     >
+      {isCheckingInitial && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80">
+          <div className="flex flex-col items-center gap-2">
+            <CenteredSpinner size="large" containerClassName="relative opacity-100" />
+            <p className="text-sm text-muted-foreground">Checking for existing organizations...</p>
+          </div>
+        </div>
+      )}
       <h1 className="text-xl font-semibold leading-none tracking-tight lg:text-2xl">
         Add your organization
       </h1>
       <p className="text-sm text-muted-foreground lg:text-base">
-        We just need some basic info to get your organization set up. You’ll be
+        We just need some basic info to get your organization set up. You'll be
         able to edit this later.
       </p>
       <div className="space-y-2">
@@ -171,13 +372,49 @@ export function OnboardingOrganizationStep({
               />
             </FormControl>
             {slug && (
-              <FormDescription className="break-all">
+              <FormDescription className={cn(
+                "break-all",
+                isSlugAvailable === false && "text-destructive"
+              )}>
                 Your dashboard URL will be:{' '}
                 {getPathname(
                   routes.dashboard.organizations.Index,
                   baseUrl.Dashboard
                 )}
                 /{slug}
+              </FormDescription>
+            )}
+            {isCheckingSlug && (
+              <FormDescription className="flex items-center gap-1 text-muted-foreground">
+                <Loader2Icon className="h-3 w-3 animate-spin" />
+                Checking availability...
+              </FormDescription>
+            )}
+            {isSlugAvailable === false && !isCheckingSlug && (
+              <div className="space-y-2">
+                <p className="text-sm text-destructive">
+                  This organization name is already registered. Please choose a different name or request to join the existing organization.
+                </p>
+                {skipDuplicateCheck && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-sm"
+                    onClick={() => {
+                      setSkipDuplicateCheck(false);
+                      setIsSlugAvailable(null);
+                      methods.clearErrors('organizationStep.slug');
+                    }}
+                  >
+                    Search for existing organizations to join
+                  </Button>
+                )}
+              </div>
+            )}
+            {isSearching && !skipDuplicateCheck && (
+              <FormDescription className="flex items-center gap-1 text-muted-foreground">
+                <Loader2Icon className="h-3 w-3 animate-spin" />
+                Checking for similar organizations...
               </FormDescription>
             )}
             {(methods.formState.touchedFields.organizationStep?.name ||
@@ -343,20 +580,10 @@ export function OnboardingOrganizationStep({
       </FormItem>
 
       <NextButton
-        loading={loading}
-        disabled={!canNext}
+        loading={loading || isCheckingSlug || isCheckingInitial}
+        disabled={!canNext || isSlugAvailable === false || isCheckingSlug || isCheckingInitial}
         isLastStep={isLastStep}
-        onClick={async () => {
-          const result = await checkIfSlugIsAvailable({ slug });
-          if (!result?.data?.isAvailable) {
-            methods.setError('organizationStep.slug', {
-              type: 'validate',
-              message: 'This slug is already taken.'
-            });
-            return;
-          }
-          handleNext();
-        }}
+        onClick={handleNext}
       />
     </div>
   );

@@ -53,7 +53,7 @@ export function RevenueByProductChart({ data }: RevenueByProductChartProps): Rea
       <BarChart
         data={data}
         layout="vertical"
-        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
       >
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={true} vertical={false} />
         <XAxis
@@ -69,7 +69,8 @@ export function RevenueByProductChart({ data }: RevenueByProductChartProps): Rea
           className="fill-muted-foreground text-xs"
           tickLine={false}
           axisLine={false}
-          width={120}
+          width={100}
+          tick={{ fontSize: 11 }}
         />
         <Tooltip content={renderCustomTooltip} />
         <Bar

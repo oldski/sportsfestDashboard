@@ -1,7 +1,7 @@
 'use server';
 
 import { ForbiddenError } from '@workspace/common/errors';
-import { db, eq, sql, and } from '@workspace/database/client';
+import { db, eq, sql, and, inArray } from '@workspace/database/client';
 import { organizationTable, orderTable, OrderStatus, membershipTable } from '@workspace/database/schema';
 
 import { getAuthContext } from '@workspace/auth/context';
@@ -133,27 +133,30 @@ export async function getTopOrganizations(eventYearId?: string, limit: number = 
       targetEventYearId = currentEventYear?.id as string | undefined;
     }
 
+    // Only include orders that have actually paid (not just confirmed)
+    const paidStatuses = [OrderStatus.DEPOSIT_PAID, OrderStatus.FULLY_PAID];
+
     // Build the where clause
     const whereClause = targetEventYearId
       ? and(
           eq(orderTable.eventYearId, targetEventYearId),
-          sql`${orderTable.status} IN ('confirmed', 'deposit_paid', 'fully_paid')`
+          inArray(orderTable.status, paidStatuses)
         )
-      : sql`${orderTable.status} IN ('confirmed', 'deposit_paid', 'fully_paid')`;
+      : inArray(orderTable.status, paidStatuses);
 
-    // Query top organizations by revenue
+    // Query top organizations by actual collected revenue (totalAmount - balanceOwed)
     const result = await db
       .select({
         id: organizationTable.id,
         name: organizationTable.name,
         slug: organizationTable.slug,
-        totalRevenue: sql<number>`COALESCE(SUM(${orderTable.totalAmount}), 0)`.mapWith(Number),
+        totalRevenue: sql<number>`COALESCE(SUM(${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)), 0)`.mapWith(Number),
       })
       .from(orderTable)
       .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
       .where(whereClause)
       .groupBy(organizationTable.id, organizationTable.name, organizationTable.slug)
-      .orderBy(sql`SUM(${orderTable.totalAmount}) DESC`)
+      .orderBy(sql`SUM(${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)) DESC`)
       .limit(limit);
 
     return result.map((org, index) => ({

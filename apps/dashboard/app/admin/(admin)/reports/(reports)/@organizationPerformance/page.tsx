@@ -12,10 +12,10 @@ export default async function OrganizationPerformancePage(): Promise<React.JSX.E
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center">
           <BuildingIcon className="mr-2 h-4 w-4" />
-          Organization Performance
+          Top Companies by Revenue
         </CardTitle>
         <CardDescription>
-          Registration rates and payment completion by organization
+          Revenue breakdown by company and category
         </CardDescription>
       </CardHeader>
       <CardContent>

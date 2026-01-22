@@ -16,7 +16,7 @@ export default async function PlayersByGenderPage(): Promise<React.JSX.Element> 
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <PieChart data={genderData} height={200} donut />
+        <PieChart data={genderData} height={260} donut />
       </CardContent>
     </Card>
   );

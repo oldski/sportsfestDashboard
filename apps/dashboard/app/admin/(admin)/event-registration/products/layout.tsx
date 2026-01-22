@@ -51,7 +51,7 @@ export default async function ProductsLayout({
               <CreateProductButton />
             </PagePrimaryBar>
           </PageHeader>
-          <PageBody disableScroll>
+          <PageBody>
             <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
               {products}
               {categories}

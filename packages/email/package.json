@@ -53,6 +53,10 @@
     "./send-purchase-confirmation-email": "./src/send-purchase-confirmation-email.ts",
     "./send-admin-purchase-notification-email": "./src/send-admin-purchase-notification-email.ts",
     "./send-sponsorship-invoice-email": "./src/send-sponsorship-invoice-email.ts",
+    "./send-join-request-email": "./src/send-join-request-email.ts",
+    "./send-join-request-approved-email": "./src/send-join-request-approved-email.ts",
+    "./send-join-request-rejected-email": "./src/send-join-request-rejected-email.ts",
+    "./send-daily-digest-email": "./src/send-daily-digest-email.ts",
     "./templates/confirm-email-address-change-email": "./src/templates/confirm-email-address-change-email.tsx",
     "./templates/connected-account-security-alert-email": "./src/templates/connected-account-security-alert-email.tsx",
     "./templates/feedback-email": "./src/templates/feedback-email.tsx",
@@ -64,6 +68,10 @@
     "./templates/team-signup-notification-email": "./src/templates/team-signup-notification-email.tsx",
     "./templates/purchase-confirmation-email": "./src/templates/purchase-confirmation-email.tsx",
     "./templates/admin-purchase-notification-email": "./src/templates/admin-purchase-notification-email.tsx",
-    "./templates/sponsorship-invoice-email": "./src/templates/sponsorship-invoice-email.tsx"
+    "./templates/sponsorship-invoice-email": "./src/templates/sponsorship-invoice-email.tsx",
+    "./templates/join-request-email": "./src/templates/join-request-email.tsx",
+    "./templates/join-request-approved-email": "./src/templates/join-request-approved-email.tsx",
+    "./templates/join-request-rejected-email": "./src/templates/join-request-rejected-email.tsx",
+    "./templates/daily-digest-email": "./src/templates/daily-digest-email.tsx"
   }
 }

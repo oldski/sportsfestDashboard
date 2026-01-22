@@ -16,7 +16,7 @@ export default async function PlayersFavoriteEventsPage(): Promise<React.JSX.Ele
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <PieChart data={eventsData} height={200} donut />
+        <PieChart data={eventsData} height={260} donut />
       </CardContent>
     </Card>
   );

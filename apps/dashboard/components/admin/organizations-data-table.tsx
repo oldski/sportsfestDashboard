@@ -38,6 +38,7 @@ import type { OrganizationData } from '~/actions/admin/get-organizations';
 import { generateAdminOrganizationsReactPDF } from './generate-organizations-pdf';
 import { exportToCSV, exportToExcel } from '@workspace/ui/lib/data-table-utils';
 import { formatPhoneNumber } from '~/lib/formatters';
+import { OrganizationInlineActions } from './organization-inline-actions';
 
 const columnHelper = createColumnHelper<OrganizationData>();
 
@@ -287,19 +288,13 @@ const columns = [
     cell: ({ row }) => {
       const organization = row.original;
       return (
-        <Link
-          href={replaceOrgSlug(
-            routes.dashboard.organizations.slug.Home,
-            organization.slug
-          )}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center size-8 rounded-md hover:bg-muted transition-colors"
-          title="View Organization"
-        >
-          <ExternalLinkIcon className="size-4 text-muted-foreground hover:text-foreground" />
-          <span className="sr-only">View Organization</span>
-        </Link>
+        <OrganizationInlineActions
+          organization={{
+            id: organization.id,
+            name: organization.name,
+            slug: organization.slug,
+          }}
+        />
       );
     }
   })

@@ -1,8 +1,8 @@
 'use server';
 
 import { ForbiddenError } from '@workspace/common/errors';
-import { db, eq, sql, and } from '@workspace/database/client';
-import { orderTable, eventYearTable } from '@workspace/database/schema';
+import { db, eq, sql, and, inArray } from '@workspace/database/client';
+import { orderTable, eventYearTable, OrderStatus } from '@workspace/database/schema';
 
 import { getAuthContext } from '@workspace/auth/context';
 import { isSuperAdmin } from '~/lib/admin-utils';
@@ -36,15 +36,18 @@ export async function getRevenueStats(): Promise<RevenueStatsResult> {
       };
     }
 
-    // Get current year revenue
+    // Only include orders that have actually paid (not just confirmed)
+    const paidStatuses = [OrderStatus.DEPOSIT_PAID, OrderStatus.FULLY_PAID];
+
+    // Get current year revenue (actual collected: totalAmount - balanceOwed)
     const currentResult = await db
       .select({
-        totalRevenue: sql<number>`COALESCE(SUM(${orderTable.totalAmount}), 0)`.mapWith(Number),
+        totalRevenue: sql<number>`COALESCE(SUM(${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)), 0)`.mapWith(Number),
       })
       .from(orderTable)
       .where(and(
         eq(orderTable.eventYearId, currentEventYear.id as string),
-        sql`${orderTable.status} IN ('confirmed', 'deposit_paid', 'fully_paid')`
+        inArray(orderTable.status, paidStatuses)
       ));
 
     const totalRevenue = currentResult[0]?.totalRevenue || 0;
@@ -72,12 +75,12 @@ export async function getRevenueStats(): Promise<RevenueStatsResult> {
 
       const priorResult = await db
         .select({
-          totalRevenue: sql<number>`COALESCE(SUM(${orderTable.totalAmount}), 0)`.mapWith(Number),
+          totalRevenue: sql<number>`COALESCE(SUM(${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)), 0)`.mapWith(Number),
         })
         .from(orderTable)
         .where(and(
           eq(orderTable.eventYearId, priorEventYear.id),
-          sql`${orderTable.status} IN ('confirmed', 'deposit_paid', 'fully_paid')`
+          inArray(orderTable.status, paidStatuses)
         ));
 
       priorYearRevenue = priorResult[0]?.totalRevenue || 0;

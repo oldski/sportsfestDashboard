@@ -1,21 +1,23 @@
 'use server';
 
 import { ForbiddenError } from '@workspace/common/errors';
-import { db, eq } from '@workspace/database/client';
-import { organizationTable, orderTable, membershipTable } from '@workspace/database/schema';
+import { db, eq, sql, and, inArray } from '@workspace/database/client';
+import { organizationTable, orderTable, orderItemTable, productTable, ProductType, OrderStatus } from '@workspace/database/schema';
 
 import { getAuthContext } from '@workspace/auth/context';
 import { isSuperAdmin } from '~/lib/admin-utils';
+import { getCurrentEventYear } from '~/data/event-years/get-current-event-year';
 
-export interface OrganizationPerformanceData {
+export interface OrganizationRevenueData {
   name: string;
-  registrationRate: number; // percentage
-  paymentCompletion: number; // percentage
-  memberCount: number;
-  revenue: number;
+  teamRegistration: number;
+  tentRentals: number;
+  sponsorships: number;
+  other: number;
+  total: number;
 }
 
-export async function getOrganizationPerformance(): Promise<OrganizationPerformanceData[]> {
+export async function getOrganizationPerformance(eventYearId?: string): Promise<OrganizationRevenueData[]> {
   const { session } = await getAuthContext();
 
   if (!isSuperAdmin(session.user)) {
@@ -23,56 +25,136 @@ export async function getOrganizationPerformance(): Promise<OrganizationPerforma
   }
 
   try {
-    // Get organizations with their member counts
-    const organizations = await db.select().from(organizationTable);
+    // Get the event year to filter by
+    let targetEventYearId = eventYearId;
+    if (!targetEventYearId) {
+      const currentEventYear = await getCurrentEventYear();
+      targetEventYearId = currentEventYear?.id as string | undefined;
+    }
 
-    const performanceData = await Promise.all(
-      organizations.slice(0, 8).map(async (org) => {
-        // Get member count for this organization through membership table
-        const members = await db
-          .select()
-          .from(membershipTable)
-          .where(eq(membershipTable.organizationId, org.id));
+    if (!targetEventYearId) {
+      return [];
+    }
 
-        // Get orders for this organization
-        const orders = await db
-          .select()
-          .from(orderTable)
-          .where(eq(orderTable.organizationId, org.id));
+    // Only include orders that have actually paid
+    const paidStatuses = [OrderStatus.DEPOSIT_PAID, OrderStatus.FULLY_PAID];
 
-        const memberCount = members.length;
-        const totalOrders = orders.length;
-        const completedOrders = orders.filter(order => order.status === 'fully_paid').length;
-        const revenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-
-        // Calculate realistic performance metrics
-        const baseRegistrationRate = Math.min(85, Math.max(45, (totalOrders / Math.max(memberCount, 1)) * 100));
-        const basePaymentRate = Math.min(95, Math.max(65, (completedOrders / Math.max(totalOrders, 1)) * 100));
-
-        return {
-          name: org.name,
-          registrationRate: Math.round(baseRegistrationRate),
-          paymentCompletion: Math.round(basePaymentRate),
-          memberCount: memberCount || Math.floor(Math.random() * 50) + 10,
-          revenue: revenue || Math.floor(Math.random() * 25000) + 5000
-        };
+    // Get revenue by product type per organization (excluding sponsorships)
+    const revenueByOrgAndType = await db
+      .select({
+        organizationId: orderTable.organizationId,
+        organizationName: organizationTable.name,
+        productType: productTable.type,
+        revenue: sql<number>`
+          COALESCE(SUM(
+            CASE
+              WHEN ${orderTable.totalAmount} > 0
+              THEN (${orderItemTable.totalPrice} / ${orderTable.totalAmount}) * (${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0))
+              ELSE 0
+            END
+          ), 0)
+        `.mapWith(Number),
       })
-    );
+      .from(orderItemTable)
+      .innerJoin(orderTable, eq(orderItemTable.orderId, orderTable.id))
+      .innerJoin(productTable, eq(orderItemTable.productId, productTable.id))
+      .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
+      .where(
+        and(
+          eq(orderTable.eventYearId, targetEventYearId),
+          inArray(orderTable.status, paidStatuses),
+          eq(orderTable.isSponsorship, false)
+        )
+      )
+      .groupBy(orderTable.organizationId, organizationTable.name, productTable.type);
 
-    return performanceData.sort((a, b) => b.revenue - a.revenue);
+    // Get sponsorship revenue per organization
+    const sponsorshipByOrg = await db
+      .select({
+        organizationId: orderTable.organizationId,
+        organizationName: organizationTable.name,
+        revenue: sql<number>`COALESCE(SUM(${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)), 0)`.mapWith(Number),
+      })
+      .from(orderTable)
+      .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
+      .where(
+        and(
+          eq(orderTable.eventYearId, targetEventYearId),
+          inArray(orderTable.status, paidStatuses),
+          eq(orderTable.isSponsorship, true)
+        )
+      )
+      .groupBy(orderTable.organizationId, organizationTable.name);
+
+    // Build a map of organization data
+    const orgMap = new Map<string, OrganizationRevenueData>();
+
+    // Process product type revenue
+    for (const row of revenueByOrgAndType) {
+      if (!row.organizationId) continue;
+
+      if (!orgMap.has(row.organizationId)) {
+        orgMap.set(row.organizationId, {
+          name: row.organizationName,
+          teamRegistration: 0,
+          tentRentals: 0,
+          sponsorships: 0,
+          other: 0,
+          total: 0,
+        });
+      }
+
+      const org = orgMap.get(row.organizationId)!;
+      const amount = Math.round(row.revenue * 100) / 100;
+
+      switch (row.productType) {
+        case ProductType.TEAM_REGISTRATION:
+          org.teamRegistration = amount;
+          break;
+        case ProductType.TENT_RENTAL:
+          org.tentRentals = amount;
+          break;
+        default:
+          org.other += amount;
+          break;
+      }
+    }
+
+    // Add sponsorship revenue
+    for (const row of sponsorshipByOrg) {
+      if (!row.organizationId) continue;
+
+      if (!orgMap.has(row.organizationId)) {
+        orgMap.set(row.organizationId, {
+          name: row.organizationName,
+          teamRegistration: 0,
+          tentRentals: 0,
+          sponsorships: 0,
+          other: 0,
+          total: 0,
+        });
+      }
+
+      const org = orgMap.get(row.organizationId)!;
+      org.sponsorships = Math.round(row.revenue * 100) / 100;
+    }
+
+    // Calculate totals and convert to array
+    const result: OrganizationRevenueData[] = [];
+    for (const org of orgMap.values()) {
+      org.other = Math.round(org.other * 100) / 100;
+      org.total = Math.round((org.teamRegistration + org.tentRentals + org.sponsorships + org.other) * 100) / 100;
+      if (org.total > 0) {
+        result.push(org);
+      }
+    }
+
+    // Sort by total revenue descending and take top 10
+    return result
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
   } catch (error) {
     console.error('Failed to get organization performance data:', error);
-
-    // Fallback data if database queries fail
-    return [
-      { name: 'TechCorp Solutions', registrationRate: 85, paymentCompletion: 92, memberCount: 45, revenue: 22500 },
-      { name: 'Global Dynamics', registrationRate: 78, paymentCompletion: 88, memberCount: 38, revenue: 19000 },
-      { name: 'Innovation Labs', registrationRate: 72, paymentCompletion: 95, memberCount: 32, revenue: 16800 },
-      { name: 'Future Systems', registrationRate: 68, paymentCompletion: 85, memberCount: 28, revenue: 14200 },
-      { name: 'NextGen Tech', registrationRate: 65, paymentCompletion: 90, memberCount: 25, revenue: 12750 },
-      { name: 'Digital Works', registrationRate: 62, paymentCompletion: 83, memberCount: 22, revenue: 11000 },
-      { name: 'Smart Solutions', registrationRate: 58, paymentCompletion: 87, memberCount: 20, revenue: 9600 },
-      { name: 'Tech Pioneers', registrationRate: 55, paymentCompletion: 80, memberCount: 18, revenue: 8100 }
-    ];
+    return [];
   }
 }

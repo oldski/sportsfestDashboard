@@ -30,7 +30,8 @@ export enum OrganizationCacheKey {
   Webhooks,
   RegistrationInvoices,
   RegistrationStats,
-  RecentActivity
+  RecentActivity,
+  JoinRequests
 }
 
 export class Caching {

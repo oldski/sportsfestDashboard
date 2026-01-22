@@ -16,7 +16,7 @@ export default async function PlayersByAgeGroupPage(): Promise<React.JSX.Element
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <PieChart data={ageData} height={200} donut />
+        <PieChart data={ageData} height={260} donut />
       </CardContent>
     </Card>
   );

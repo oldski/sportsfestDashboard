@@ -22,7 +22,7 @@ export type OrganizationData = {
 
 export async function getOrganizations(): Promise<OrganizationData[]> {
   const { session } = await getAuthContext();
-  
+
   if (!isSuperAdmin(session.user)) {
     throw new Error('Unauthorized: Super admin access required');
   }

@@ -22,11 +22,11 @@ export function RegistrationTimelineChart({ data }: RegistrationTimelineChartPro
           <div className="space-y-1">
             <p className="text-sm">
               <span className="font-medium">Daily: </span>
-              <span className="text-blue-600">{payload[0].value} registrations</span>
+              <span className="text-blue-600">{payload[0].value} teams</span>
             </p>
             <p className="text-sm">
               <span className="font-medium">Total: </span>
-              <span className="text-blue-800">{payload[1].value} registered</span>
+              <span className="text-blue-800">{payload[1].value} teams registered</span>
             </p>
           </div>
         </div>
@@ -36,44 +36,46 @@ export function RegistrationTimelineChart({ data }: RegistrationTimelineChartPro
   };
 
   return (
-    <ResponsiveContainer width="100%" height={240}>
-      <AreaChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+    <ResponsiveContainer width="100%" height={280}>
+      <AreaChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-        <XAxis 
-          dataKey="date" 
+        <XAxis
+          dataKey="date"
           className="fill-muted-foreground text-xs"
           tickLine={false}
           axisLine={false}
         />
-        <YAxis 
+        <YAxis
           yAxisId="daily"
           className="fill-muted-foreground text-xs"
           tickLine={false}
           axisLine={false}
           orientation="left"
+          width={30}
         />
-        <YAxis 
+        <YAxis
           yAxisId="cumulative"
           className="fill-muted-foreground text-xs"
           tickLine={false}
           axisLine={false}
           orientation="right"
+          width={30}
         />
         <Tooltip content={renderCustomTooltip} />
-        <Area 
+        <Area
           yAxisId="daily"
-          type="monotone" 
-          dataKey="registrations" 
-          stroke="#60a5fa" 
+          type="monotone"
+          dataKey="registrations"
+          stroke="#60a5fa"
           fill="#60a5fa"
           fillOpacity={0.3}
           strokeWidth={2}
         />
-        <Area 
+        <Area
           yAxisId="cumulative"
-          type="monotone" 
-          dataKey="cumulative" 
-          stroke="#1e40af" 
+          type="monotone"
+          dataKey="cumulative"
+          stroke="#1e40af"
           fill="#1e40af"
           fillOpacity={0.1}
           strokeWidth={2}

@@ -23,22 +23,26 @@ interface ReportsAnalyticsLayoutProps {
   revenueAnalytics: React.ReactNode;
   registrationProgress: React.ReactNode;
   organizationPerformance: React.ReactNode;
+  topCompaniesByPlayers: React.ReactNode;
+  companyLeaderboard: React.ReactNode;
   playersData: React.ReactNode;
   organizationsData: React.ReactNode;
   usersData: React.ReactNode;
   revenueStats: React.ReactNode;
-  topOrganizations: React.ReactNode;
+  referralSourceAnalytics: React.ReactNode;
 }
 
 export default async function ReportsAnalyticsLayout({
   revenueAnalytics,
   registrationProgress,
   organizationPerformance,
+  topCompaniesByPlayers,
+  companyLeaderboard,
   playersData,
   organizationsData,
   usersData,
   revenueStats,
-  topOrganizations,
+  referralSourceAnalytics,
 }: ReportsAnalyticsLayoutProps & React.PropsWithChildren & NextPageProps): Promise<React.JSX.Element> {
   const eventYears = await getEventYearsSimple();
   const currentYear = eventYears.find(y => y.isActive);
@@ -64,26 +68,40 @@ export default async function ReportsAnalyticsLayout({
       <PageBody>
         <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
           {/* Primary Analytics Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {revenueAnalytics}
-            {registrationProgress}
-          </div>
-
-          {/* Revenue & Organization Stats */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {revenueStats}
-            {topOrganizations}
+            <div className="grid grid-cols-1 lg:grid-cols-2 lg:col-span-2 gap-6">
+              {revenueAnalytics}
+              {registrationProgress}
+            </div>
           </div>
 
-          {/* Full Width Sections */}
+          {/* Company Leaderboard */}
           <div className="space-y-6">
+            {companyLeaderboard}
+          </div>
+
+          {/* Company Analytics */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {organizationPerformance}
+            {topCompaniesByPlayers}
+          </div>
+
+          {/* Organizations Table */}
+          <div className="space-y-6">
             {organizationsData}
           </div>
 
+          {/* Marketing Analytics */}
+          <div className="grid grid-cols-1 gap-6">
+            {referralSourceAnalytics}
+          </div>
+
           {/* Players & Users Analytics */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             {playersData}
+          </div>
+          <div className="grid grid-cols-1 gap-6">
             {usersData}
           </div>
         </div>

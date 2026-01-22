@@ -3,8 +3,8 @@
 import { auth } from '@workspace/auth';
 import { isSuperAdmin } from '~/lib/admin-utils';
 import { getActiveEventYear } from './get-event-year';
-import { db, sql, desc, eq, and } from '@workspace/database/client';
-import { organizationTable, membershipTable, orderTable, playerTable, companyTeamTable, OrderStatus } from '@workspace/database/schema';
+import { db, sql } from '@workspace/database/client';
+import { OrderStatus } from '@workspace/database/schema';
 
 export interface TopOrganizationData {
   id: string;
@@ -17,7 +17,10 @@ export interface TopOrganizationData {
 
 export type RankingType = 'members' | 'revenue' | 'teams' | 'players';
 
-export async function getTopOrganizations(rankingType: RankingType = 'members', limit: number = 10): Promise<TopOrganizationData[]> {
+export async function getTopOrganizations(
+  rankingType: RankingType = 'members',
+  limit: number = 10
+): Promise<TopOrganizationData[]> {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Unauthorized');
@@ -31,55 +34,84 @@ export async function getTopOrganizations(rankingType: RankingType = 'members', 
     const activeEvent = await getActiveEventYear();
 
     if (!activeEvent?.id) {
+      console.log('No active event found');
       return [];
     }
 
-    // Get comprehensive organization data
-    const topOrgs = await db
-      .select({
-        id: organizationTable.id,
-        name: organizationTable.name,
-        memberCount: sql<number>`COUNT(DISTINCT ${membershipTable.id})`,
-        revenue: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.eventYearId} = ${activeEvent.id} AND ${orderTable.status} IN ('fully_paid', 'deposit_paid') THEN ${orderTable.totalAmount} ELSE 0 END), 0)`,
-        teamCount: sql<number>`COALESCE(SUM(CASE WHEN ${companyTeamTable.eventYearId} = ${activeEvent.id} THEN 1 ELSE 0 END), 0)`,
-        playerCount: sql<number>`COALESCE(SUM(CASE WHEN ${playerTable.eventYearId} = ${activeEvent.id} THEN 1 ELSE 0 END), 0)`
-      })
-      .from(organizationTable)
-      .leftJoin(membershipTable, eq(membershipTable.organizationId, organizationTable.id))
-      .leftJoin(orderTable, eq(orderTable.organizationId, organizationTable.id))
-      .leftJoin(companyTeamTable, eq(companyTeamTable.organizationId, organizationTable.id))
-      .leftJoin(playerTable, eq(playerTable.organizationId, organizationTable.id))
-      .groupBy(organizationTable.id, organizationTable.name)
-      .orderBy(getOrderByClause(rankingType))
-      .limit(limit);
+    const paidStatuses = [OrderStatus.DEPOSIT_PAID, OrderStatus.FULLY_PAID];
+    const statusList = paidStatuses.map((s) => `'${s}'`).join(', ');
 
+    // Determine order by clause based on ranking type
+    let orderByColumn: string;
+    switch (rankingType) {
+      case 'members':
+        orderByColumn = 'member_count';
+        break;
+      case 'revenue':
+        orderByColumn = 'revenue';
+        break;
+      case 'teams':
+        orderByColumn = 'team_count';
+        break;
+      case 'players':
+        orderByColumn = 'player_count';
+        break;
+      default:
+        orderByColumn = 'member_count';
+    }
 
-    return topOrgs.map(org => ({
+    // Use derived tables (pre-aggregated subqueries) to avoid Cartesian product
+    const result = await db.execute(sql`
+      SELECT
+        o.id,
+        o.name,
+        COALESCE(mem.member_count, 0)::int as member_count,
+        COALESCE(rev.revenue, 0)::numeric as revenue,
+        COALESCE(teams.team_count, 0)::int as team_count,
+        COALESCE(players.player_count, 0)::int as player_count
+      FROM "organization" o
+      LEFT JOIN (
+        SELECT "organizationId", COUNT(*) as member_count
+        FROM "membership"
+        GROUP BY "organizationId"
+      ) mem ON mem."organizationId" = o.id
+      LEFT JOIN (
+        SELECT "organizationId", SUM("totalAmount" - COALESCE("balanceOwed", 0)) as revenue
+        FROM "order"
+        WHERE "eventYearId" = ${activeEvent.id}
+          AND "status" IN (${sql.raw(statusList)})
+        GROUP BY "organizationId"
+      ) rev ON rev."organizationId" = o.id
+      LEFT JOIN (
+        SELECT "organizationId", COUNT(*) as team_count
+        FROM "companyTeam"
+        WHERE "eventYearId" = ${activeEvent.id}
+        GROUP BY "organizationId"
+      ) teams ON teams."organizationId" = o.id
+      LEFT JOIN (
+        SELECT "organizationId", COUNT(*) as player_count
+        FROM "player"
+        WHERE "eventYearId" = ${activeEvent.id}
+        GROUP BY "organizationId"
+      ) players ON players."organizationId" = o.id
+      ORDER BY ${sql.raw(orderByColumn)} DESC NULLS LAST
+      LIMIT ${limit}
+    `);
+
+    console.log('Top organizations query result:', result.rows?.length || 0, 'rows');
+
+    const rows = result.rows as any[];
+
+    return rows.map((org) => ({
       id: org.id,
       name: org.name,
-      memberCount: Number(org.memberCount),
-      revenue: Number(org.revenue),
-      teamCount: Number(org.teamCount),
-      playerCount: Number(org.playerCount)
+      memberCount: Number(org.member_count) || 0,
+      revenue: Number(org.revenue) || 0,
+      teamCount: Number(org.team_count) || 0,
+      playerCount: Number(org.player_count) || 0
     }));
-
   } catch (error) {
     console.error('Failed to get top organizations:', error);
     return [];
-  }
-}
-
-function getOrderByClause(rankingType: RankingType) {
-  switch (rankingType) {
-    case 'members':
-      return desc(sql`COUNT(DISTINCT membership.id)`);
-    case 'revenue':
-      return desc(sql`COALESCE(SUM(CASE WHEN "order"."eventYearId" = (SELECT id FROM "eventYear" WHERE "isActive" = true AND "isDeleted" = false LIMIT 1) AND "order"."status" IN ('fully_paid', 'deposit_paid') THEN "order"."totalAmount" ELSE 0 END), 0)`);
-    case 'teams':
-      return desc(sql`COALESCE(SUM(CASE WHEN "companyTeam"."eventYearId" = (SELECT id FROM "eventYear" WHERE "isActive" = true AND "isDeleted" = false LIMIT 1) THEN 1 ELSE 0 END), 0)`);
-    case 'players':
-      return desc(sql`COALESCE(SUM(CASE WHEN "player"."eventYearId" = (SELECT id FROM "eventYear" WHERE "isActive" = true AND "isDeleted" = false LIMIT 1) THEN 1 ELSE 0 END), 0)`);
-    default:
-      return desc(sql`COUNT(DISTINCT membership.id)`);
   }
 }

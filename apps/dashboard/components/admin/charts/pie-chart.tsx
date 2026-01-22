@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 export interface PieChartData {
   name: string;
@@ -40,16 +40,20 @@ export function PieChart({
 }: PieChartProps): React.JSX.Element {
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
+  // Calculate pie size based on height
+  const pieRadius = donut ? Math.min(height * 0.4, 100) : Math.min(height * 0.45, 110);
+  const pieInnerRadius = donut ? pieRadius * 0.55 : 0;
+
   const renderCustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const item = payload[0];
       const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
 
       return (
-        <div className="bg-background border border-border rounded-md p-3 shadow-md">
+        <div className="bg-background border border-border rounded-md p-3 shadow-md z-50">
           <div className="flex items-center gap-2 mb-1">
             <div
-              className="w-3 h-3 rounded-full"
+              className="w-3 h-3 rounded-full shrink-0"
               style={{ backgroundColor: item.payload.fill }}
             />
             <span className="text-foreground text-sm font-medium">{item.name}</span>
@@ -64,8 +68,8 @@ export function PieChart({
     return null;
   };
 
-  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
-    if (percent < 0.05) return null; // Don't show labels for small slices
+  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (percent < 0.08) return null; // Don't show labels for small slices
 
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
@@ -86,19 +90,6 @@ export function PieChart({
     );
   };
 
-  const legendFormatter = (value: string, entry: any) => {
-    const item = data.find(d => d.name === value);
-    if (item && total > 0) {
-      const percentage = ((item.value / total) * 100).toFixed(1);
-      return (
-        <span className="text-sm text-foreground">
-          {value} ({percentage}%)
-        </span>
-      );
-    }
-    return <span className="text-sm text-foreground">{value}</span>;
-  };
-
   if (data.length === 0 || total === 0) {
     return (
       <div
@@ -110,40 +101,63 @@ export function PieChart({
     );
   }
 
-  return (
-    <ResponsiveContainer width="100%" height={height}>
-      <RechartsPieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          labelLine={false}
-          label={showLabels ? renderCustomLabel : undefined}
-          outerRadius={donut ? 80 : 90}
-          innerRadius={donut ? 50 : 0}
-          fill="#8884d8"
-          dataKey="value"
-          paddingAngle={2}
-        >
-          {data.map((entry, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={entry.color || CHART_COLORS[index % CHART_COLORS.length]}
+  // Custom legend component - stacked on left, top-aligned
+  const CustomLegend = () => (
+    <div className="flex flex-col gap-1.5 pr-2">
+      {data.map((item, index) => {
+        const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
+        const color = item.color || CHART_COLORS[index % CHART_COLORS.length];
+        return (
+          <div key={item.name} className="flex items-center gap-2">
+            <div
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: color }}
             />
-          ))}
-        </Pie>
-        <Tooltip content={renderCustomTooltip} />
-        {showLegend && (
-          <Legend
-            verticalAlign="bottom"
-            height={36}
-            iconType="circle"
-            iconSize={10}
-            formatter={legendFormatter}
-            wrapperStyle={{ fontSize: '12px' }}
-          />
-        )}
-      </RechartsPieChart>
-    </ResponsiveContainer>
+            <span className="text-xs text-foreground whitespace-nowrap">
+              {item.name} ({percentage}%)
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="flex items-start overflow-hidden" style={{ height }}>
+      {/* Legend on left - top aligned */}
+      {showLegend && (
+        <div className="shrink-0 pt-2">
+          <CustomLegend />
+        </div>
+      )}
+
+      {/* Chart on right - vertically centered */}
+      <div className="flex-1 flex items-center justify-center h-full min-w-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <RechartsPieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={showLabels ? renderCustomLabel : undefined}
+              outerRadius={pieRadius}
+              innerRadius={pieInnerRadius}
+              fill="#8884d8"
+              dataKey="value"
+              paddingAngle={2}
+            >
+              {data.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.color || CHART_COLORS[index % CHART_COLORS.length]}
+                />
+              ))}
+            </Pie>
+            <Tooltip content={renderCustomTooltip} />
+          </RechartsPieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }

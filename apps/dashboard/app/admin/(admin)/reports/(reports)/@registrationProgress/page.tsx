@@ -12,10 +12,10 @@ export default async function RegistrationProgressPage(): Promise<React.JSX.Elem
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center">
           <TrendingUpIcon className="mr-2 h-4 w-4" />
-          Registration Progress
+          Company Team Registration Progress
         </CardTitle>
         <CardDescription>
-          Daily registration trends and cumulative progress
+          Daily company team registrations and cumulative progress
         </CardDescription>
       </CardHeader>
       <CardContent>
