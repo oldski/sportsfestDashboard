@@ -39,6 +39,12 @@ export default async function RevenueStatsPage(): Promise<React.JSX.Element> {
               Total Revenue {stats.currentYear ? `(${stats.currentYear})` : ''}
             </p>
             <p className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</p>
+            <div className="text-xs text-muted-foreground">
+              <span className="text-foreground/70">{formatCurrency(stats.registrationRevenue)}</span> registrations
+              {stats.sponsorshipRevenue > 0 && (
+                <span> · <span className="text-foreground/70">{formatCurrency(stats.sponsorshipRevenue)}</span> sponsorships</span>
+              )}
+            </div>
           </div>
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">

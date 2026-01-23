@@ -13,9 +13,11 @@ import {
 
 import {
   Caching,
-  defaultRevalidateTimeInSeconds,
   OrganizationCacheKey
 } from '~/data/caching';
+
+// Short cache time for recent activity - users expect to see updates quickly
+const RECENT_ACTIVITY_CACHE_SECONDS = 60;
 
 export interface ActivityItem {
   id: string;
@@ -159,7 +161,7 @@ export async function getOrganizationRecentActivity(limit: number = 5): Promise<
       'v1'
     ),
     {
-      revalidate: defaultRevalidateTimeInSeconds,
+      revalidate: RECENT_ACTIVITY_CACHE_SECONDS,
       tags: [
         Caching.createOrganizationTag(
           OrganizationCacheKey.RecentActivity,

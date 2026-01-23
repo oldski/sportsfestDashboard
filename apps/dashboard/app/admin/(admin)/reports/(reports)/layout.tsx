@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: createTitle('Reports & Analytics')
 };
 
+// Ensure fresh data on every request for reports
+export const dynamic = 'force-dynamic';
+
 
 interface ReportsAnalyticsLayoutProps {
   revenueAnalytics: React.ReactNode;

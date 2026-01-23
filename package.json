@@ -24,12 +24,14 @@
   "devDependencies": {
     "@manypkg/cli": "0.24.0",
     "@tanstack/react-table": "8.21.3",
-    "@turbo/gen": "2.5.4",
+    "@turbo/gen": "2.7.5",
     "cross-env": "7.0.3",
+    "csv-parse": "^6.1.0",
     "jspdf": "^3.0.2",
     "jspdf-autotable": "^5.0.2",
     "papaparse": "^5.5.3",
-    "turbo": "2.5.8",
+    "tsx": "^4.21.0",
+    "turbo": "2.7.5",
     "typescript": "5.8.3",
     "xlsx": "^0.18.5"
   },
@@ -44,7 +46,7 @@
       "tree-sitter": "0.21.1"
     }
   },
-  "packageManager": "pnpm@10.24.0",
+  "packageManager": "pnpm@10.28.1",
   "engines": {
     "node": ">=20"
   }

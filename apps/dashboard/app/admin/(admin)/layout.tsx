@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: createTitle('Admin')
 };
 
+// Disable route caching for admin pages - admins need fresh data on every request
+export const dynamic = 'force-dynamic';
+
 export default async function AdminLayout(
   props: NextPageProps & React.PropsWithChildren
 ): Promise<React.JSX.Element> {

@@ -79,15 +79,7 @@ export async function getOrganizations(): Promise<OrganizationDto[]> {
       }
 
       const response: OrganizationDto[] = organizations
-        .sort((a, b) => {
-          if (!a.earliestMembershipCreatedAt || !b.earliestMembershipCreatedAt) {
-            return 0;
-          }
-          return (
-            a.earliestMembershipCreatedAt.getTime() -
-            b.earliestMembershipCreatedAt.getTime()
-          );
-        })
+        .sort((a, b) => a.name.localeCompare(b.name))
         .map((organization) => ({
           id: organization.id,
           logo: organization.logo ? organization.logo : undefined,

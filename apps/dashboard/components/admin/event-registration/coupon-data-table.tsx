@@ -71,7 +71,7 @@ function AdminCouponsDataTableExport({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="h-9 text-sm">
           <DownloadIcon className="size-4 shrink-0" />
-          Export
+          <span className="hidden lg:inline">Export</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -505,7 +505,7 @@ export function CouponDataTable({ data, onDataChange }: CouponDataTableProps): R
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Input
           placeholder="Search coupons..."
           value={globalFilter}

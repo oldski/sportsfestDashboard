@@ -175,16 +175,15 @@ export async function getAdminOverviewStats(): Promise<AdminOverviewStats> {
     tentTrackingStats = { totalPurchases: 0, quotaMet: 0, totalQuantityPurchased: 0 };
   }
 
-  // Calculate tent utilization based on actual inventory
-  const totalTentPurchases = Number(tentRow?.total_tent_purchases || 0);
-  const tentUtilizationRate = tentInventoryTotal > 0
-    ? Math.round((totalTentPurchases / tentInventoryTotal) * 100)
-    : 0;
-
   // Use tent tracking data for more detailed metrics
   const tentTrackingPurchases = Number(tentTrackingStats?.totalPurchases || 0);
   const tentQuotaMet = Number(tentTrackingStats?.quotaMet || 0);
   const totalQuantityFromTracking = Number(tentTrackingStats?.totalQuantityPurchased || 0);
+
+  // Calculate tent utilization based on actual quantity purchased (not order count)
+  const tentUtilizationRate = tentInventoryTotal > 0
+    ? Math.round((totalQuantityFromTracking / tentInventoryTotal) * 100)
+    : 0;
 
   // Calculate available tents based on inventory minus sold/reserved
   const availableTents = Math.max(0, tentInventoryTotal - totalQuantityFromTracking);
@@ -196,7 +195,7 @@ export async function getAdminOverviewStats(): Promise<AdminOverviewStats> {
     newPlayersThisMonth: newPlayersThisMonth,
     totalRevenue: Number(revenueRow?.total_revenue || 0),
     revenueThisMonth: Number(revenueRow?.revenue_this_month || 0),
-    totalTentRentals: totalTentPurchases,
+    totalTentRentals: totalQuantityFromTracking, // Use actual quantity, not order count
     tentUtilizationRate: Math.min(tentUtilizationRate, 100), // Cap at 100%
     // Additional tent tracking data
     tentQuotaMet: tentQuotaMet,

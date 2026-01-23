@@ -372,7 +372,6 @@ export function PlayersDataTable({ data, organization, eventYears }: PlayersData
     onGlobalFilterChange: setGlobalFilter,
   });
 
-  console.log(data)
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">

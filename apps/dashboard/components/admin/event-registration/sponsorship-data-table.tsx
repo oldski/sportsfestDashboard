@@ -491,19 +491,19 @@ export function SponsorshipDataTable({ data }: SponsorshipDataTableProps): React
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Input
           placeholder="Search sponsorships..."
           value={globalFilter}
           onChange={(event) => setGlobalFilter(event.target.value)}
-          className="max-w-sm ml-5"
+          className="max-w-sm"
         />
         <div className="flex items-center space-x-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-9 text-sm">
                 <DownloadIcon className="size-4 shrink-0" />
-                Export
+                <span className="hidden lg:inline">Export</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

@@ -54,7 +54,21 @@ scripts/supabase-*.json
 scripts/migrations/*.sql
 *.backup
 
+# Reconciliation data files (CSV imports, exports)
+scripts/reconciliation/*.csv
+scripts/reconciliation/*.json
+scripts/*.csv
+
+# Screenshots and images in scripts (test artifacts)
+scripts/*.png
+scripts/*.jpg
+scripts/test-data/*.png
+scripts/test-data/*.jpg
+
 # Project documentation and notes (not for version control)
 CONSTANT_CONTACT_SETUP.md
 team-management-video-script.md
 team-recruitment-video-script.md
+
+# Cursor IDE (not used)
+.cursor/

@@ -17,6 +17,8 @@ export interface RevenueByProductData {
 export interface RevenueAnalyticsResult {
   byProductType: RevenueByProductData[];
   netRevenue: number;
+  registrationRevenue: number;
+  sponsorshipRevenue: number;
 }
 
 const PRODUCT_TYPE_DISPLAY_NAMES: Record<string, string> = {
@@ -43,7 +45,7 @@ export async function getRevenueAnalytics(eventYearId?: string): Promise<Revenue
     }
 
     if (!targetEventYearId) {
-      return { byProductType: [], netRevenue: 0 };
+      return { byProductType: [], netRevenue: 0, registrationRevenue: 0, sponsorshipRevenue: 0 };
     }
 
     // Only include orders that have actually paid (not just confirmed)
@@ -78,10 +80,11 @@ export async function getRevenueAnalytics(eventYearId?: string): Promise<Revenue
       )
       .groupBy(productTable.type);
 
-    // Query sponsorship revenue separately
+    // Query sponsorship revenue separately (use baseAmount from metadata to exclude processing fee)
     const sponsorshipRevenueResult = await db
       .select({
-        total: sql<number>`COALESCE(SUM(${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)), 0)`.mapWith(Number),
+        ordered: sql<number>`COALESCE(SUM(COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount})), 0)`.mapWith(Number),
+        balance: sql<number>`COALESCE(SUM(COALESCE(${orderTable.balanceOwed}, 0) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)), 0)`.mapWith(Number),
       })
       .from(orderTable)
       .where(
@@ -92,7 +95,9 @@ export async function getRevenueAnalytics(eventYearId?: string): Promise<Revenue
         )
       );
 
-    const sponsorshipRevenue = sponsorshipRevenueResult[0]?.total || 0;
+    const sponsorshipOrdered = sponsorshipRevenueResult[0]?.ordered || 0;
+    const sponsorshipBalance = sponsorshipRevenueResult[0]?.balance || 0;
+    const sponsorshipRevenue = sponsorshipOrdered - sponsorshipBalance;
 
     // Transform to display format
     const byProductType: RevenueByProductData[] = revenueByType
@@ -115,11 +120,19 @@ export async function getRevenueAnalytics(eventYearId?: string): Promise<Revenue
       byProductType.sort((a, b) => b.amount - a.amount);
     }
 
-    // Calculate net revenue directly from order totals (same as get-revenue-stats.ts)
-    // This ensures consistency between revenue analytics and revenue stats
+    // Calculate net revenue directly from order totals
+    // For sponsorships, use baseAmount to exclude processing fees (consistent with sponsorshipRevenue)
     const netRevenueResult = await db
       .select({
-        total: sql<number>`COALESCE(SUM(${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)), 0)`.mapWith(Number),
+        total: sql<number>`COALESCE(SUM(
+          CASE
+            WHEN ${orderTable.isSponsorship} = true THEN
+              COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount})
+              - COALESCE(${orderTable.balanceOwed}, 0) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)
+            ELSE
+              ${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)
+          END
+        ), 0)`.mapWith(Number),
       })
       .from(orderTable)
       .where(
@@ -144,15 +157,22 @@ export async function getRevenueAnalytics(eventYearId?: string): Promise<Revenue
       });
     }
 
+    // Calculate registration revenue (all non-sponsorship revenue)
+    const registrationRevenue = netRevenue - sponsorshipRevenue;
+
     return {
       byProductType,
       netRevenue: Math.round(netRevenue * 100) / 100,
+      registrationRevenue: Math.round(registrationRevenue * 100) / 100,
+      sponsorshipRevenue: Math.round(sponsorshipRevenue * 100) / 100,
     };
   } catch (error) {
     console.error('Failed to get revenue analytics:', error);
     return {
       byProductType: [],
       netRevenue: 0,
+      registrationRevenue: 0,
+      sponsorshipRevenue: 0,
     };
   }
 }

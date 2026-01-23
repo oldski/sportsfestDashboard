@@ -68,12 +68,15 @@ export async function getOrganizationPerformance(eventYearId?: string): Promise<
       )
       .groupBy(orderTable.organizationId, organizationTable.name, productTable.type);
 
-    // Get sponsorship revenue per organization
+    // Get sponsorship revenue per organization (use baseAmount from metadata to exclude processing fee)
     const sponsorshipByOrg = await db
       .select({
         organizationId: orderTable.organizationId,
         organizationName: organizationTable.name,
-        revenue: sql<number>`COALESCE(SUM(${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)), 0)`.mapWith(Number),
+        revenue: sql<number>`COALESCE(SUM(
+          COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount})
+          - COALESCE(${orderTable.balanceOwed}, 0) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)
+        ), 0)`.mapWith(Number),
       })
       .from(orderTable)
       .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))

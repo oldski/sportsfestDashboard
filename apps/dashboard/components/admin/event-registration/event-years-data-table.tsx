@@ -235,13 +235,15 @@ export function EventYearsDataTable({ eventYears }: EventYearsDataTableProps): R
           placeholder="Search event years..."
           value={globalFilter}
           onChange={(event) => setGlobalFilter(event.target.value)}
-          className="max-w-sm ml-5"
+          className="max-w-sm"
         />
         <div className="flex items-center space-x-2">
           <DataTableColumnOptionsHeader table={table} />
         </div>
       </div>
-      <DataTable table={table} fixedHeader />
+      <div className="-mx-2 overflow-x-auto px-2 sm:mx-0 sm:px-0">
+        <DataTable table={table} fixedHeader />
+      </div>
       <div className="rounded-b-xl overflow-hidden">
         <DataTablePagination table={table} />
       </div>

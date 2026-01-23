@@ -53,7 +53,7 @@ export default async function EventRegistrationOverviewLayout({
       <PageBody>
         <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 lg:gap-6">
-            <div className="col-span-2">
+            <div className="xl:col-span-2">
               <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 lg:gap-6">
                 {totalRevenue}
                 {pendingPayments}
@@ -63,7 +63,7 @@ export default async function EventRegistrationOverviewLayout({
                 {invoiceManagement}
               </div>
             </div>
-            <div className="h-full *:h-full">
+            <div className="w-full h-full *:h-full">
               {tentTracking}
             </div>
           </div>

@@ -13,6 +13,7 @@ export interface TopOrganizationData {
   revenue: number;
   teamCount: number;
   playerCount: number;
+  isSponsor: boolean;
 }
 
 export type RankingType = 'members' | 'revenue' | 'teams' | 'players';
@@ -61,6 +62,7 @@ export async function getTopOrganizations(
     }
 
     // Use derived tables (pre-aggregated subqueries) to avoid Cartesian product
+    // For sponsorship orders, use baseAmount from metadata to exclude processing fee
     const result = await db.execute(sql`
       SELECT
         o.id,
@@ -68,7 +70,8 @@ export async function getTopOrganizations(
         COALESCE(mem.member_count, 0)::int as member_count,
         COALESCE(rev.revenue, 0)::numeric as revenue,
         COALESCE(teams.team_count, 0)::int as team_count,
-        COALESCE(players.player_count, 0)::int as player_count
+        COALESCE(players.player_count, 0)::int as player_count,
+        COALESCE(spons.is_sponsor, false) as is_sponsor
       FROM "organization" o
       LEFT JOIN (
         SELECT "organizationId", COUNT(*) as member_count
@@ -76,7 +79,15 @@ export async function getTopOrganizations(
         GROUP BY "organizationId"
       ) mem ON mem."organizationId" = o.id
       LEFT JOIN (
-        SELECT "organizationId", SUM("totalAmount" - COALESCE("balanceOwed", 0)) as revenue
+        SELECT "organizationId", SUM(
+          CASE
+            WHEN "isSponsorship" = true THEN
+              COALESCE((metadata->'sponsorship'->>'baseAmount')::numeric, "totalAmount")
+              - COALESCE("balanceOwed", 0) * COALESCE((metadata->'sponsorship'->>'baseAmount')::numeric / NULLIF("totalAmount", 0), 1)
+            ELSE
+              "totalAmount" - COALESCE("balanceOwed", 0)
+          END
+        ) as revenue
         FROM "order"
         WHERE "eventYearId" = ${activeEvent.id}
           AND "status" IN (${sql.raw(statusList)})
@@ -94,6 +105,14 @@ export async function getTopOrganizations(
         WHERE "eventYearId" = ${activeEvent.id}
         GROUP BY "organizationId"
       ) players ON players."organizationId" = o.id
+      LEFT JOIN (
+        SELECT "organizationId", true as is_sponsor
+        FROM "order"
+        WHERE "eventYearId" = ${activeEvent.id}
+          AND "isSponsorship" = true
+          AND "status" IN (${sql.raw(statusList)})
+        GROUP BY "organizationId"
+      ) spons ON spons."organizationId" = o.id
       ORDER BY ${sql.raw(orderByColumn)} DESC NULLS LAST
       LIMIT ${limit}
     `);
@@ -108,7 +127,8 @@ export async function getTopOrganizations(
       memberCount: Number(org.member_count) || 0,
       revenue: Number(org.revenue) || 0,
       teamCount: Number(org.team_count) || 0,
-      playerCount: Number(org.player_count) || 0
+      playerCount: Number(org.player_count) || 0,
+      isSponsor: Boolean(org.is_sponsor)
     }));
   } catch (error) {
     console.error('Failed to get top organizations:', error);

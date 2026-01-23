@@ -38,6 +38,7 @@ import { formatCurrency, formatDate } from '~/lib/formatters';
 import type { PaymentData } from '~/actions/admin/get-payments';
 import { generateAdminPaymentsReactPDF } from '~/components/admin/generate-payments-pdf';
 import { exportToCSV, exportToExcel } from '@workspace/ui/lib/data-table-utils';
+import {hidden} from "next/dist/lib/picocolors";
 
 const columnHelper = createColumnHelper<PaymentData>();
 
@@ -69,7 +70,7 @@ function AdminPaymentsDataTableExport({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="h-9 text-sm">
           <DownloadIcon className="size-4 shrink-0" />
-          Export
+          <span className="hidden lg:inline">Export</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -330,21 +331,19 @@ export function PaymentsDataTable({ data, status }: PaymentsDataTableProps): Rea
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Input
           placeholder={`Search ${status} payments...`}
           value={globalFilter}
           onChange={(event) => setGlobalFilter(event.target.value)}
           className="max-w-sm"
         />
-        <div className="flex items-center space-x-2">
-          <AdminPaymentsDataTableExport
-            payments={data}
-            table={table}
-            status={status}
-          />
-          <DataTableColumnOptionsHeader table={table} />
-        </div>
+        <AdminPaymentsDataTableExport
+          payments={data}
+          table={table}
+          status={status}
+        />
+        <DataTableColumnOptionsHeader table={table} />
       </div>
       <DataTable table={table} fixedHeader />
       <div className="rounded-b-xl overflow-hidden">

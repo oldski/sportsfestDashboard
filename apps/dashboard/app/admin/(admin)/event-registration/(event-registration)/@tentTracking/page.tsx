@@ -12,7 +12,7 @@ export default async function TentTrackingPage(): Promise<React.JSX.Element> {
   const utilizationPercent = stats.tentUtilizationRate;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full">
       {/* Main content - spread vertically */}
       <div className="flex-1 flex flex-col justify-center gap-6">
         {/* Main tent rental count */}

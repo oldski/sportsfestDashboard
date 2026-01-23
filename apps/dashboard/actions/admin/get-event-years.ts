@@ -1,7 +1,7 @@
 'use server';
 
 import { db, eq, desc, and, sql } from '@workspace/database/client';
-import { eventYearTable, product, order, orderItem, companyTeamTable } from '@workspace/database/schema';
+import { eventYearTable, product, order, companyTeamTable } from '@workspace/database/schema';
 import { auth } from '@workspace/auth';
 
 import { isSuperAdmin } from '~/lib/admin-utils';
@@ -39,31 +39,33 @@ async function getCompanyTeamsCount(eventYearId: string): Promise<number> {
   }
 }
 
-// Helper function to get total revenue for an event year
-async function getTotalRevenue(eventYearId: string): Promise<number> {
+// Helper function to get revenue breakdown for an event year
+// Calculates actual collected revenue: totalAmount - balanceOwed
+// Only includes orders with DEPOSIT_PAID or FULLY_PAID status
+// Returns total, registration, and sponsorship revenue separately
+async function getRevenueBreakdown(eventYearId: string): Promise<{ total: number; registration: number; sponsorship: number }> {
   try {
     const result = await db
       .select({
-        revenue: sql`cast(COALESCE(SUM(
-          CASE
-            WHEN ${order.status} = 'fully_paid' THEN ${orderItem.totalPrice}
-            WHEN ${order.status} = 'deposit_paid' THEN ${orderItem.totalPrice} * 0.3
-            ELSE 0
-          END
-        ), 0) as numeric)`.mapWith(Number)
+        total: sql`COALESCE(SUM(${order.totalAmount} - COALESCE(${order.balanceOwed}, 0)), 0)`.mapWith(Number),
+        registration: sql`COALESCE(SUM(CASE WHEN ${order.isSponsorship} = false THEN ${order.totalAmount} - COALESCE(${order.balanceOwed}, 0) ELSE 0 END), 0)`.mapWith(Number),
+        sponsorship: sql`COALESCE(SUM(CASE WHEN ${order.isSponsorship} = true THEN ${order.totalAmount} - COALESCE(${order.balanceOwed}, 0) ELSE 0 END), 0)`.mapWith(Number),
       })
-      .from(orderItem)
-      .innerJoin(order, eq(orderItem.orderId, order.id))
+      .from(order)
       .where(
         and(
           eq(order.eventYearId, eventYearId),
           sql`${order.status} IN ('fully_paid', 'deposit_paid')`
         )
       );
-    return result[0]?.revenue || 0;
+    return {
+      total: result[0]?.total || 0,
+      registration: result[0]?.registration || 0,
+      sponsorship: result[0]?.sponsorship || 0,
+    };
   } catch (error) {
-    console.error('Error fetching total revenue:', error);
-    return 0;
+    console.error('Error fetching revenue breakdown:', error);
+    return { total: 0, registration: 0, sponsorship: 0 };
   }
 }
 
@@ -80,6 +82,8 @@ export type EventYearWithStats = {
   companyTeamsCount: number;
   organizationCount: number;
   totalRevenue: number;
+  registrationRevenue: number;
+  sponsorshipRevenue: number;
   status: 'active' | 'completed' | 'draft';
   createdAt: string;
 };
@@ -127,10 +131,10 @@ export async function getEventYears(): Promise<EventYearWithStats[]> {
         }
 
         // Get real stats for this event year
-        const [productCount, companyTeamsCount, totalRevenue] = await Promise.all([
+        const [productCount, companyTeamsCount, revenueBreakdown] = await Promise.all([
           getProductCount(ey.id),
           getCompanyTeamsCount(ey.id),
-          getTotalRevenue(ey.id)
+          getRevenueBreakdown(ey.id)
         ]);
 
         return {
@@ -145,7 +149,9 @@ export async function getEventYears(): Promise<EventYearWithStats[]> {
           productCount,
           companyTeamsCount,
           organizationCount: companyTeamsCount,
-          totalRevenue,
+          totalRevenue: revenueBreakdown.total,
+          registrationRevenue: revenueBreakdown.registration,
+          sponsorshipRevenue: revenueBreakdown.sponsorship,
           status,
           createdAt: ey.createdAt.toISOString().split('T')[0],
         };

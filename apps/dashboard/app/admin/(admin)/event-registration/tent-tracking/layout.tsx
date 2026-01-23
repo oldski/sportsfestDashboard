@@ -42,7 +42,7 @@ export default async function TentTrackingPurchaseDetailsLayout({
               Event Registration
             </Link>
             <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
-            <PageTitle>Tent tentPurchaseDetails</PageTitle>
+            <PageTitle>Tent Tracking</PageTitle>
           </div>
         </PagePrimaryBar>
       </PageHeader>

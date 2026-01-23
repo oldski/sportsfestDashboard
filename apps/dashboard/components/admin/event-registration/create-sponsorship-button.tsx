@@ -12,7 +12,7 @@ export function CreateSponsorshipButton(): React.JSX.Element {
   return (
     <Button onClick={openDialog} size="sm">
       <PlusIcon className="size-4 shrink-0" />
-      Sponsorship
+      <span className="hidden lg:inline">Sponsorship</span>
     </Button>
   );
 }

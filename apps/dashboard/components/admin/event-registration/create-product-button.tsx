@@ -9,8 +9,8 @@ export function CreateProductButton(): React.JSX.Element {
 
   return (
     <Button onClick={openCreateDialog}>
-      <PlusIcon className="mr-2 h-4 w-4" />
-      Create Product
+      <PlusIcon className="lg:mr-2 h-4 w-4" />
+      <span className="hidden lg:inline">Create Product</span>
     </Button>
   );
 }

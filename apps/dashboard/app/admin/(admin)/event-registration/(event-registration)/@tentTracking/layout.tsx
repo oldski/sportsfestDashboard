@@ -12,7 +12,7 @@ export default function TentTrackingLayout({
 }: React.PropsWithChildren): React.JSX.Element {
   // TODO: more of a ux component
   return(
-    <Card className="flex flex-col cursor-pointer hover:shadow-md transition-shadow">
+    <Card className="flex flex-col cursor-pointer hover:shadow-md transition-shadow w-full">
       <Link href="/admin/event-registration/tent-tracking" className="flex flex-col flex-1">
         <CardHeader>
           <div className="flex items-center space-x-2">

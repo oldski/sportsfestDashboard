@@ -134,6 +134,18 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   const newOrderStatus = isDepositPayment ? OrderStatus.DEPOSIT_PAID : OrderStatus.FULLY_PAID;
   const paymentType = isDepositPayment ? PaymentType.DEPOSIT_PAYMENT : PaymentType.BALANCE_PAYMENT;
 
+  // Check for existing payment to prevent duplicates (race condition with confirm-payment)
+  const [existingPayment] = await db
+    .select({ id: orderPaymentTable.id })
+    .from(orderPaymentTable)
+    .where(eq(orderPaymentTable.stripePaymentIntentId, paymentIntent.id))
+    .limit(1);
+
+  if (existingPayment) {
+    console.log(`ℹ️ Payment record already exists for ${paymentIntent.id}, skipping webhook processing`);
+    return;
+  }
+
   // Create payment record
   console.log('💳 Creating payment record via webhook');
   await db.insert(orderPaymentTable).values({
@@ -161,6 +173,11 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     stripePaymentIntentId: paymentIntent.id,
     updatedAt: new Date(),
   };
+
+  // Update balanceOwed to 0 when order is fully paid
+  if (newOrderStatus === OrderStatus.FULLY_PAID) {
+    orderUpdateFields.balanceOwed = 0;
+  }
 
   if (isSponsorshipBankPayment && adjustedOrderTotal !== order.totalAmount) {
     orderUpdateFields.totalAmount = adjustedOrderTotal;
@@ -268,8 +285,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     }
   }
 
-  // Create company teams if fully paid
-  if (newOrderStatus === OrderStatus.FULLY_PAID) {
+  // Create company teams when order is paid (deposit or full)
+  if (newOrderStatus === OrderStatus.FULLY_PAID || newOrderStatus === OrderStatus.DEPOSIT_PAID) {
     try {
       await createCompanyTeamsForOrder(orderId, order.organizationId, order.eventYearId);
     } catch (teamError) {

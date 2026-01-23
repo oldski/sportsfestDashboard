@@ -113,3 +113,7 @@ export class Caching {
 
 export const defaultRevalidateTimeInSeconds =
   process.env.NODE_ENV === 'production' ? 3600 : 120;
+
+// Shorter cache time for admin data - admins need fresher data for monitoring
+export const adminRevalidateTimeInSeconds =
+  process.env.NODE_ENV === 'production' ? 60 : 30;

@@ -185,23 +185,34 @@ export async function POST(request: NextRequest) {
       });
       console.log('✅ Payment record created for free order');
     } else {
-      await db.insert(orderPaymentTable).values({
-        orderId,
-        type: paymentType,
-        status: PaymentStatus.COMPLETED,
-        amount: paymentAmount,
-        stripePaymentIntentId: paymentIntentId,
-        stripeChargeId: paymentIntent.latest_charge as string,
-        paymentMethodType: paymentIntent.payment_method_types[0],
-        processedAt: new Date(),
-        metadata: {
-          stripePaymentIntent: {
-            id: paymentIntent.id,
-            status: paymentIntent.status,
-            amount: paymentIntent.amount,
+      // Check for existing payment to prevent duplicates (race condition with webhook)
+      const [existingPayment] = await db
+        .select({ id: orderPaymentTable.id })
+        .from(orderPaymentTable)
+        .where(eq(orderPaymentTable.stripePaymentIntentId, paymentIntentId))
+        .limit(1);
+
+      if (existingPayment) {
+        console.log(`ℹ️ Payment record already exists for ${paymentIntentId}, skipping creation`);
+      } else {
+        await db.insert(orderPaymentTable).values({
+          orderId,
+          type: paymentType,
+          status: PaymentStatus.COMPLETED,
+          amount: paymentAmount,
+          stripePaymentIntentId: paymentIntentId,
+          stripeChargeId: paymentIntent.latest_charge as string,
+          paymentMethodType: paymentIntent.payment_method_types[0],
+          processedAt: new Date(),
+          metadata: {
+            stripePaymentIntent: {
+              id: paymentIntent.id,
+              status: paymentIntent.status,
+              amount: paymentIntent.amount,
+            }
           }
-        }
-      });
+        });
+      }
     }
 
     // For sponsorship bank payments, we need to update the order's total amount
@@ -229,6 +240,11 @@ export async function POST(request: NextRequest) {
       status: newOrderStatus,
       updatedAt: new Date(),
     };
+
+    // Update balanceOwed to 0 when order is fully paid
+    if (newOrderStatus === OrderStatus.FULLY_PAID) {
+      updateFields.balanceOwed = 0;
+    }
 
     if (isFreeOrder) {
       updateFields.stripePaymentIntentId = 'free_order';
@@ -409,8 +425,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create company teams for team registration products
-    // Only create teams when the order becomes fully paid (either initial full payment or completion payment)
-    if (newOrderStatus === OrderStatus.FULLY_PAID) {
+    // Create teams when order is paid (deposit or full) so customers can start managing rosters
+    if (newOrderStatus === OrderStatus.FULLY_PAID || newOrderStatus === OrderStatus.DEPOSIT_PAID) {
       try {
         await createCompanyTeamsForOrder(orderId, order.organizationId, order.eventYearId);
       } catch (teamError) {

@@ -60,10 +60,10 @@ export default async function DashboardLayout({
           </div>
           {/* Analytics Section */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <div className="col-span-4">
+            <div className="lg:col-span-4">
               {topOrganizations}
             </div>
-            <div className="col-span-3">
+            <div className="lg:col-span-3">
               {systemHealth}
             </div>
           </div>

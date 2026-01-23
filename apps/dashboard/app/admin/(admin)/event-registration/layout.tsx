@@ -10,8 +10,8 @@ interface EventRegistrationLayoutProps {
 
 export default function EventRegistrationLayout({ children }: EventRegistrationLayoutProps): React.JSX.Element {
   return(
-    <div className="flex h-screen flex-row overflow-hidden">
-      <div className="size-full">{children}</div>
+    <div className="flex min-h-screen flex-col">
+      <div className="flex-1">{children}</div>
     </div>
   )
 }

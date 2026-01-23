@@ -28,6 +28,14 @@ import {
   DialogTitle,
 } from '@workspace/ui/components/dialog';
 import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@workspace/ui/components/drawer';
+import {
   FormProvider,
   FormControl,
   FormDescription,
@@ -38,6 +46,7 @@ import {
 } from '@workspace/ui/components/form';
 import { toast } from '@workspace/ui/components/sonner';
 import { cn } from '@workspace/ui/lib/utils';
+import { useMediaQuery } from '@workspace/ui/hooks/use-media-query';
 
 import { US_STATES } from '~/lib/constants';
 import type { EventYearFormData } from '~/actions/admin/event-year';
@@ -88,21 +97,21 @@ const eventYearFormSchema = z.object({
   path: ['registrationClose'],
 });
 
-interface EventYearDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface EventYearFormProps {
   eventYear?: EventYearFormData & { id?: string };
-  mode?: 'create' | 'edit';
+  mode: 'create' | 'edit';
+  onSubmit: (data: EventYearFormData) => Promise<void>;
+  onCancel: () => void;
+  isLoading: boolean;
 }
 
-export function EventYearDialog({
-  open,
-  onOpenChange,
+function EventYearForm({
   eventYear,
-  mode = 'create'
-}: EventYearDialogProps): React.JSX.Element {
-  const [isLoading, setIsLoading] = React.useState(false);
-
+  mode,
+  onSubmit,
+  onCancel,
+  isLoading
+}: EventYearFormProps): React.JSX.Element {
   const form = useForm({
     resolver: zodResolver(eventYearFormSchema),
     defaultValues: {
@@ -123,52 +132,26 @@ export function EventYearDialog({
     },
   });
 
-  // Reset form when eventYear prop changes or dialog opens/closes
+  // Reset form when eventYear prop changes
   React.useEffect(() => {
-    if (open) {
-      // Reset form when dialog opens
-      if (eventYear) {
-        // Transform date strings to Date objects
-        form.reset({
-          ...eventYear,
-          eventStartDate: eventYear.eventStartDate instanceof Date
-            ? eventYear.eventStartDate
-            : new Date(eventYear.eventStartDate),
-          eventEndDate: eventYear.eventEndDate instanceof Date
-            ? eventYear.eventEndDate
-            : new Date(eventYear.eventEndDate),
-          registrationOpen: eventYear.registrationOpen instanceof Date
-            ? eventYear.registrationOpen
-            : new Date(eventYear.registrationOpen),
-          registrationClose: eventYear.registrationClose instanceof Date
-            ? eventYear.registrationClose
-            : new Date(eventYear.registrationClose),
-        });
-      } else {
-        form.reset({
-          year: new Date().getFullYear() + 1,
-          name: '',
-          eventStartDate: undefined,
-          eventEndDate: undefined,
-          registrationOpen: undefined,
-          registrationClose: undefined,
-          locationName: '',
-          address: '',
-          city: '',
-          state: 'FL',
-          zipCode: '',
-          latitude: undefined,
-          longitude: undefined,
-          isActive: false,
-        });
-      }
-    }
-  }, [eventYear, form, open]);
-
-  // Clear form when dialog closes
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      // Clear form when closing
+    if (eventYear) {
+      // Transform date strings to Date objects
+      form.reset({
+        ...eventYear,
+        eventStartDate: eventYear.eventStartDate instanceof Date
+          ? eventYear.eventStartDate
+          : new Date(eventYear.eventStartDate),
+        eventEndDate: eventYear.eventEndDate instanceof Date
+          ? eventYear.eventEndDate
+          : new Date(eventYear.eventEndDate),
+        registrationOpen: eventYear.registrationOpen instanceof Date
+          ? eventYear.registrationOpen
+          : new Date(eventYear.registrationOpen),
+        registrationClose: eventYear.registrationClose instanceof Date
+          ? eventYear.registrationClose
+          : new Date(eventYear.registrationClose),
+      });
+    } else {
       form.reset({
         year: new Date().getFullYear() + 1,
         name: '',
@@ -186,19 +169,9 @@ export function EventYearDialog({
         isActive: false,
       });
     }
-    onOpenChange(newOpen);
-  };
+  }, [eventYear, form]);
 
-  const onSubmit = async (data: EventYearFormData) => {
-    console.log('=== onSubmit called ===');
-    console.log('Form submitted with data:', data);
-    console.log('Mode:', mode);
-    console.log('Event Year ID:', eventYear?.id);
-    console.log('Form errors:', form.formState.errors);
-    console.log('Form is valid:', form.formState.isValid);
-
-    setIsLoading(true);
-
+  const handleFormSubmit = async (data: EventYearFormData) => {
     // Ensure dates are Date objects, not strings
     const transformedData: EventYearFormData = {
       ...data,
@@ -216,48 +189,12 @@ export function EventYearDialog({
         : new Date(data.registrationClose),
     };
 
-    console.log('Transformed data:', transformedData);
-
-    try {
-      if (mode === 'create') {
-        const { createEventYear } = await import('~/actions/admin/event-year');
-        await createEventYear(transformedData);
-      } else if (eventYear?.id) {
-        const { updateEventYear } = await import('~/actions/admin/event-year');
-        console.log('Calling updateEventYear with ID:', eventYear.id);
-        await updateEventYear(eventYear.id, transformedData);
-      } else {
-        throw new Error('No event year ID provided for update');
-      }
-
-      toast.success(`Event year ${data.year} ${mode === 'create' ? 'created' : 'updated'} successfully!`);
-      handleOpenChange(false);
-    } catch (error) {
-      console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} event year:`, error);
-      toast.error(error instanceof Error ? error.message : `Failed to ${mode} event year. Please try again.`);
-    } finally {
-      setIsLoading(false);
-    }
+    await onSubmit(transformedData);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MapPinIcon className="h-5 w-5" />
-            {mode === 'create' ? 'Create Event Year' : 'Edit Event Year'}
-          </DialogTitle>
-          <DialogDescription>
-            {mode === 'create'
-              ? 'Set up a new SportsFest event year with dates and location'
-              : 'Update the event year information and location details'
-            }
-          </DialogDescription>
-        </DialogHeader>
-
-        <FormProvider {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" id="event-year-form">
+    <FormProvider {...form}>
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6" id="event-year-form">
             <div className="grid md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-4">
                 <div className="pt-4">
@@ -578,35 +515,133 @@ export function EventYearDialog({
               )}
             />
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isLoading}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLoading}
-                onClick={async (e) => {
-                  console.log('=== Submit button clicked ===');
-                  console.log('Form state:', form.formState);
-                  console.log('Form values:', form.getValues());
-                  console.log('Form errors:', form.formState.errors);
-                  console.log('Is form valid?', form.formState.isValid);
+        {/* Form Actions */}
+        <div className="sticky bottom-0 bg-background pt-4 border-t mt-6 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 space-y-2 space-y-reverse sm:space-y-0">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+            {mode === 'create' ? 'Create' : 'Update'} Event Year
+          </Button>
+        </div>
+      </form>
+    </FormProvider>
+  );
+}
 
-                  // Manually trigger validation to see errors
-                  const isValid = await form.trigger();
-                  console.log('Manual validation result:', isValid);
-                  if (!isValid) {
-                    console.log('VALIDATION FAILED - Errors:', form.formState.errors);
-                  }
-                }}
-              >
-                {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === 'create' ? 'Create' : 'Update'} Event Year
-              </Button>
-            </DialogFooter>
-          </form>
-        </FormProvider>
-      </DialogContent>
-    </Dialog>
+interface EventYearDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  eventYear?: EventYearFormData & { id?: string };
+  mode?: 'create' | 'edit';
+}
+
+export function EventYearDialog({
+  open,
+  onOpenChange,
+  eventYear,
+  mode = 'create'
+}: EventYearDialogProps): React.JSX.Element {
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    onOpenChange(newOpen);
+  };
+
+  const handleSubmit = async (data: EventYearFormData) => {
+    setIsLoading(true);
+
+    try {
+      if (mode === 'create') {
+        const { createEventYear } = await import('~/actions/admin/event-year');
+        await createEventYear(data);
+      } else if (eventYear?.id) {
+        const { updateEventYear } = await import('~/actions/admin/event-year');
+        await updateEventYear(eventYear.id, data);
+      } else {
+        throw new Error('No event year ID provided for update');
+      }
+
+      toast.success(`Event year ${data.year} ${mode === 'create' ? 'created' : 'updated'} successfully!`);
+      handleOpenChange(false);
+    } catch (error) {
+      console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} event year:`, error);
+      toast.error(error instanceof Error ? error.message : `Failed to ${mode} event year. Please try again.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    handleOpenChange(false);
+  };
+
+  if (!mounted) {
+    return <></>;
+  }
+
+  if (isDesktop) {
+    return (
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <MapPinIcon className="h-5 w-5" />
+              {mode === 'create' ? 'Create Event Year' : 'Edit Event Year'}
+            </DialogTitle>
+            <DialogDescription>
+              {mode === 'create'
+                ? 'Set up a new SportsFest event year with dates and location'
+                : 'Update the event year information and location details'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-1">
+            <EventYearForm
+              eventYear={eventYear}
+              mode={mode}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              isLoading={isLoading}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Drawer open={open} onOpenChange={handleOpenChange}>
+      <DrawerContent className="max-h-[95vh] flex flex-col">
+        <DrawerHeader className="text-left flex-shrink-0">
+          <DrawerTitle className="flex items-center gap-2">
+            <MapPinIcon className="h-5 w-5" />
+            {mode === 'create' ? 'Create Event Year' : 'Edit Event Year'}
+          </DrawerTitle>
+          <DrawerDescription>
+            {mode === 'create'
+              ? 'Set up a new SportsFest event year with dates and location'
+              : 'Update the event year information and location details'
+            }
+          </DrawerDescription>
+        </DrawerHeader>
+        <div className="px-4 flex-1 overflow-y-auto">
+          <EventYearForm
+            eventYear={eventYear}
+            mode={mode}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            isLoading={isLoading}
+          />
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }

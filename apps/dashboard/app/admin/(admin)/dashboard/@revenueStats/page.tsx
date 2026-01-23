@@ -32,6 +32,12 @@ export default async function RevenueStatsPage(): Promise<React.JSX.Element> {
         <div className="text-right">
           <p className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</p>
           <p className="text-xs text-muted-foreground">Total Revenue</p>
+          <div className="mt-1 text-xs text-muted-foreground">
+            <span className="text-foreground/70">{formatCurrency(stats.registrationRevenue)}</span> registrations
+            {stats.sponsorshipRevenue > 0 && (
+              <span> · <span className="text-foreground/70">{formatCurrency(stats.sponsorshipRevenue)}</span> sponsorships</span>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col justify-end">

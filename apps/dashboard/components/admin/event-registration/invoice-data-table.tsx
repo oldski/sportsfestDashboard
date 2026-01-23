@@ -48,6 +48,13 @@ import {
   DropdownMenuTrigger
 } from '@workspace/ui/components/dropdown-menu';
 import { Input } from '@workspace/ui/components/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@workspace/ui/components/select';
 
 import { pdf } from '@react-pdf/renderer';
 import { toast } from '@workspace/ui/components/sonner';
@@ -435,29 +442,31 @@ export function InvoiceDataTable({ data, status = 'all', showSearch = true }: In
     <div className="space-y-4">
       {showSearch && (
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 ml-5">
+          <div className="flex items-center gap-2">
             <Input
               placeholder="Search invoices..."
               value={globalFilter}
               onChange={(event) => setGlobalFilter(event.target.value)}
               className="max-w-sm"
             />
-            <select
-              className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            <Select
               value={(table.getColumn('type')?.getFilterValue() as string) ?? 'all'}
-              onChange={(e) => table.getColumn('type')?.setFilterValue(e.target.value)}
+              onValueChange={(value) => table.getColumn('type')?.setFilterValue(value)}
             >
-              <option value="all">All Types</option>
-              <option value="regular">Regular</option>
-              <option value="sponsorship">Sponsorship</option>
-            </select>
-          </div>
-          <div className="flex items-center space-x-2">
+              <SelectTrigger className="h-9 w-[130px]">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="regular">Regular</SelectItem>
+                <SelectItem value="sponsorship">Sponsorship</SelectItem>
+              </SelectContent>
+            </Select>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 text-sm">
                   <DownloadIcon className="size-4 shrink-0" />
-                  Export
+                  <span className="hidden lg:inline">Export</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

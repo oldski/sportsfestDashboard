@@ -74,7 +74,7 @@ function AdminUsersDataTableExport({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="h-9 text-sm">
           <DownloadIcon className="size-4 shrink-0" />
-          Export
+          <span className="hidden lg:inline">Export</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -356,13 +356,13 @@ function UserActionsCell({ user }: UserActionsCellProps): React.JSX.Element {
               size="sm"
               className="h-8 w-8 p-0"
               onClick={handleResendInvite}
-              disabled={isResending}
+              disabled={isResending || !!user.lastLogin}
             >
-              <MailIcon className="h-4 w-4 text-blue-500" />
+              <MailIcon className={`h-4 w-4 ${user.lastLogin ? 'text-muted-foreground' : 'text-blue-500'}`} />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Resend Sign-in Link</p>
+            <p>{user.lastLogin ? 'User has already signed in' : 'Resend Sign-in Link'}</p>
           </TooltipContent>
         </Tooltip>
       </div>
@@ -405,7 +405,7 @@ export function UsersDataTable({ data }: UsersDataTableProps): React.JSX.Element
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Input
           placeholder="Search users..."
           value={globalFilter}
@@ -419,8 +419,8 @@ export function UsersDataTable({ data }: UsersDataTableProps): React.JSX.Element
             onClick={handleCreateSuperAdmin}
             className="h-9 text-sm"
           >
-            <UserPlusIcon className="size-4 mr-2" />
-            Create Super Admin
+            <UserPlusIcon className="size-4 lg:mr-2" />
+            <span className="hidden lg:inline">Create Super Admin</span>
           </Button>
           <AdminUsersDataTableExport
             users={data}

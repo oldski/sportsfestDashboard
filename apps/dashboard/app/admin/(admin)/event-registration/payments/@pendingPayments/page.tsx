@@ -1,14 +1,14 @@
 import * as React from 'react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@workspace/ui/components/card';
 import { ClockIcon } from 'lucide-react';
-import { getPendingPaymentsSimple } from '~/actions/admin/get-payments-simple';
+import { getOrdersWithOutstandingBalance } from '~/actions/admin/get-orders-with-balance';
 import { getCurrentEventYear } from '~/data/event-years/get-current-event-year';
-import { PaymentsDataTable } from '~/components/admin/event-registration/payments-data-table';
+import { OrdersWithBalanceDataTable } from '~/components/admin/event-registration/orders-with-balance-data-table';
 
 export default async function PendingPaymentsPage(): Promise<React.JSX.Element> {
-  const [pendingPayments, currentEventYear] = await Promise.all([
-    getPendingPaymentsSimple(),
+  const [ordersWithBalance, currentEventYear] = await Promise.all([
+    getOrdersWithOutstandingBalance(),
     getCurrentEventYear()
   ]);
 
@@ -29,6 +29,6 @@ export default async function PendingPaymentsPage(): Promise<React.JSX.Element> 
   }
 
   return (
-    <PaymentsDataTable data={pendingPayments} status="pending" />
+    <OrdersWithBalanceDataTable data={ordersWithBalance} />
   );
 }

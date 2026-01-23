@@ -12,7 +12,7 @@ export function CreateCouponButton(): React.JSX.Element {
   return (
     <Button onClick={openDialog} size="sm">
       <PlusIcon className="size-4 shrink-0" />
-      Coupon
+      <span className="hidden lg:inline">Coupon</span>
     </Button>
   );
 }

@@ -207,7 +207,8 @@ async function calculateAndCreateOrder(
 
     // Calculate totals
     let totalAmount = 0;
-    let depositAmount = 0;
+    let depositPaymentAmount = 0; // Amount due today if paying deposit (deposits + full price for non-deposit items)
+    let actualDepositAmount = 0;  // Sum of deposit amounts for items with deposits (for order record)
     const orderItems: Array<{
       productId: string;
       quantity: number;
@@ -225,6 +226,7 @@ async function calculateAndCreateOrder(
       // Determine pricing (custom pricing overrides base pricing)
       const unitPrice = product.customPrice ?? product.basePrice;
       const unitDepositPrice = product.customDepositAmount ?? product.depositAmount ?? 0;
+      const hasDeposit = product.requiresDeposit && unitDepositPrice > 0;
 
       // Check if waived
       if (product.isWaived) {
@@ -240,14 +242,17 @@ async function calculateAndCreateOrder(
 
       // Check quantity limits
       if (product.maxQuantity && cartItem.quantity > product.maxQuantity) {
-        return { 
-          success: false, 
-          error: `Quantity ${cartItem.quantity} exceeds limit of ${product.maxQuantity} for ${product.name}` 
+        return {
+          success: false,
+          error: `Quantity ${cartItem.quantity} exceeds limit of ${product.maxQuantity} for ${product.name}`
         };
       }
 
       const itemTotal = unitPrice * cartItem.quantity;
-      const itemDeposit = unitDepositPrice * cartItem.quantity;
+      // For deposit payment: items with deposits pay deposit, items without pay full price
+      const itemDepositPayment = hasDeposit
+        ? (unitDepositPrice * cartItem.quantity)  // Pay deposit for items with deposits
+        : itemTotal;                               // Pay full price for items without deposits
 
       orderItems.push({
         productId: cartItem.productId,
@@ -258,18 +263,23 @@ async function calculateAndCreateOrder(
       });
 
       totalAmount += itemTotal;
-      depositAmount += itemDeposit;
+      depositPaymentAmount += itemDepositPayment;
+      if (hasDeposit) {
+        actualDepositAmount += unitDepositPrice * cartItem.quantity;
+      }
     }
 
     // Calculate coupon discount
     const couponDiscount = appliedCoupon?.calculatedDiscount || 0;
 
-    // Apply coupon discount to the order total
+    // Apply coupon discount to the amounts
     const discountedTotalAmount = Math.max(0, totalAmount - couponDiscount);
-    const discountedDepositAmount = Math.max(0, depositAmount - couponDiscount);
+    const discountedDepositPayment = Math.max(0, depositPaymentAmount - couponDiscount);
 
     // Determine payment amount based on type (with coupon applied)
-    const paymentAmount = paymentType === 'deposit' ? discountedDepositAmount : discountedTotalAmount;
+    // For deposit: charge deposit for items with deposits + full price for items without
+    // For full: charge the full discounted total
+    const paymentAmount = paymentType === 'deposit' ? discountedDepositPayment : discountedTotalAmount;
     const balanceOwed = discountedTotalAmount - paymentAmount;
 
     // Allow $0 payments for 100% off coupons
@@ -280,6 +290,9 @@ async function calculateAndCreateOrder(
     // Generate order number
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
+    // Calculate discounted deposit amount for order record
+    const discountedActualDeposit = Math.max(0, actualDepositAmount - couponDiscount);
+
     // Create order
     const [order] = await db
       .insert(orderTable)
@@ -289,7 +302,7 @@ async function calculateAndCreateOrder(
         eventYearId: activeEventYear[0].id,
         status: OrderStatus.PENDING,
         totalAmount: discountedTotalAmount, // Store discounted amount as the actual order total
-        depositAmount: discountedDepositAmount,
+        depositAmount: discountedActualDeposit, // Deposit portion only (for items with deposits)
         balanceOwed,
         metadata: {
           cartItems,

@@ -50,7 +50,7 @@ export default async function EventYearsLayout({
                 Event Registration
               </Link>
               <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
-              <PageTitle>Event Years Management</PageTitle>
+              <PageTitle>Event Years</PageTitle>
             </div>
             <CreateEventYearButton />
           </PagePrimaryBar>

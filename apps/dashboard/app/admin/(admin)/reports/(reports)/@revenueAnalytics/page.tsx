@@ -14,10 +14,10 @@ export default async function RevenueAnalyticsPage(): Promise<React.JSX.Element>
         <div>
           <CardTitle className="text-base flex items-center">
             <DollarSignIcon className="mr-2 h-4 w-4" />
-            Revenue by Product Type
+            Revenue by Type
           </CardTitle>
           <CardDescription>
-            Revenue breakdown by product category
+            Revenue breakdown by product type and sponsorships
           </CardDescription>
         </div>
         <div className="text-right">

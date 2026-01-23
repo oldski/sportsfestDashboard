@@ -31,7 +31,7 @@ export default async function EventYearStatsPage(): Promise<React.JSX.Element> {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 grid-cols-2">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Event Year</p>
                 <p className="text-2xl font-bold">{activeEventYear.year}</p>
@@ -47,6 +47,12 @@ export default async function EventYearStatsPage(): Promise<React.JSX.Element> {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
                 <p className="text-2xl font-bold">{formatCurrency(activeEventYear.totalRevenue)}</p>
+                <div className="text-xs text-muted-foreground mt-1">
+                  <span className="text-foreground/70">{formatCurrency(activeEventYear.registrationRevenue)}</span> reg
+                  {activeEventYear.sponsorshipRevenue > 0 && (
+                    <span> · <span className="text-foreground/70">{formatCurrency(activeEventYear.sponsorshipRevenue)}</span> spon</span>
+                  )}
+                </div>
               </div>
             </div>
 

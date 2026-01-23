@@ -26,8 +26,8 @@ export function ManageEventYear({ activeEventYear }: ManageEventYearProps): Reac
         size="sm"
         onClick={() => openEditDialog(activeEventYear.id)}
       >
-        <SettingsIcon className="mr-2 h-3 w-3" />
-        Manage
+        <SettingsIcon className="lg:mr-2 h-3 w-3" />
+        <span className="hidden lg:inline">Manage</span>
       </Button>
     </div>
   );

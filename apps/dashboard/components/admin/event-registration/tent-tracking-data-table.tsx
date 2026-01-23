@@ -68,7 +68,7 @@ function TentTrackingDataTableExport({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="h-9 text-sm">
           <DownloadIcon className="size-4 shrink-0" />
-          Export
+          <span className="hidden lg:inline">Export</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -366,50 +366,52 @@ export function TentTrackingDataTable({ data }: TentTrackingDataTableProps): Rea
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div className="flex gap-2 flex-col lg:flex-row flex-wrap w-full">
           <Input
             placeholder="Search tent tracking..."
             value={globalFilter}
             onChange={(event) => setGlobalFilter(event.target.value)}
-            className="max-w-sm"
+            className="lg:max-w-sm"
           />
-          <Select value={eventYearFilter} onValueChange={setEventYearFilter}>
-            <SelectTrigger className="w-[180px]">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Event Year..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Event Years</SelectItem>
-              {eventYears.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
+          <div className="flex gap-2">
+            <Select value={eventYearFilter} onValueChange={setEventYearFilter}>
+              <SelectTrigger className="w-[180px]">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Event Year..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Event Years</SelectItem>
+                {eventYears.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={quickFilter} onValueChange={setQuickFilter}>
+              <SelectTrigger className="w-[220px]">
+                <FilterIcon className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Filter by..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Organizations</SelectItem>
+                <SelectItem value="at-limit">
+                  At Tent Limit ({atLimitCount})
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={quickFilter} onValueChange={setQuickFilter}>
-            <SelectTrigger className="w-[220px]">
-              <FilterIcon className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Filter by..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Organizations</SelectItem>
-              <SelectItem value="at-limit">
-                At Tent Limit ({atLimitCount})
-              </SelectItem>
-              <SelectItem value="pending-payment">
-                Pending Payment ({pendingPaymentCount})
-              </SelectItem>
-              <SelectItem value="confirmed">Confirmed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center space-x-2">
-          <TentTrackingDataTableExport
-            tentTracking={data}
-            table={table}
-          />
-          <DataTableColumnOptionsHeader table={table} />
+                <SelectItem value="pending-payment">
+                  Pending Payment ({pendingPaymentCount})
+                </SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex self-end justify-end gap-2">
+            <TentTrackingDataTableExport
+              tentTracking={data}
+              table={table}
+            />
+            <DataTableColumnOptionsHeader table={table} />
+          </div>
         </div>
       </div>
       <DataTable table={table} fixedHeader />

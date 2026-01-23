@@ -1,7 +1,6 @@
 import * as React from 'react';
 
 import { cn } from '../lib/utils';
-import { ScrollArea } from './scroll-area';
 import { Separator } from './separator';
 import { SidebarTrigger } from './sidebar';
 
@@ -126,23 +125,17 @@ function PageBody({
   disableScroll = false,
   ...other
 }: PageBodyProps): React.JSX.Element {
-  if (disableScroll) {
-    return (
-      <div
-        className={cn('flex h-full flex-col', className)}
-        {...other}
-      >
-        {children}
-      </div>
-    );
-  }
-
+  // Use native overflow instead of ScrollArea to allow nested horizontal scrolling (e.g., tables)
   return (
     <div
-      className={cn('grow overflow-hidden', className)}
+      className={cn(
+        'min-h-0 flex-1',
+        !disableScroll && 'overflow-y-auto',
+        className
+      )}
       {...other}
     >
-      <ScrollArea className="h-full">{children}</ScrollArea>
+      {children}
     </div>
   );
 }

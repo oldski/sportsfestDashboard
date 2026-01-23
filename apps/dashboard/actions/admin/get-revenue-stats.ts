@@ -10,6 +10,8 @@ import { getCurrentEventYear } from '~/data/event-years/get-current-event-year';
 
 export interface RevenueStatsResult {
   totalRevenue: number;
+  registrationRevenue: number;
+  sponsorshipRevenue: number;
   priorYearRevenue: number | null;
   growthRate: number | null;
   currentYear: number | null;
@@ -29,6 +31,8 @@ export async function getRevenueStats(): Promise<RevenueStatsResult> {
     if (!currentEventYear) {
       return {
         totalRevenue: 0,
+        registrationRevenue: 0,
+        sponsorshipRevenue: 0,
         priorYearRevenue: null,
         growthRate: null,
         currentYear: null,
@@ -39,10 +43,14 @@ export async function getRevenueStats(): Promise<RevenueStatsResult> {
     // Only include orders that have actually paid (not just confirmed)
     const paidStatuses = [OrderStatus.DEPOSIT_PAID, OrderStatus.FULLY_PAID];
 
-    // Get current year revenue (actual collected: totalAmount - balanceOwed)
+    // Get current year revenue with registration/sponsorship breakdown
+    // For sponsorships, use baseAmount from metadata to exclude processing fee
     const currentResult = await db
       .select({
-        totalRevenue: sql<number>`COALESCE(SUM(${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)), 0)`.mapWith(Number),
+        registrationRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = false THEN ${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0) ELSE 0 END), 0)`.mapWith(Number),
+        // Sponsorship: use baseAmount from metadata, proportionally adjusted for balance owed
+        sponsorshipOrdered: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = true THEN COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount}) ELSE 0 END), 0)`.mapWith(Number),
+        sponsorshipBalance: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = true THEN COALESCE(${orderTable.balanceOwed}, 0) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1) ELSE 0 END), 0)`.mapWith(Number),
       })
       .from(orderTable)
       .where(and(
@@ -50,7 +58,11 @@ export async function getRevenueStats(): Promise<RevenueStatsResult> {
         inArray(orderTable.status, paidStatuses)
       ));
 
-    const totalRevenue = currentResult[0]?.totalRevenue || 0;
+    const registrationRevenue = currentResult[0]?.registrationRevenue || 0;
+    const sponsorshipOrdered = currentResult[0]?.sponsorshipOrdered || 0;
+    const sponsorshipBalance = currentResult[0]?.sponsorshipBalance || 0;
+    const sponsorshipRevenue = sponsorshipOrdered - sponsorshipBalance;
+    const totalRevenue = registrationRevenue + sponsorshipRevenue;
 
     // Try to get prior year for comparison
     const priorYearResult = await db
@@ -95,6 +107,8 @@ export async function getRevenueStats(): Promise<RevenueStatsResult> {
 
     return {
       totalRevenue,
+      registrationRevenue,
+      sponsorshipRevenue,
       priorYearRevenue,
       growthRate,
       currentYear: currentEventYear.year as number,
@@ -104,6 +118,8 @@ export async function getRevenueStats(): Promise<RevenueStatsResult> {
     console.error('Failed to get revenue stats:', error);
     return {
       totalRevenue: 0,
+      registrationRevenue: 0,
+      sponsorshipRevenue: 0,
       priorYearRevenue: null,
       growthRate: null,
       currentYear: null,
