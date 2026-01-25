@@ -36,10 +36,19 @@ export async function getRevenueProgression(eventYearId?: string): Promise<Reven
     const paidStatuses = [OrderStatus.DEPOSIT_PAID, OrderStatus.FULLY_PAID];
 
     // Get daily revenue (actual collected: totalAmount - balanceOwed)
+    // For sponsorships, use baseAmount from metadata to exclude processing fee
     const dailyRevenue = await db
       .select({
         date: sql<string>`DATE(${orderTable.updatedAt})`.as('date'),
-        amount: sql<number>`COALESCE(SUM(${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)), 0)`.mapWith(Number),
+        amount: sql<number>`COALESCE(SUM(
+          CASE
+            WHEN ${orderTable.isSponsorship} = true THEN
+              COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount})
+              - COALESCE(${orderTable.balanceOwed}, 0) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)
+            ELSE
+              ${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)
+          END
+        ), 0)`.mapWith(Number),
       })
       .from(orderTable)
       .where(
@@ -59,7 +68,8 @@ export async function getRevenueProgression(eventYearId?: string): Promise<Reven
     let cumulative = 0;
     const progressionData: RevenueProgressionData[] = dailyRevenue.map((row) => {
       cumulative += row.amount;
-      const dateObj = new Date(row.date);
+      // Parse date as local time by appending T00:00:00 (prevents UTC interpretation)
+      const dateObj = new Date(row.date + 'T00:00:00');
       return {
         date: dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         cumulative: Math.round(cumulative * 100) / 100,

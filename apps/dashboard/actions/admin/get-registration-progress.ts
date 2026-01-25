@@ -67,7 +67,8 @@ export async function getRegistrationProgress(eventYearId?: string): Promise<Reg
     let cumulative = 0;
     const timelineData: RegistrationTimelineData[] = dailyRegistrations.map((row) => {
       cumulative += row.count;
-      const dateObj = new Date(row.date);
+      // Parse date as local time by appending T00:00:00 (prevents UTC interpretation)
+      const dateObj = new Date(row.date + 'T00:00:00');
       return {
         date: dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         registrations: row.count,
