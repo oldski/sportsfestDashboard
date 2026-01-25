@@ -29,7 +29,7 @@ import { cn } from '@workspace/ui/lib/utils';
 import { NextButton } from '~/components/onboarding/next-button';
 import type { OnboardingStepProps } from '~/components/onboarding/onboarding-step-props';
 import { CropPhotoModal } from '~/components/organizations/slug/settings/account/profile/crop-photo-modal';
-import { FileUploadAction, MAX_IMAGE_SIZE } from '~/lib/file-upload';
+import { ACCEPTED_IMAGE_TYPES, FileUploadAction, MAX_IMAGE_SIZE } from '~/lib/file-upload';
 import { getInitials } from '~/lib/formatters';
 import { type CompleteOnboardingSchema } from '~/schemas/onboarding/complete-onboarding-schema';
 
@@ -93,7 +93,7 @@ export function OnboardingProfileStep({
       <div className="mt-4 flex items-center justify-center pb-6">
         <div className="relative">
           <ImageDropzone
-            accept={{ 'image/*': [] }}
+            accept={ACCEPTED_IMAGE_TYPES}
             multiple={false}
             borderRadius="full"
             onDrop={handleDrop}

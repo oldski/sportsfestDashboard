@@ -24,7 +24,7 @@ import {
 import { updateOrganizationLogo } from '~/actions/organization/update-organization-logo';
 import { CropPhotoModal } from '~/components/organizations/slug/settings/account/profile/crop-photo-modal';
 import { useZodForm } from '~/hooks/use-zod-form';
-import { FileUploadAction, MAX_IMAGE_SIZE } from '~/lib/file-upload';
+import { ACCEPTED_IMAGE_TYPES, FileUploadAction, MAX_IMAGE_SIZE } from '~/lib/file-upload';
 import {
   updateOrganizationLogoSchema,
   type UpdateOrganizationLogoSchema
@@ -108,7 +108,7 @@ export function OrganizationLogoCard({
           >
             <div className="relative">
               <ImageDropzone
-                accept={{ 'image/*': [] }}
+                accept={ACCEPTED_IMAGE_TYPES}
                 onDrop={handleDrop}
                 src={logo}
                 borderRadius="xl"

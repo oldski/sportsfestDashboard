@@ -43,7 +43,7 @@ import { updateContactImage } from '~/actions/contacts/update-contact-image';
 import { updateContactProperties } from '~/actions/contacts/update-contact-properties';
 import { CropPhotoModal } from '~/components/organizations/slug/settings/account/profile/crop-photo-modal';
 import { useZodForm } from '~/hooks/use-zod-form';
-import { FileUploadAction, MAX_IMAGE_SIZE } from '~/lib/file-upload';
+import { ACCEPTED_IMAGE_TYPES, FileUploadAction, MAX_IMAGE_SIZE } from '~/lib/file-upload';
 import { contactRecordLabel } from '~/lib/labels';
 import {
   updateContactPropertiesSchema,
@@ -113,7 +113,7 @@ function ContactImage(contact: ContactDto): React.JSX.Element {
     <div className="flex items-center justify-center p-6">
       <div className="relative">
         <ImageDropzone
-          accept={{ 'image/*': [] }}
+          accept={ACCEPTED_IMAGE_TYPES}
           multiple={false}
           onDrop={handleDrop}
           borderRadius={contact.record === ContactRecord.PERSON ? 'full' : 'md'}

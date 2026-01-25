@@ -51,7 +51,7 @@ import { ExistingOrganizationPrompt } from '~/components/onboarding/existing-org
 import { PendingJoinRequestNotice } from '~/components/onboarding/pending-join-request-notice';
 import { CropPhotoModal } from '~/components/organizations/slug/settings/account/profile/crop-photo-modal';
 import { US_STATES } from '~/lib/constants';
-import { MAX_IMAGE_SIZE } from '~/lib/file-upload';
+import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE } from '~/lib/file-upload';
 import { type CompleteOnboardingSchema } from '~/schemas/onboarding/complete-onboarding-schema';
 
 function slugify(str: string): string {
@@ -203,7 +203,7 @@ export function OnboardingOrganizationStep({
       } else {
         const base64Image: string = await NiceModal.show(CropPhotoModal, {
           file,
-          aspectRatio: 1,
+          aspectRatio: undefined,
           circularCrop: false
         });
         if (base64Image) {
@@ -311,7 +311,7 @@ export function OnboardingOrganizationStep({
         <div className="flex items-center space-x-4">
           <div className="relative">
             <ImageDropzone
-              accept={{ 'image/*': [] }}
+              accept={ACCEPTED_IMAGE_TYPES}
               onDrop={handleDrop}
               src={logo}
               borderRadius="xl"

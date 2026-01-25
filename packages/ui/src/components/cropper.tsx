@@ -3,6 +3,7 @@
 import * as React from 'react';
 import ReactCrop, {
   centerCrop,
+  convertToPixelCrop,
   makeAspectCrop,
   type PercentCrop,
   type PixelCrop
@@ -115,7 +116,10 @@ export const Cropper = ({
   const onImageLoad = React.useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       const { width, height } = e.currentTarget;
-      setCrop(centerAspectCrop(width, height, aspectRatio));
+      const initialCrop = centerAspectCrop(width, height, aspectRatio);
+      setCrop(initialCrop);
+      // Set initial completedCrop so user can click Apply without interacting with crop area
+      setCompletedCrop(convertToPixelCrop(initialCrop, width, height));
     },
     [aspectRatio]
   );
