@@ -585,8 +585,8 @@ async function validateEventRosterSlot(
     }
   }
 
-  // Check gender-specific starter capacity
-  if (isStarter) {
+  // Check gender-specific starter capacity (corn toss has no gender-specific starter limits)
+  if (isStarter && eventType !== EventType.CORN_TOSS) {
     const starterRequirements = getStarterRequirements(eventType);
 
     if (playerGender === 'male' && currentMaleStarters >= starterRequirements.male) {
@@ -636,8 +636,8 @@ async function validateEventRosterSlotForToggle(
   const currentMaleStarters = currentRoster.filter(p => p.gender === 'male' && p.isStarter).length;
   const currentFemaleStarters = currentRoster.filter(p => p.gender === 'female' && p.isStarter).length;
 
-  // Check gender-specific starter capacity
-  if (isStarter) {
+  // Check gender-specific starter capacity (corn toss has no gender-specific starter limits)
+  if (isStarter && eventType !== EventType.CORN_TOSS) {
     const starterRequirements = getStarterRequirements(eventType);
 
     if (playerGender === 'male' && currentMaleStarters >= starterRequirements.male) {
