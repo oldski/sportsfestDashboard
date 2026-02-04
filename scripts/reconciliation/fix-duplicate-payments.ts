@@ -1,11 +1,15 @@
 /**
  * Fix Duplicate Payments Script
  *
- * This script finds payment records with duplicate stripePaymentIntentId values
- * and removes the duplicates, keeping only the first record created.
+ * This script finds and removes duplicate records caused by a race condition
+ * where both the confirm-payment route and the Stripe webhook could create
+ * records for the same payment.
  *
- * This fixes a race condition where both the confirm-payment route and the
- * Stripe webhook could create payment records for the same payment.
+ * It handles:
+ * 1. Duplicate orderPayment records (same stripePaymentIntentId)
+ * 2. Duplicate orderInvoice records (multiple invoices for same orderId)
+ *
+ * For duplicates, it keeps the first record created and removes the rest.
  *
  * Usage:
  *   DATABASE_URL="postgresql://..." npx tsx scripts/reconciliation/fix-duplicate-payments.ts
@@ -16,7 +20,7 @@
 
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { eq, sql, and, inArray } from 'drizzle-orm';
+import { eq, sql, inArray } from 'drizzle-orm';
 import {
   orderPaymentTable,
   orderTable,
@@ -49,15 +53,32 @@ const db = drizzle(pool);
 // Main Function
 // ============================================
 
+// Helper to format dates
+function formatDate(d: unknown): string {
+  try {
+    return d instanceof Date ? d.toISOString() : new Date(d as string).toISOString();
+  } catch {
+    return String(d);
+  }
+}
+
 async function main() {
   console.log('='.repeat(60));
-  console.log('Fix Duplicate Payments Script');
+  console.log('Fix Duplicate Payments & Invoices Script');
   console.log('='.repeat(60));
   console.log(`DRY RUN: ${DRY_RUN ? 'YES (no changes will be made)' : 'NO (changes will be committed)'}`);
   console.log('='.repeat(60));
 
-  // Find duplicate stripePaymentIntentIds
-  const duplicates = await db.execute(sql`
+  const paymentsToDelete: string[] = [];
+  const invoicesToDelete: string[] = [];
+  const affectedOrderIds: Set<string> = new Set();
+
+  // ============================================
+  // 1. Find duplicate payment records
+  // ============================================
+  console.log('\n📋 STEP 1: Checking for duplicate payment records...');
+
+  const duplicatePayments = await db.execute(sql`
     SELECT
       "stripePaymentIntentId",
       COUNT(*) as count,
@@ -73,103 +94,151 @@ async function main() {
     ORDER BY COUNT(*) DESC
   `);
 
-  if (duplicates.rows.length === 0) {
-    console.log('\n✅ No duplicate payments found. All good!');
-    await pool.end();
-    return;
-  }
+  if (duplicatePayments.rows.length === 0) {
+    console.log('✅ No duplicate payment records found.');
+  } else {
+    console.log(`Found ${duplicatePayments.rows.length} stripePaymentIntentId(s) with duplicate payments:\n`);
 
-  console.log(`\nFound ${duplicates.rows.length} stripePaymentIntentId(s) with duplicate payment records:\n`);
-  console.log('-'.repeat(60));
+    for (const row of duplicatePayments.rows) {
+      const paymentIntentId = row.stripePaymentIntentId as string;
+      const paymentIds = row.payment_ids as string[];
+      const orderIds = row.order_ids as string[];
+      const amounts = row.amounts as number[];
+      const createdDates = row.created_dates as Date[];
 
-  let totalDuplicates = 0;
-  let totalAmountDuplicated = 0;
-  const paymentsToDelete: string[] = [];
+      // Track affected orders
+      orderIds.forEach(id => affectedOrderIds.add(id));
 
-  for (const row of duplicates.rows) {
-    const paymentIntentId = row.stripePaymentIntentId as string;
-    const paymentIds = row.payment_ids as string[];
-    const orderIds = row.order_ids as string[];
-    const amounts = row.amounts as number[];
-    const createdDates = row.created_dates as Date[];
-    const count = Number(row.count);
+      // Get order info
+      const [orderInfo] = await db
+        .select({
+          orderNumber: orderTable.orderNumber,
+          organizationName: organizationTable.name,
+        })
+        .from(orderTable)
+        .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
+        .where(eq(orderTable.id, orderIds[0]))
+        .limit(1);
 
-    // Get order and organization info for the first order
-    const [orderInfo] = await db
-      .select({
-        orderNumber: orderTable.orderNumber,
-        organizationName: organizationTable.name,
-      })
-      .from(orderTable)
-      .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
-      .where(eq(orderTable.id, orderIds[0]))
-      .limit(1);
+      console.log(`  Stripe PI: ${paymentIntentId}`);
+      console.log(`    Company: ${orderInfo?.organizationName || 'Unknown'}`);
+      console.log(`    Order: ${orderInfo?.orderNumber || orderIds[0]}`);
+      console.log(`    Keeping: ${paymentIds[0]} (${formatDate(createdDates[0])})`);
 
-    console.log(`\nStripe Payment Intent: ${paymentIntentId}`);
-    console.log(`  Company: ${orderInfo?.organizationName || 'Unknown'}`);
-    console.log(`  Order: ${orderInfo?.orderNumber || orderIds[0]}`);
-    console.log(`  Duplicate count: ${count} records (should be 1)`);
-    console.log(`  Payment amounts: ${amounts.map(a => `$${a.toFixed(2)}`).join(', ')}`);
-
-    // Keep the first payment (oldest), delete the rest
-    const keepId = paymentIds[0];
-    const deleteIds = paymentIds.slice(1);
-
-    const formatDate = (d: any) => {
-      try {
-        return d instanceof Date ? d.toISOString() : new Date(d).toISOString();
-      } catch {
-        return String(d);
+      for (let i = 1; i < paymentIds.length; i++) {
+        console.log(`    Deleting: ${paymentIds[i]} ($${amounts[i].toFixed(2)}, ${formatDate(createdDates[i])})`);
+        paymentsToDelete.push(paymentIds[i]);
       }
-    };
-
-    console.log(`  Keeping: ${keepId} (created ${formatDate(createdDates[0])})`);
-    console.log(`  Deleting: ${deleteIds.length} duplicate(s)`);
-
-    for (let i = 1; i < paymentIds.length; i++) {
-      console.log(`    - ${paymentIds[i]} (created ${formatDate(createdDates[i])}, $${amounts[i].toFixed(2)})`);
-      paymentsToDelete.push(paymentIds[i]);
-      totalAmountDuplicated += amounts[i];
     }
-
-    totalDuplicates += deleteIds.length;
   }
 
+  // ============================================
+  // 2. Find duplicate invoice records
+  // ============================================
+  console.log('\n📋 STEP 2: Checking for duplicate invoice records...');
+
+  const duplicateInvoices = await db.execute(sql`
+    SELECT
+      "orderId",
+      COUNT(*) as count,
+      array_agg("id" ORDER BY "createdAt" ASC) as invoice_ids,
+      array_agg("invoiceNumber" ORDER BY "createdAt" ASC) as invoice_numbers,
+      array_agg("totalAmount" ORDER BY "createdAt" ASC) as total_amounts,
+      array_agg("status" ORDER BY "createdAt" ASC) as statuses,
+      array_agg("createdAt" ORDER BY "createdAt" ASC) as created_dates
+    FROM "orderInvoice"
+    GROUP BY "orderId"
+    HAVING COUNT(*) > 1
+    ORDER BY COUNT(*) DESC
+  `);
+
+  if (duplicateInvoices.rows.length === 0) {
+    console.log('✅ No duplicate invoice records found.');
+  } else {
+    console.log(`Found ${duplicateInvoices.rows.length} order(s) with duplicate invoices:\n`);
+
+    for (const row of duplicateInvoices.rows) {
+      const orderId = row.orderId as string;
+      const invoiceIds = row.invoice_ids as string[];
+      const invoiceNumbers = row.invoice_numbers as string[];
+      const totalAmounts = row.total_amounts as number[];
+      const statuses = row.statuses as string[];
+      const createdDates = row.created_dates as Date[];
+
+      // Track affected orders
+      affectedOrderIds.add(orderId);
+
+      // Get order info
+      const [orderInfo] = await db
+        .select({
+          orderNumber: orderTable.orderNumber,
+          organizationName: organizationTable.name,
+        })
+        .from(orderTable)
+        .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
+        .where(eq(orderTable.id, orderId))
+        .limit(1);
+
+      console.log(`  Order: ${orderInfo?.orderNumber || orderId}`);
+      console.log(`    Company: ${orderInfo?.organizationName || 'Unknown'}`);
+      console.log(`    Invoice count: ${invoiceIds.length} (should be 1)`);
+      console.log(`    Keeping: ${invoiceNumbers[0]} (${statuses[0]}, ${formatDate(createdDates[0])})`);
+
+      for (let i = 1; i < invoiceIds.length; i++) {
+        console.log(`    Deleting: ${invoiceNumbers[i]} ($${totalAmounts[i].toFixed(2)}, ${statuses[i]}, ${formatDate(createdDates[i])})`);
+        invoicesToDelete.push(invoiceIds[i]);
+      }
+    }
+  }
+
+  // ============================================
+  // 3. Summary
+  // ============================================
   console.log('\n' + '='.repeat(60));
   console.log('Summary');
   console.log('='.repeat(60));
-  console.log(`Duplicate payment records found: ${totalDuplicates}`);
-  console.log(`Total duplicated amount: $${totalAmountDuplicated.toFixed(2)}`);
-  console.log(`\nNote: This amount was recorded twice but only charged once in Stripe.`);
+  console.log(`Duplicate payment records to delete: ${paymentsToDelete.length}`);
+  console.log(`Duplicate invoice records to delete: ${invoicesToDelete.length}`);
+  console.log(`Affected orders: ${affectedOrderIds.size}`);
 
-  if (paymentsToDelete.length === 0) {
-    console.log('\nNo payments to delete.');
+  if (paymentsToDelete.length === 0 && invoicesToDelete.length === 0) {
+    console.log('\n✅ No duplicates found. All good!');
     await pool.end();
     return;
   }
 
+  // ============================================
+  // 4. Execute deletions
+  // ============================================
   if (DRY_RUN) {
-    console.log(`\n[DRY RUN] Would delete ${paymentsToDelete.length} duplicate payment record(s)`);
-    console.log('\nRun without --dry-run to actually delete the duplicates.');
+    console.log('\n[DRY RUN] No changes made. Run without --dry-run to delete duplicates.');
   } else {
-    console.log(`\nDeleting ${paymentsToDelete.length} duplicate payment record(s)...`);
+    console.log('\n🔧 Executing deletions...');
 
-    // Delete duplicates
-    await db
-      .delete(orderPaymentTable)
-      .where(inArray(orderPaymentTable.id, paymentsToDelete));
+    // Delete duplicate payments
+    if (paymentsToDelete.length > 0) {
+      await db
+        .delete(orderPaymentTable)
+        .where(inArray(orderPaymentTable.id, paymentsToDelete));
+      console.log(`✅ Deleted ${paymentsToDelete.length} duplicate payment record(s)`);
+    }
 
-    console.log('✅ Duplicate payments deleted.');
+    // Delete duplicate invoices
+    if (invoicesToDelete.length > 0) {
+      await db
+        .delete(orderInvoiceTable)
+        .where(inArray(orderInvoiceTable.id, invoicesToDelete));
+      console.log(`✅ Deleted ${invoicesToDelete.length} duplicate invoice record(s)`);
+    }
 
-    // Now fix the invoice paidAmount for affected orders
-    console.log('\nRecalculating invoice paid amounts for affected orders...');
+    // ============================================
+    // 5. Recalculate remaining invoice amounts
+    // ============================================
+    console.log('\n🔧 Recalculating invoice amounts for affected orders...');
 
-    // Get unique order IDs from the duplicates
-    const affectedOrderIds = [...new Set(
-      duplicates.rows.flatMap(row => row.order_ids as string[])
-    )];
+    const orderIdArray = Array.from(affectedOrderIds);
 
-    for (const orderId of affectedOrderIds) {
+    for (const orderId of orderIdArray) {
       // Calculate correct paid amount from remaining payments
       const [paymentSum] = await db
         .select({
@@ -182,7 +251,10 @@ async function main() {
 
       // Get order total for balance calculation
       const [order] = await db
-        .select({ totalAmount: orderTable.totalAmount })
+        .select({
+          orderNumber: orderTable.orderNumber,
+          totalAmount: orderTable.totalAmount,
+        })
         .from(orderTable)
         .where(eq(orderTable.id, orderId));
 
@@ -190,7 +262,7 @@ async function main() {
         const correctBalance = Math.max(0, order.totalAmount - correctPaidAmount);
         const invoiceStatus = correctBalance <= 0 ? 'paid' : 'sent';
 
-        // Update invoice
+        // Update remaining invoice (there should only be one now)
         await db
           .update(orderInvoiceTable)
           .set({
@@ -201,28 +273,33 @@ async function main() {
           })
           .where(eq(orderInvoiceTable.orderId, orderId));
 
-        console.log(`  Updated invoice for order ${orderId}: paid=$${correctPaidAmount.toFixed(2)}, balance=$${correctBalance.toFixed(2)}`);
+        console.log(`  Order ${order.orderNumber}: paid=$${correctPaidAmount.toFixed(2)}, balance=$${correctBalance.toFixed(2)}, status=${invoiceStatus}`);
       }
     }
 
     console.log('\n✅ Invoice amounts recalculated.');
 
-    // Output affected organizations for cache reference
-    const orgResults = await db
-      .select({
-        organizationId: orderTable.organizationId,
-        organizationName: organizationTable.name,
-      })
-      .from(orderTable)
-      .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
-      .where(inArray(orderTable.id, affectedOrderIds));
+    // Output affected organizations
+    if (orderIdArray.length > 0) {
+      const orgResults = await db
+        .select({
+          organizationId: orderTable.organizationId,
+          organizationName: organizationTable.name,
+        })
+        .from(orderTable)
+        .innerJoin(organizationTable, eq(orderTable.organizationId, organizationTable.id))
+        .where(inArray(orderTable.id, orderIdArray));
 
-    const uniqueOrgs = [...new Map(orgResults.map(o => [o.organizationId, o])).values()];
-
-    console.log('\n📋 Affected organizations (recent activity cache will refresh within 60 seconds):');
-    uniqueOrgs.forEach(org => {
-      console.log(`  - ${org.organizationName} (${org.organizationId})`);
-    });
+      // Deduplicate by organization ID
+      const seenOrgIds = new Set<string>();
+      console.log('\n📋 Affected organizations:');
+      for (const org of orgResults) {
+        if (!seenOrgIds.has(org.organizationId)) {
+          seenOrgIds.add(org.organizationId);
+          console.log(`  - ${org.organizationName} (${org.organizationId})`);
+        }
+      }
+    }
   }
 
   console.log('\nDone!');

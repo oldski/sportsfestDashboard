@@ -9,7 +9,6 @@ import {
   PhoneIcon,
   CalendarIcon,
   ShirtIcon,
-  StarIcon,
   ClipboardCheckIcon,
   FileCheckIcon
 } from 'lucide-react';
@@ -32,6 +31,7 @@ import {
   DrawerTitle,
   DrawerFooter
 } from '@workspace/ui/components/drawer';
+import { Rating } from '@workspace/ui/components/rating';
 import { Separator } from '@workspace/ui/components/separator';
 import { useMediaQuery } from '@workspace/ui/hooks/use-media-query';
 
@@ -85,23 +85,6 @@ function getEventTypeDisplay(eventType: string): string {
   };
   // Return mapped value or format the raw string (replace _ with space, capitalize each word)
   return eventTypes[eventType]
-}
-
-function getInterestStars(rating: number): React.ReactNode {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <StarIcon
-          key={star}
-          className={`h-3.5 w-3.5 ${
-            star <= rating
-              ? 'fill-yellow-400 text-yellow-400'
-              : 'text-muted-foreground/30'
-          }`}
-        />
-      ))}
-    </div>
-  );
 }
 
 function calculateAge(dateOfBirth: Date): number {
@@ -249,7 +232,7 @@ export const ViewPlayerDialog = NiceModal.create<ViewPlayerDialogProps>(
               <h4 className="text-sm font-medium text-muted-foreground">Event Interests</h4>
               <div className="grid grid-cols-2 gap-2">
                 {player.eventInterests
-                  .sort((a, b) => b.interestRating - a.interestRating)
+                  .sort((a, b) => a.interestRating - b.interestRating)
                   .map((interest) => (
                     <div
                       key={interest.eventType}
@@ -258,7 +241,13 @@ export const ViewPlayerDialog = NiceModal.create<ViewPlayerDialogProps>(
                       <span className="text-sm font-medium">
                         {getEventTypeDisplay(interest.eventType)}
                       </span>
-                      {getInterestStars(interest.interestRating)}
+                      <Rating
+                        value={6 - interest.interestRating}
+                        totalStars={5}
+                        size={14}
+                        readOnly
+                        variant="yellow"
+                      />
                     </div>
                   ))}
               </div>
@@ -377,7 +366,7 @@ export const ViewPlayerDialog = NiceModal.create<ViewPlayerDialogProps>(
               <h4 className="text-sm font-medium text-muted-foreground">Event Interests</h4>
               <div className="grid gap-2">
                 {player.eventInterests
-                  .sort((a, b) => b.interestRating - a.interestRating)
+                  .sort((a, b) => a.interestRating - b.interestRating)
                   .map((interest) => (
                     <div
                       key={interest.eventType}
@@ -386,7 +375,13 @@ export const ViewPlayerDialog = NiceModal.create<ViewPlayerDialogProps>(
                       <span className="text-sm font-medium">
                         {getEventTypeDisplay(interest.eventType)}
                       </span>
-                      {getInterestStars(interest.interestRating)}
+                      <Rating
+                        value={6 - interest.interestRating}
+                        totalStars={5}
+                        size={14}
+                        readOnly
+                        variant="yellow"
+                      />
                     </div>
                   ))}
               </div>
