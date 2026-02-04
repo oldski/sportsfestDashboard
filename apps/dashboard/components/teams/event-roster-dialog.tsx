@@ -252,6 +252,12 @@ export function EventRosterDialog({
   const canAddAsStarter = (gender: string) => {
     if (!canAddGender(gender)) return false;
 
+    // Corn toss has no gender requirements - just check total starters (4 starters, no subs)
+    if (eventType === 'corn_toss') {
+      const currentStarters = eventData.players.filter(p => p.isStarter);
+      return currentStarters.length < 4;
+    }
+
     // Get current starters by gender
     const currentStarters = eventData.players.filter(p => p.isStarter);
     const currentMaleStarters = currentStarters.filter(p => p.gender === 'male').length;
@@ -273,6 +279,11 @@ export function EventRosterDialog({
   // Check if we can add as substitute (check gender-specific substitute limits)
   const canAddAsSubstitute = (gender: string) => {
     if (!canAddGender(gender)) return false;
+
+    // Corn toss has no substitutes - all 4 players are starters (2 squads of 2)
+    if (eventType === 'corn_toss') {
+      return false;
+    }
 
     // Get current substitutes by gender
     const currentSubstitutes = eventData.players.filter(p => !p.isStarter);
