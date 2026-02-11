@@ -65,6 +65,27 @@ function getGenderDisplay(gender: string) {
   }
 }
 
+const EVENT_TYPES: Record<string, string> = {
+  beach_volleyball: 'Beach Volleyball',
+  tug_of_war: 'Tug of War',
+  corn_toss: 'Corn Toss',
+  bote_beach_challenge: 'Surf & Turf Relay',
+  beach_dodgeball: 'Beach Dodgeball',
+};
+
+function getStarRating(interestRating: number): string {
+  const stars = 6 - interestRating;
+  return '★'.repeat(stars) + '☆'.repeat(5 - stars);
+}
+
+function getPlayerEventRating(player: PlayerWithDetails, eventType: string, format: 'stars' | 'numeric' = 'stars'): string {
+  const interest = player.eventInterests.find(i => i.eventType === eventType);
+  if (!interest) return '';
+  const value = 6 - interest.interestRating;
+  if (format === 'numeric') return `${value} ${value === 1 ? 'star' : 'stars'}`;
+  return getStarRating(interest.interestRating);
+}
+
 // Custom export functions for players data table
 const exportPlayersToCSV = async (
   players: PlayerWithDetails[],
@@ -72,11 +93,11 @@ const exportPlayersToCSV = async (
 ) => {
   const Papa = (await import('papaparse')).default;
 
-  // Define headers manually for complete control
-  const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Age', 'T-Shirt', 'Registered'];
+  const eventTypeKeys = Object.keys(EVENT_TYPES);
+  const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Age', 'T-Shirt', ...eventTypeKeys.map(k => EVENT_TYPES[k]!), 'Registered'];
 
   const data = players.map((player) => {
-    return {
+    const row: Record<string, string> = {
       'First Name': player.firstName || '',
       'Last Name': player.lastName || '',
       'Email': player.email || '',
@@ -84,8 +105,12 @@ const exportPlayersToCSV = async (
       'Gender': getGenderDisplay(player.gender),
       'Age': player.dateOfBirth ? format(new Date(player.dateOfBirth), 'yyyy-MM-dd') : '',
       'T-Shirt': player.tshirtSize ? player.tshirtSize.toUpperCase() : '',
-      'Registered': player.createdAt ? format(new Date(player.createdAt), 'yyyy-MM-dd') : '',
     };
+    for (const eventType of eventTypeKeys) {
+      row[EVENT_TYPES[eventType]!] = getPlayerEventRating(player, eventType, 'numeric');
+    }
+    row['Registered'] = player.createdAt ? format(new Date(player.createdAt), 'yyyy-MM-dd') : '';
+    return row;
   });
 
   const csv = Papa.unparse({ fields: headers, data });
@@ -105,8 +130,8 @@ const exportPlayersToExcel = async (
 ) => {
   const XLSX = await import('xlsx');
 
-  // Define headers manually for complete control
-  const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Age', 'T-Shirt', 'Registered'];
+  const eventTypeKeys = Object.keys(EVENT_TYPES);
+  const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Age', 'T-Shirt', ...eventTypeKeys.map(k => EVENT_TYPES[k]!), 'Registered'];
 
   const data = [
     headers,
@@ -119,6 +144,7 @@ const exportPlayersToExcel = async (
         getGenderDisplay(player.gender),
         player.dateOfBirth ? format(new Date(player.dateOfBirth), 'yyyy-MM-dd') : '',
         player.tshirtSize ? player.tshirtSize.toUpperCase() : '',
+        ...eventTypeKeys.map(eventType => getPlayerEventRating(player, eventType, 'numeric')),
         player.createdAt ? format(new Date(player.createdAt), 'yyyy-MM-dd') : '',
       ];
     })
@@ -373,7 +399,7 @@ export function PlayersDataTable({ data, organization, eventYears }: PlayersData
   });
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <Input
           placeholder="Search players..."

@@ -9,7 +9,7 @@ export type PageProps = React.ComponentProps<'div'>;
 function Page({ children, className, ...other }: PageProps): React.JSX.Element {
   return (
     <div
-      className={cn('flex h-full flex-col', className)}
+      className={cn('flex h-full min-w-0 flex-col overflow-hidden', className)}
       {...other}
     >
       {children}
@@ -44,7 +44,7 @@ function PagePrimaryBar({
   return (
     <div
       className={cn(
-        'relative flex h-14 flex-row items-center gap-1 border-b px-4 sm:px-6',
+        'relative flex min-h-14 flex-row items-center gap-1 border-b px-4 sm:px-6',
         className
       )}
       {...other}
@@ -54,7 +54,7 @@ function PagePrimaryBar({
         orientation="vertical"
         className="mr-2 h-4!"
       />
-      <div className="flex w-full flex-row items-center justify-between">
+      <div className="flex w-full min-w-0 flex-row flex-wrap items-center justify-between gap-2">
         {children}
       </div>
     </div>

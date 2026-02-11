@@ -49,7 +49,7 @@ export default async function PlayersLayout({
           </PagePrimaryBar>
         </PageHeader>
         <PageBody>
-          <div className="mx-auto w-full space-y-4 p-2 py-4 sm:space-y-8 sm:p-6">
+          <div className="mx-auto w-full min-w-0 space-y-4 p-2 py-4 sm:space-y-8 sm:p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Players</h3>
