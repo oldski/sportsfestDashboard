@@ -45,14 +45,60 @@ import {
 import { toast } from '@workspace/ui/components/sonner';
 
 import type { UserData } from '~/actions/admin/get-users';
+import { formatPhoneNumber } from '~/lib/formatters';
 import { generateAdminUsersReactPDF } from './generate-users-pdf';
-import { exportToCSV, exportToExcel } from '@workspace/ui/lib/data-table-utils';
 import { CreateSuperAdminDialog } from './users/create-super-admin-dialog';
 import { revokeSuperAdmin } from '~/actions/admin/revoke-super-admin';
 import { grantSuperAdmin } from '~/actions/admin/grant-super-admin';
 import { resendSuperAdminInvite } from '~/actions/admin/resend-super-admin-invite';
 
 const columnHelper = createColumnHelper<UserData>();
+
+const exportUsersToCSV = async (users: UserData[], filename: string) => {
+  const Papa = (await import('papaparse')).default;
+  const headers = ['Name', 'Email', 'Phone', 'Role', 'Organization', 'Status', 'Last Login', 'Created'];
+  const data = users.map((user) => ({
+    'Name': user.name || '',
+    'Email': user.email || '',
+    'Phone': formatPhoneNumber(user.phone),
+    'Role': user.isSportsFestAdmin ? 'Super Admin' : 'User',
+    'Organization': user.organizationName || '',
+    'Status': user.isActive ? 'Active' : 'Inactive',
+    'Last Login': user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
+    'Created': user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '',
+  }));
+  const csv = Papa.unparse({ fields: headers, data });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+const exportUsersToExcel = async (users: UserData[], filename: string) => {
+  const XLSX = await import('xlsx');
+  const headers = ['Name', 'Email', 'Phone', 'Role', 'Organization', 'Status', 'Last Login', 'Created'];
+  const data = [
+    headers,
+    ...users.map((user) => [
+      user.name || '',
+      user.email || '',
+      formatPhoneNumber(user.phone),
+      user.isSportsFestAdmin ? 'Super Admin' : 'User',
+      user.organizationName || '',
+      user.isActive ? 'Active' : 'Inactive',
+      user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
+      user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '',
+    ]),
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Users');
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+};
 
 const exportUsersToPDF = async (users: UserData[]) => {
   await generateAdminUsersReactPDF(users);
@@ -61,13 +107,10 @@ const exportUsersToPDF = async (users: UserData[]) => {
 // Custom DataTableExport component for admin users
 function AdminUsersDataTableExport({
   users,
-  table,
 }: {
   users: UserData[];
-  table: any;
 }): React.JSX.Element {
   const filename = `sportsfest-admin-users-${new Date().toISOString().slice(0, 10)}`;
-  const title = 'SportsFest Admin Users';
 
   return (
     <DropdownMenu>
@@ -81,13 +124,13 @@ function AdminUsersDataTableExport({
         <DropdownMenuLabel>Export data</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => exportToCSV(table, filename, title)}
+          onClick={() => exportUsersToCSV(users, filename)}
           className="cursor-pointer"
         >
           Export as CSV
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => exportToExcel(table, filename, title)}
+          onClick={() => exportUsersToExcel(users, filename)}
           className="cursor-pointer"
         >
           Export as Excel
@@ -131,6 +174,19 @@ const columns = [
       title: 'User'
     }
   }),
+  columnHelper.accessor('phone', {
+    id: 'phone',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Phone" />
+    ),
+    cell: ({ row }) => {
+      const phone = row.getValue('phone') as string | null;
+      return <span className="text-sm">{formatPhoneNumber(phone)}</span>;
+    },
+    meta: {
+      title: 'Phone'
+    }
+  }),
   columnHelper.accessor('isSportsFestAdmin', {
     id: 'role',
     header: ({ column }) => (
@@ -169,10 +225,10 @@ const columns = [
       }
 
       return (
-        <div className="flex items-center space-x-2">
-          <span className="font-medium">{orgName}</span>
+        <div>
+          <div className="font-medium">{orgName}</div>
           {orgSlug && (
-            <span className="text-xs text-muted-foreground">({orgSlug})</span>
+            <div className="text-xs text-muted-foreground">{orgSlug}</div>
           )}
         </div>
       );
@@ -424,7 +480,6 @@ export function UsersDataTable({ data }: UsersDataTableProps): React.JSX.Element
           </Button>
           <AdminUsersDataTableExport
             users={data}
-            table={table}
           />
           <DataTableColumnOptionsHeader table={table} />
         </div>

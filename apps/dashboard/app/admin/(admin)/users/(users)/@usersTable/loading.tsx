@@ -19,8 +19,9 @@ export default function UsersTableLoading(): React.JSX.Element {
       <div className="rounded-md border">
         {/* Table header */}
         <div className="border-b px-4 py-3">
-          <div className="grid grid-cols-7 gap-4">
+          <div className="grid grid-cols-8 gap-4">
             <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-4 w-16" />
             <Skeleton className="h-4 w-10" />
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-4 w-14" />
@@ -33,7 +34,7 @@ export default function UsersTableLoading(): React.JSX.Element {
         {/* Table rows */}
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="border-b px-4 py-3 last:border-0">
-            <div className="grid grid-cols-7 gap-4 items-center">
+            <div className="grid grid-cols-8 gap-4 items-center">
               {/* User (avatar + name + email) */}
               <div className="flex items-center space-x-3">
                 <Skeleton className="h-8 w-8 rounded-full" />
@@ -42,10 +43,15 @@ export default function UsersTableLoading(): React.JSX.Element {
                   <Skeleton className="h-3 w-32" />
                 </div>
               </div>
+              {/* Phone */}
+              <Skeleton className="h-4 w-24" />
               {/* Role badge */}
               <Skeleton className="h-6 w-20 rounded-full" />
               {/* Organization */}
-              <Skeleton className="h-4 w-28" />
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-20" />
+              </div>
               {/* Status badge */}
               <Skeleton className="h-6 w-14 rounded-full" />
               {/* Last Login */}

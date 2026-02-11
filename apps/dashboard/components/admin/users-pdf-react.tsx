@@ -9,6 +9,7 @@ import {
 } from '@react-pdf/renderer';
 import { format } from 'date-fns';
 import type { UserData } from '~/actions/admin/get-users';
+import { formatPhoneNumber } from '~/lib/formatters';
 
 // Helper function to get role display text
 function getRoleDisplay(isSportsFestAdmin: boolean) {
@@ -88,11 +89,12 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   // Column widths for admin users table
-  colName: { width: '20%' },
-  colEmail: { width: '20%' },
-  colRole: { width: '12%' },
-  colOrganization: { width: '18%' },
-  colStatus: { width: '10%' },
+  colName: { width: '16%' },
+  colEmail: { width: '18%' },
+  colPhone: { width: '12%' },
+  colRole: { width: '10%' },
+  colOrganization: { width: '16%' },
+  colStatus: { width: '8%' },
   colLastLogin: { width: '10%' },
   colCreated: { width: '10%' },
   footer: {
@@ -138,6 +140,7 @@ export function AdminUsersReactPDF({
           <View style={styles.tableHeader} fixed>
             <Text style={[styles.headerCell, styles.colName]}>Name</Text>
             <Text style={[styles.headerCell, styles.colEmail]}>Email</Text>
+            <Text style={[styles.headerCell, styles.colPhone]}>Phone</Text>
             <Text style={[styles.headerCell, styles.colRole]}>Role</Text>
             <Text style={[styles.headerCell, styles.colOrganization]}>Organization</Text>
             <Text style={[styles.headerCell, styles.colStatus]}>Status</Text>
@@ -161,12 +164,22 @@ export function AdminUsersReactPDF({
               <Text style={[styles.cell, styles.colEmail]}>
                 {user.email || ''}
               </Text>
+              <Text style={[styles.cell, styles.colPhone]}>
+                {formatPhoneNumber(user.phone)}
+              </Text>
               <Text style={[styles.cell, styles.colRole]}>
                 {getRoleDisplay(user.isSportsFestAdmin)}
               </Text>
-              <Text style={[styles.cell, styles.colOrganization]}>
-                {user.organizationName || 'No organization'}
-              </Text>
+              <View style={[styles.colOrganization]}>
+                <Text style={styles.cell}>
+                  {user.organizationName || 'No organization'}
+                </Text>
+                {user.organizationSlug && (
+                  <Text style={[styles.cell, { fontSize: 6, color: '#6b7280' }]}>
+                    {user.organizationSlug}
+                  </Text>
+                )}
+              </View>
               <Text style={[styles.cell, styles.colStatus]}>
                 {getStatusDisplay(user.isActive)}
               </Text>

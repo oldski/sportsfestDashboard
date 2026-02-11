@@ -9,6 +9,7 @@ export type UserData = {
   id: string;
   name: string;
   email: string | null;
+  phone: string | null;
   createdAt: Date;
   lastLogin: Date | null;
   isSportsFestAdmin: boolean;
@@ -30,6 +31,7 @@ export async function getUsers(): Promise<UserData[]> {
       id: userTable.id,
       name: userTable.name,
       email: userTable.email,
+      phone: userTable.phone,
       createdAt: userTable.createdAt,
       lastLogin: userTable.lastLogin,
       isSportsFestAdmin: userTable.isSportsFestAdmin
