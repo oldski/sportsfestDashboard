@@ -35,18 +35,33 @@ export async function getAdminOverviewStats(): Promise<AdminOverviewStats> {
   firstDayOfMonth.setHours(0, 0, 0, 0);
   const firstDayISO = firstDayOfMonth.toISOString();
 
+  // First, get the current event year ID
+  let currentEventYearId;
+  try {
+    const currentEventYear = await db.execute(sql`
+      SELECT id FROM "eventYear"
+      WHERE "isActive" = true
+      ORDER BY "createdAt" DESC
+      LIMIT 1
+    `);
+    currentEventYearId = (currentEventYear as any)?.rows?.[0]?.id;
+  } catch (error) {
+    console.error('Could not fetch current event year:', error);
+  }
 
-  // Get organization statistics (no createdAt column available)
+  // Get company team purchase statistics for the current event year
   let companyStats;
   try {
     companyStats = await db.execute(sql`
       SELECT
         COUNT(*) as total_companies,
-        0 as new_companies_this_month
-      FROM organization
+        COUNT(*) FILTER (WHERE "createdAt" >= ${firstDayISO}::timestamp) as new_companies_this_month
+      FROM "companyTeam"
+      WHERE "isPaid" = true
+        AND "eventYearId" = ${currentEventYearId}
     `);
   } catch (error) {
-    console.error('Error querying organization table:', error);
+    console.error('Error querying companyTeam table:', error);
     companyStats = [{ total_companies: 0, new_companies_this_month: 0 }];
   }
 
@@ -61,20 +76,6 @@ export async function getAdminOverviewStats(): Promise<AdminOverviewStats> {
     `);
   } catch (error) {
     playerStats = [{ total_players: 0, new_players_this_month: 0 }];
-  }
-
-  // First, get the current event year ID
-  let currentEventYearId;
-  try {
-    const currentEventYear = await db.execute(sql`
-      SELECT id FROM "eventYear"
-      WHERE "isActive" = true
-      ORDER BY "createdAt" DESC
-      LIMIT 1
-    `);
-    currentEventYearId = (currentEventYear as any)?.rows?.[0]?.id;
-  } catch (error) {
-    console.error('Could not fetch current event year:', error);
   }
 
   // Get tent rental statistics from orders table

@@ -14,7 +14,7 @@ export default async function TotalCompaniesPage(): Promise<React.JSX.Element> {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="flex items-center gap-2">
             <BuildingIcon className="h-5 w-5" />
-            Total Companies
+            Total Company Teams
           </CardTitle>
           <div className="flex items-center space-x-2">
             <ExternalLinkIcon className="h-3 w-3 text-muted-foreground" />
