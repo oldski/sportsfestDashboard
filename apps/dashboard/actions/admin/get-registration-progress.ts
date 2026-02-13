@@ -1,8 +1,8 @@
 'use server';
 
 import { ForbiddenError } from '@workspace/common/errors';
-import { db, eq, sql, and, inArray } from '@workspace/database/client';
-import { orderTable, orderItemTable, productTable, ProductType, OrderStatus } from '@workspace/database/schema';
+import { db, eq, sql, and } from '@workspace/database/client';
+import { companyTeamTable } from '@workspace/database/schema';
 
 import { getAuthContext } from '@workspace/auth/context';
 import { isSuperAdmin } from '~/lib/admin-utils';
@@ -33,31 +33,21 @@ export async function getRegistrationProgress(eventYearId?: string): Promise<Reg
       return [];
     }
 
-    // Query orders that contain team registration products, grouped by date
-    // Count distinct organizations per day (one org = one team registration)
-    const validStatuses = [
-      OrderStatus.CONFIRMED,
-      OrderStatus.DEPOSIT_PAID,
-      OrderStatus.FULLY_PAID
-    ];
-
+    // Count paid company teams per day for the current event year
     const dailyRegistrations = await db
       .select({
-        date: sql<string>`DATE(${orderTable.createdAt})`.as('date'),
-        count: sql<number>`COUNT(DISTINCT ${orderTable.organizationId})`.mapWith(Number),
+        date: sql<string>`DATE(${companyTeamTable.createdAt})`.as('date'),
+        count: sql<number>`COUNT(*)`.mapWith(Number),
       })
-      .from(orderTable)
-      .innerJoin(orderItemTable, eq(orderItemTable.orderId, orderTable.id))
-      .innerJoin(productTable, eq(productTable.id, orderItemTable.productId))
+      .from(companyTeamTable)
       .where(
         and(
-          eq(orderTable.eventYearId, targetEventYearId),
-          eq(productTable.type, ProductType.TEAM_REGISTRATION),
-          inArray(orderTable.status, validStatuses)
+          eq(companyTeamTable.eventYearId, targetEventYearId),
+          eq(companyTeamTable.isPaid, true)
         )
       )
-      .groupBy(sql`DATE(${orderTable.createdAt})`)
-      .orderBy(sql`DATE(${orderTable.createdAt}) ASC`);
+      .groupBy(sql`DATE(${companyTeamTable.createdAt})`)
+      .orderBy(sql`DATE(${companyTeamTable.createdAt}) ASC`);
 
     if (dailyRegistrations.length === 0) {
       return [];
