@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   BarChart3Icon,
   CalendarDaysIcon,
-  UsersIcon
 } from 'lucide-react';
 
 import { Button } from '@workspace/ui/components/button';
@@ -24,12 +23,6 @@ const navigationItems = [
     href: '/admin/reports/game-day',
     icon: CalendarDaysIcon,
     description: 'Real-time event day reports'
-  },
-  {
-    label: 'Players',
-    href: '/admin/reports/players',
-    icon: UsersIcon,
-    description: 'Player performance and registration analytics'
   }
 ];
 

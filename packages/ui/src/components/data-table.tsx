@@ -70,7 +70,7 @@ const exportToCSV = async <TData,>(
   filename: string
 ) => {
   const Papa = (await import('papaparse')).default;
-  const rows = table.getRowModel().rows;
+  const rows = table.getPrePaginationRowModel().rows;
   const headers = table
     .getVisibleLeafColumns()
     .filter((col) => col.id !== 'select' && col.id !== 'actions')
@@ -107,7 +107,7 @@ const exportToExcel = async <TData,>(
   filename: string
 ) => {
   const XLSX = await import('xlsx');
-  const rows = table.getRowModel().rows;
+  const rows = table.getPrePaginationRowModel().rows;
   const headers = table
     .getVisibleLeafColumns()
     .filter((col) => col.id !== 'select' && col.id !== 'actions')
@@ -151,7 +151,7 @@ const exportToPDF = async <TData,>(
     doc.text(title, 14, 20);
   }
 
-  const rows = table.getRowModel().rows;
+  const rows = table.getPrePaginationRowModel().rows;
   const headers = table
     .getVisibleLeafColumns()
     .filter((col) => col.id !== 'select' && col.id !== 'actions')

@@ -6,7 +6,7 @@ export const exportToCSV = async <TData,>(
   title?: string
 ) => {
   const Papa = (await import('papaparse')).default;
-  const rows = table.getRowModel().rows;
+  const rows = table.getPrePaginationRowModel().rows;
   const headers = table
     .getVisibleLeafColumns()
     .filter((col) => col.id !== 'select' && col.id !== 'actions')
@@ -56,7 +56,7 @@ export const exportToExcel = async <TData,>(
   title?: string
 ) => {
   const XLSX = await import('xlsx');
-  const rows = table.getRowModel().rows;
+  const rows = table.getPrePaginationRowModel().rows;
   const headers = table
     .getVisibleLeafColumns()
     .filter((col) => col.id !== 'select' && col.id !== 'actions')
