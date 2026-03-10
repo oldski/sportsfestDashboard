@@ -176,6 +176,9 @@ function PlayersDataTableExport({
   eventYearName?: string;
   filename: string;
 }) {
+  // Exclude deactivated players from exports
+  const activePlayers = players.filter(p => p.status !== 'inactive');
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -188,19 +191,19 @@ function PlayersDataTableExport({
         <DropdownMenuLabel>Export data</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => exportPlayersToCSV(players, filename)}
+          onClick={() => exportPlayersToCSV(activePlayers, filename)}
           className="cursor-pointer"
         >
           Export as CSV
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => exportPlayersToExcel(players, filename)}
+          onClick={() => exportPlayersToExcel(activePlayers, filename)}
           className="cursor-pointer"
         >
           Export as Excel
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => exportPlayersToPDF(players, organizationName, eventYearName)}
+          onClick={() => exportPlayersToPDF(activePlayers, organizationName, eventYearName)}
           className="cursor-pointer"
         >
           Export as PDF
