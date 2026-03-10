@@ -208,45 +208,6 @@ const columns = [
       title: 'Total Amount'
     }
   }),
-  columnHelper.display({
-    id: 'paymentStatus',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Payment Status" />
-    ),
-    cell: ({ row }) => {
-      const { balanceOwed, depositPaid, status } = row.original;
-
-      if (status === 'cancelled') {
-        return (
-          <Badge variant="secondary" className="text-xs">
-            Cancelled
-          </Badge>
-        );
-      }
-
-      if (balanceOwed > 0) {
-        return (
-          <div className="space-y-1">
-            <div className="text-sm">
-              Paid: {formatCurrency(depositPaid)}
-            </div>
-            <div className="text-sm text-red-600">
-              Owed: {formatCurrency(balanceOwed)}
-            </div>
-          </div>
-        );
-      }
-
-      return (
-        <Badge variant="default" className="text-xs">
-          Paid in Full
-        </Badge>
-      );
-    },
-    meta: {
-      title: 'Payment Status'
-    }
-  }),
   columnHelper.accessor('status', {
     id: 'status',
     header: ({ column }) => (

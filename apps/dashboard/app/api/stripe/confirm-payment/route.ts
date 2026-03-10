@@ -385,8 +385,11 @@ export async function POST(request: NextRequest) {
     } // End of !isAchProcessing block for invoice creation
 
     // Confirm inventory sales - move from reserved to sold
+    // Skip when the webhook already handled this payment (prevents double-incrementing tent quotas, soldcount, etc.)
     // Only confirm sales when payment is fully completed
-    if (newOrderStatus === OrderStatus.FULLY_PAID || newOrderStatus === OrderStatus.DEPOSIT_PAID) {
+    if (paymentAlreadyExisted) {
+      console.log('ℹ️ Skipping inventory confirmation — payment was already recorded by webhook');
+    } else if (newOrderStatus === OrderStatus.FULLY_PAID || newOrderStatus === OrderStatus.DEPOSIT_PAID) {
       try {
         // Get order items with product details to confirm their inventory
         const orderItems = await db
