@@ -122,8 +122,14 @@ export async function getRegistrationInvoices(): Promise<RegistrationInvoiceDto[
         orderNumber: item.order.orderNumber,
         organizationName: ctx.organization.name,
         totalAmount: item.invoice.totalAmount,
-        paidAmount: item.invoice.paidAmount,
-        balanceOwed: item.invoice.balanceOwed,
+        // Derive paidAmount from completed payment records to avoid double-counting
+        // caused by race condition between confirm-payment and webhook routes
+        paidAmount: (orderPaymentsMap.get(item.order.id) || [])
+          .filter(p => p.status === 'completed')
+          .reduce((sum, p) => sum + p.amount, 0),
+        balanceOwed: item.invoice.totalAmount - (orderPaymentsMap.get(item.order.id) || [])
+          .filter(p => p.status === 'completed')
+          .reduce((sum, p) => sum + p.amount, 0),
         status: item.invoice.status as RegistrationInvoiceDto['status'],
         dueDate: item.invoice.dueDate ?? undefined,
         paidAt: item.invoice.paidAt ?? undefined,

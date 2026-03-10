@@ -1,13 +1,14 @@
 'use server';
 
-import { db, eq, desc, and, or } from '@workspace/database/client';
-import { 
+import { db, eq, desc, and, or, inArray } from '@workspace/database/client';
+import {
   orderInvoiceTable,
   orderTable,
-  organizationTable, 
+  organizationTable,
   eventYearTable,
   orderItemTable,
-  productTable
+  productTable,
+  orderPaymentTable
 } from '@workspace/database/schema';
 import { auth } from '@workspace/auth';
 import { isSuperAdmin } from '~/lib/admin-utils';
@@ -110,6 +111,26 @@ export async function getInvoicesByStatus(status?: 'draft' | 'sent' | 'paid' | '
       .where(and(...whereConditions))
       .orderBy(desc(orderInvoiceTable.createdAt));
 
+    // Batch-fetch completed payments for all orders to derive paidAmount
+    const orderIds = invoicesData.map(inv => inv.orderId).filter(Boolean);
+    const allPayments = orderIds.length > 0 ? await db
+      .select({
+        orderId: orderPaymentTable.orderId,
+        amount: orderPaymentTable.amount,
+        status: orderPaymentTable.status
+      })
+      .from(orderPaymentTable)
+      .where(inArray(orderPaymentTable.orderId, orderIds))
+      : [];
+
+    // Build a map of orderId -> sum of completed payment amounts
+    const paidAmountByOrder = new Map<string, number>();
+    allPayments.forEach(p => {
+      if (p.status === 'completed') {
+        paidAmountByOrder.set(p.orderId, (paidAmountByOrder.get(p.orderId) || 0) + p.amount);
+      }
+    });
+
     // Get invoice items for each invoice
     const invoicesWithItems = await Promise.all(
       invoicesData.map(async (invoice) => {
@@ -125,12 +146,16 @@ export async function getInvoicesByStatus(status?: 'draft' | 'sent' | 'paid' | '
           .leftJoin(productTable, eq(orderItemTable.productId, productTable.id))
           .where(eq(orderItemTable.orderId, invoice.orderId));
 
-        // Calculate status based on payments
+        // Derive paidAmount from completed payment records to avoid double-counting
+        const derivedPaidAmount = paidAmountByOrder.get(invoice.orderId) || 0;
+        const derivedBalanceOwed = Math.max(0, invoice.totalAmount - derivedPaidAmount);
+
+        // Calculate status based on derived payment values
         let calculatedStatus = invoice.status as InvoiceData['status'];
         if (invoice.status !== 'cancelled' && invoice.status !== 'draft') {
-          if (invoice.balanceOwed === 0) {
+          if (derivedBalanceOwed === 0) {
             calculatedStatus = 'paid';
-          } else if (invoice.paidAmount > 0) {
+          } else if (derivedPaidAmount > 0) {
             calculatedStatus = 'partial';
           } else if (invoice.dueDate && new Date(invoice.dueDate) < new Date()) {
             calculatedStatus = 'overdue';
@@ -148,8 +173,8 @@ export async function getInvoicesByStatus(status?: 'draft' | 'sent' | 'paid' | '
           eventYear: invoice.eventYear || 0,
           eventYearName: invoice.eventYearName || 'Unknown Event',
           totalAmount: invoice.totalAmount,
-          paidAmount: invoice.paidAmount,
-          balanceOwed: invoice.balanceOwed,
+          paidAmount: derivedPaidAmount,
+          balanceOwed: derivedBalanceOwed,
           status: calculatedStatus,
           dueDate: invoice.dueDate ? invoice.dueDate.toISOString().split('T')[0] : undefined,
           paidAt: invoice.paidAt ? invoice.paidAt.toISOString().split('T')[0] : undefined,

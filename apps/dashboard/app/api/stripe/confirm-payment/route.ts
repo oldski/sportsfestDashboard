@@ -158,6 +158,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Track whether the webhook already created the payment record
+    let paymentAlreadyExisted = false;
+
     // Create payment record (skip for ACH processing - will be created when payment clears via webhook)
     if (isAchProcessing) {
       console.log('🏦 Skipping payment record creation for ACH processing payment - will be created when payment clears');
@@ -194,6 +197,9 @@ export async function POST(request: NextRequest) {
 
       if (existingPayment) {
         console.log(`ℹ️ Payment record already exists for ${paymentIntentId}, skipping creation`);
+        // Skip the invoice update too — the webhook already handled it.
+        // Skipping prevents double-incrementing the stored paidAmount.
+        paymentAlreadyExisted = true;
       } else {
         await db.insert(orderPaymentTable).values({
           orderId,
@@ -277,9 +283,11 @@ export async function POST(request: NextRequest) {
       .where(eq(orderTable.id, orderId));
     console.log('✅ Order updated successfully');
 
-    // Create or update invoice (skip for ACH processing - will be created when payment clears via webhook)
+    // Create or update invoice (skip for ACH processing and when payment already existed from webhook)
     if (isAchProcessing) {
       console.log('🏦 Skipping invoice creation for ACH processing payment - will be created when payment clears');
+    } else if (paymentAlreadyExisted) {
+      console.log('ℹ️ Skipping invoice update — payment was already recorded by webhook');
     } else {
     // Use adjusted total for sponsorship bank payments
     const invoiceOrderTotal = isSponsorshipBankPayment ? adjustedOrderTotal : order.totalAmount;

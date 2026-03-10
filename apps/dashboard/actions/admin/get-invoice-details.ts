@@ -158,6 +158,13 @@ export async function getInvoiceDetails(invoiceId: string): Promise<Registration
     console.log('🎟️ Coupon data:', { appliedCoupon, couponDiscount, originalTotal });
     console.log('🏗️ Building DTO...');
 
+    // Derive paidAmount from completed payment records to avoid double-counting
+    // caused by race condition between confirm-payment and webhook routes
+    const derivedPaidAmount = payments
+      .filter(p => p.status === 'completed')
+      .reduce((sum, p) => sum + p.amount, 0);
+    const derivedBalanceOwed = Math.max(0, invoice.totalAmount - derivedPaidAmount);
+
     // Build the DTO
     const invoiceDto: RegistrationInvoiceDto = {
       id: invoice.id,
@@ -166,8 +173,8 @@ export async function getInvoiceDetails(invoiceId: string): Promise<Registration
       orderNumber: invoice.orderNumber,
       organizationName: invoice.organizationName,
       totalAmount: invoice.totalAmount,
-      paidAmount: invoice.paidAmount,
-      balanceOwed: invoice.balanceOwed,
+      paidAmount: derivedPaidAmount,
+      balanceOwed: derivedBalanceOwed,
       status: invoice.status as RegistrationInvoiceDto['status'],
       dueDate: invoice.dueDate ? formatLocalDate(invoice.dueDate) : undefined,
       paidAt: invoice.paidAt ? formatLocalDate(invoice.paidAt) : undefined,
