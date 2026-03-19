@@ -145,7 +145,7 @@ function MemberListItem({
                 className="cursor-pointer"
                 onClick={handleShowTransferOwnershipModal}
                 disabled={
-                  !profile.isOwner || member.role !== Role.ADMIN || member.isOwner
+                  (!profile.isOwner && !profile.isSportsFestAdmin) || member.role !== Role.ADMIN || member.isOwner
                 }
               >
                 Transfer ownership

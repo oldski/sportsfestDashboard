@@ -8,7 +8,7 @@ import {
 } from '@workspace/auth/permissions';
 import { ForbiddenError } from '@workspace/common/errors';
 import { and, db, eq } from '@workspace/database/client';
-import { membershipTable } from '@workspace/database/schema';
+import { membershipTable, userTable } from '@workspace/database/schema';
 
 import { authOrganizationActionClient } from '~/actions/safe-action';
 import { Caching, OrganizationCacheKey, UserCacheKey } from '~/data/caching';
@@ -19,15 +19,23 @@ export const transferOwnership = authOrganizationActionClient
   .inputSchema(transferOwnershipSchema)
   .action(async ({ parsedInput, ctx }) => {
     if (ctx.session.user.id === parsedInput.targetId) {
-      throw new ForbiddenError("You can't transfer ownership on yoursef.");
+      throw new ForbiddenError("You can't transfer ownership to yourself.");
     }
+
+    // Check if current user is a super admin
+    const [currentUser] = await db
+      .select({ isSportsFestAdmin: userTable.isSportsFestAdmin })
+      .from(userTable)
+      .where(eq(userTable.id, ctx.session.user.id))
+      .limit(1);
+    const isSuperAdmin = currentUser?.isSportsFestAdmin === true;
 
     const currentUserIsOwner = await isOrganizationOwner(
       ctx.session.user.id,
       ctx.organization.id
     );
-    if (!currentUserIsOwner) {
-      throw new ForbiddenError('Only owners can transfer ownership.');
+    if (!currentUserIsOwner && !isSuperAdmin) {
+      throw new ForbiddenError('Only owners or super admins can transfer ownership.');
     }
 
     const targetUserIsAdmin = await isOrganizationAdmin(
@@ -39,13 +47,14 @@ export const transferOwnership = authOrganizationActionClient
     }
 
     await db.transaction(async (tx) => {
+      // Remove ownership from current owner (find the actual owner, not necessarily the current user)
       await tx
         .update(membershipTable)
         .set({ isOwner: false })
         .where(
           and(
-            eq(membershipTable.userId, ctx.session.user.id),
-            eq(membershipTable.organizationId, ctx.organization.id)
+            eq(membershipTable.organizationId, ctx.organization.id),
+            eq(membershipTable.isOwner, true)
           )
         );
 
