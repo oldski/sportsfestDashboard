@@ -283,11 +283,9 @@ export async function POST(request: NextRequest) {
       .where(eq(orderTable.id, orderId));
     console.log('✅ Order updated successfully');
 
-    // Create or update invoice (skip for ACH processing and when payment already existed from webhook)
+    // Create or update invoice (skip for ACH processing)
     if (isAchProcessing) {
       console.log('🏦 Skipping invoice creation for ACH processing payment - will be created when payment clears');
-    } else if (paymentAlreadyExisted) {
-      console.log('ℹ️ Skipping invoice update — payment was already recorded by webhook');
     } else {
     // Use adjusted total for sponsorship bank payments
     const invoiceOrderTotal = isSponsorshipBankPayment ? adjustedOrderTotal : order.totalAmount;
@@ -305,8 +303,17 @@ export async function POST(request: NextRequest) {
       .where(eq(orderInvoiceTable.orderId, orderId));
 
     if (existingInvoice) {
-      // Update existing invoice
-      const newPaidAmount = existingInvoice.paidAmount + paymentAmount;
+      // Derive paidAmount from actual completed payments to avoid over/under-counting
+      // from confirm-payment / webhook race conditions
+      const [paymentSum] = await db
+        .select({ total: sql<number>`COALESCE(SUM(${orderPaymentTable.amount}), 0)` })
+        .from(orderPaymentTable)
+        .where(and(
+          eq(orderPaymentTable.orderId, orderId),
+          eq(orderPaymentTable.status, PaymentStatus.COMPLETED)
+        ));
+
+      const newPaidAmount = Number(paymentSum.total);
       const newBalanceOwed = invoiceOrderTotal - newPaidAmount;
       const invoiceStatus = newBalanceOwed <= 0 ? 'paid' : 'sent';
 
@@ -385,10 +392,14 @@ export async function POST(request: NextRequest) {
     } // End of !isAchProcessing block for invoice creation
 
     // Confirm inventory sales - move from reserved to sold
-    // Skip when the webhook already handled this payment (prevents double-incrementing tent quotas, soldcount, etc.)
-    // Only confirm sales when payment is fully completed
+    // Only confirm on the FIRST payment (deposit or full). Skip for balance completion
+    // payments since inventory was already confirmed when the deposit was paid.
+    // Also skip when the webhook already handled this payment (prevents double-incrementing).
+    const isBalanceCompletion = paymentIntent?.metadata?.paymentType === 'balance_completion';
     if (paymentAlreadyExisted) {
       console.log('ℹ️ Skipping inventory confirmation — payment was already recorded by webhook');
+    } else if (isBalanceCompletion) {
+      console.log('ℹ️ Skipping inventory confirmation — balance completion payment, inventory already confirmed on deposit');
     } else if (newOrderStatus === OrderStatus.FULLY_PAID || newOrderStatus === OrderStatus.DEPOSIT_PAID) {
       try {
         // Get order items with product details to confirm their inventory

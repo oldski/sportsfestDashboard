@@ -60,6 +60,9 @@ async function main() {
   console.log('='.repeat(70));
 
   // Find all invoices alongside the actual sum of completed payments for that order
+  // Join order-level payment sums AND count of invoices per order so we can
+  // handle multi-invoice orders correctly (avoid false positives by comparing
+  // the order-level payment sum against each invoice's share)
   const results = await db.execute(sql`
     SELECT
       i."id"              AS invoice_id,
@@ -75,7 +78,9 @@ async function main() {
       org."name"          AS organization_name,
       org."slug"          AS organization_slug,
       ey."name"           AS event_year_name,
-      COALESCE(p.actual_paid, 0) AS actual_paid
+      COALESCE(p.actual_paid, 0) AS actual_paid,
+      COALESCE(ic.invoice_count, 1) AS invoice_count,
+      COALESCE(ic.total_invoice_amount, i."totalAmount") AS total_invoice_amount
     FROM "orderInvoice" i
     INNER JOIN "order" o        ON o."id" = i."orderId"
     INNER JOIN "organization" org ON org."id" = o."organizationId"
@@ -88,6 +93,14 @@ async function main() {
       WHERE "status" = 'completed'
       GROUP BY "orderId"
     ) p ON p."orderId" = i."orderId"
+    LEFT JOIN (
+      SELECT
+        "orderId",
+        COUNT(*) AS invoice_count,
+        SUM("totalAmount") AS total_invoice_amount
+      FROM "orderInvoice"
+      GROUP BY "orderId"
+    ) ic ON ic."orderId" = i."orderId"
     ORDER BY org."name", o."orderNumber"
   `);
 
@@ -106,6 +119,8 @@ async function main() {
     organization_slug: string;
     event_year_name: string | null;
     actual_paid: number;
+    invoice_count: number;
+    total_invoice_amount: number;
   };
 
   const rows = results.rows as Row[];
@@ -113,17 +128,31 @@ async function main() {
   console.log(`\nTotal invoices checked: ${rows.length}\n`);
 
   // Separate matched vs mismatched
-  const mismatched: (Row & { expected_balance: number })[] = [];
+  const mismatched: (Row & { expected_balance: number; expected_paid: number })[] = [];
   let matchedCount = 0;
 
   for (const row of rows) {
-    const actualPaid = Number(row.actual_paid);
+    const orderActualPaid = Number(row.actual_paid);
     const storedPaid = Number(row.stored_paid);
-    const expectedBalance = Math.max(0, Number(row.invoice_total) - actualPaid);
+    const invoiceCount = Number(row.invoice_count);
+    const invoiceTotal = Number(row.invoice_total);
+
+    // For multi-invoice orders, proportionally allocate the order-level payment
+    // sum to each invoice based on its share of the total invoice amount
+    let expectedPaid: number;
+    if (invoiceCount > 1) {
+      const totalInvoiceAmount = Number(row.total_invoice_amount);
+      const invoiceShare = totalInvoiceAmount > 0 ? invoiceTotal / totalInvoiceAmount : 0;
+      expectedPaid = Math.min(invoiceTotal, orderActualPaid * invoiceShare);
+    } else {
+      expectedPaid = orderActualPaid;
+    }
+
+    const expectedBalance = Math.max(0, invoiceTotal - expectedPaid);
 
     // Use a small epsilon for floating point comparison
-    if (Math.abs(actualPaid - storedPaid) > 0.005) {
-      mismatched.push({ ...row, actual_paid: actualPaid, stored_paid: storedPaid, expected_balance: expectedBalance });
+    if (Math.abs(expectedPaid - storedPaid) > 0.005) {
+      mismatched.push({ ...row, actual_paid: orderActualPaid, stored_paid: storedPaid, expected_balance: expectedBalance, expected_paid: expectedPaid });
     } else {
       matchedCount++;
     }
@@ -161,15 +190,18 @@ async function main() {
     console.log('  ' + '-'.repeat(60));
 
     for (const inv of invoices) {
-      const diff = inv.stored_paid - inv.actual_paid;
+      const diff = inv.stored_paid - inv.expected_paid;
       totalOvercount += diff;
 
       console.log(`    Invoice: ${inv.invoice_number}  |  Order: ${inv.order_number}`);
       console.log(`      Event Year:      ${inv.event_year_name || 'N/A'}`);
       console.log(`      Invoice Total:   $${Number(inv.invoice_total).toFixed(2)}`);
       console.log(`      Stored Paid:     $${inv.stored_paid.toFixed(2)}  ← incorrect`);
-      console.log(`      Actual Paid:     $${inv.actual_paid.toFixed(2)}  ← from payment records`);
-      console.log(`      Difference:      $${diff.toFixed(2)} over-counted`);
+      console.log(`      Expected Paid:   $${inv.expected_paid.toFixed(2)}  ← from payment records`);
+      if (Number(inv.invoice_count) > 1) {
+        console.log(`      Order Payments:  $${inv.actual_paid.toFixed(2)}  (split across ${inv.invoice_count} invoices)`);
+      }
+      console.log(`      Difference:      $${diff.toFixed(2)} ${diff > 0 ? 'over' : 'under'}-counted`);
       console.log(`      Stored Balance:  $${Number(inv.stored_balance).toFixed(2)}`);
       console.log(`      Correct Balance: $${inv.expected_balance.toFixed(2)}`);
       console.log(`      Order Status:    ${inv.order_status}`);
@@ -199,7 +231,7 @@ async function main() {
     console.log('\n🔧 Correcting stored invoice values...\n');
 
     for (const inv of mismatched) {
-      const correctPaid = inv.actual_paid;
+      const correctPaid = inv.expected_paid;
       const correctBalance = inv.expected_balance;
       let correctStatus = inv.stored_status;
 

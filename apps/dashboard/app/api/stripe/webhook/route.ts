@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { db, eq, sql } from '@workspace/database/client';
+import { db, eq, and, sql } from '@workspace/database/client';
 import {
   orderTable,
   orderPaymentTable,
@@ -212,7 +212,19 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     .where(eq(orderInvoiceTable.orderId, orderId));
 
   if (existingInvoice) {
-    const newPaidAmount = existingInvoice.paidAmount + paymentAmount;
+    // Derive paidAmount from actual completed payments to avoid over/under-counting
+    // from confirm-payment / webhook race conditions
+    const [paymentSum] = await db
+      .select({ total: sql<number>`COALESCE(SUM(${orderPaymentTable.amount}), 0)` })
+      .from(orderPaymentTable)
+      .where(
+        and(
+          eq(orderPaymentTable.orderId, orderId),
+          eq(orderPaymentTable.status, PaymentStatus.COMPLETED)
+        )
+      );
+
+    const newPaidAmount = Number(paymentSum.total);
     const newBalanceOwed = invoiceOrderTotal - newPaidAmount;
     const invoiceStatus = newBalanceOwed <= 0 ? 'paid' : 'sent';
 
@@ -254,8 +266,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
   console.log('✅ Invoice created/updated via webhook');
 
-  // Confirm inventory sales
-  if (newOrderStatus === OrderStatus.FULLY_PAID || newOrderStatus === OrderStatus.DEPOSIT_PAID) {
+  // Confirm inventory sales - only on the FIRST payment (deposit or full).
+  // Skip for balance completion payments since inventory was already confirmed on deposit.
+  const isBalanceCompletion = paymentIntent.metadata?.paymentType === 'balance_completion';
+  if (isBalanceCompletion) {
+    console.log('ℹ️ Skipping inventory confirmation — balance completion payment, inventory already confirmed on deposit');
+  } else if (newOrderStatus === OrderStatus.FULLY_PAID || newOrderStatus === OrderStatus.DEPOSIT_PAID) {
     try {
       const orderItems = await db
         .select({

@@ -163,21 +163,24 @@ export async function getEventRegistrationStats(): Promise<EventRegistrationStat
       result.sponsorshipRevenue = 0;
       result.revenueGrowthPercent = 0;
     } else {
-      // For sponsorships, use baseAmount from metadata to exclude processing fee
+      // Derive revenue from actual completed payments instead of stored balanceOwed
+      // to avoid stale values from confirm-payment/webhook race conditions
+      const totalPaidSub = sql`COALESCE((SELECT SUM(op.amount) FROM "orderPayment" op WHERE op."orderId" = ${orderTable.id} AND op.status = 'completed'), 0)`;
+
       const revenueStats = await db
         .select({
-          registrationRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = false THEN ${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0) ELSE 0 END), 0)`.mapWith(Number),
-          // Sponsorship: use baseAmount from metadata, proportionally adjusted for balance owed
+          registrationRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = false THEN ${totalPaidSub} ELSE 0 END), 0)`.mapWith(Number),
+          // Sponsorship: use baseAmount from metadata, proportionally adjusted for what's been paid
           sponsorshipOrdered: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = true THEN COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount}) ELSE 0 END), 0)`.mapWith(Number),
-          sponsorshipBalance: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = true THEN COALESCE(${orderTable.balanceOwed}, 0) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1) ELSE 0 END), 0)`.mapWith(Number),
+          sponsorshipBalance: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = true THEN (${orderTable.totalAmount} - ${totalPaidSub}) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1) ELSE 0 END), 0)`.mapWith(Number),
           revenueThisMonth: sql<number>`COALESCE(SUM(
-            CASE WHEN ${orderTable.isSponsorship} = false THEN ${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)
-            ELSE COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount}) - COALESCE(${orderTable.balanceOwed}, 0) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)
+            CASE WHEN ${orderTable.isSponsorship} = false THEN ${totalPaidSub}
+            ELSE COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount}) - (${orderTable.totalAmount} - ${totalPaidSub}) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)
             END
           ) FILTER (WHERE ${orderTable.createdAt} >= ${firstDayOfMonth.toISOString()}), 0)`.mapWith(Number),
           revenueLastMonth: sql<number>`COALESCE(SUM(
-            CASE WHEN ${orderTable.isSponsorship} = false THEN ${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)
-            ELSE COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount}) - COALESCE(${orderTable.balanceOwed}, 0) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)
+            CASE WHEN ${orderTable.isSponsorship} = false THEN ${totalPaidSub}
+            ELSE COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount}) - (${orderTable.totalAmount} - ${totalPaidSub}) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)
             END
           ) FILTER (WHERE ${orderTable.createdAt} >= ${firstDayLastMonth.toISOString()} AND ${orderTable.createdAt} < ${firstDayOfMonth.toISOString()}), 0)`.mapWith(Number)
         })
@@ -215,16 +218,19 @@ export async function getEventRegistrationStats(): Promise<EventRegistrationStat
       result.completedPaymentsCount = 0;
       result.failedPaymentsCount = 0;
     } else {
+      // Derive pending balances from actual payments
+      const pendingBalanceSub = sql`${orderTable.totalAmount} - COALESCE((SELECT SUM(op.amount) FROM "orderPayment" op WHERE op."orderId" = ${orderTable.id} AND op.status = 'completed'), 0)`;
+
       const [pendingPaymentStats, paymentStatusStats] = await Promise.all([
         db.select({
-          totalPendingAmount: sql<number>`COALESCE(SUM(COALESCE(${orderTable.balanceOwed}, 0)), 0)`.mapWith(Number),
+          totalPendingAmount: sql<number>`COALESCE(SUM(${pendingBalanceSub}), 0)`.mapWith(Number),
           pendingCount: sql<number>`COUNT(*)`.mapWith(Number)
         })
         .from(orderTable)
         .where(and(
           eq(orderTable.eventYearId, currentEventYearId),
           eq(orderTable.status, OrderStatus.DEPOSIT_PAID),
-          sql`COALESCE(${orderTable.balanceOwed}, 0) > 0`
+          sql`${pendingBalanceSub} > 0`
         )),
 
         db.select({

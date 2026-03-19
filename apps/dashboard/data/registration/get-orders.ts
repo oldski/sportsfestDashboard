@@ -161,17 +161,24 @@ export const getRegistrationOrders = cache(async (organizationSlug: string): Pro
       }
     });
 
-    // Add invoices to orders
+    // Add invoices to orders — derive paidAmount/balanceOwed from completed payments
+    // to avoid stale stored values from confirm-payment/webhook race conditions
     invoices.forEach((invoice) => {
       const orderDto = orderMap.get(invoice.orderId);
       if (orderDto) {
+        const completedPayments = payments.filter(
+          p => p.orderId === invoice.orderId && p.status === 'completed'
+        );
+        const derivedPaidAmount = completedPayments.reduce((sum, p) => sum + p.amount, 0);
+        const derivedBalanceOwed = Math.max(0, invoice.invoiceTotalAmount - derivedPaidAmount);
+
         orderDto.invoices.push({
           id: invoice.invoiceId,
           invoiceNumber: invoice.invoiceNumber,
           status: invoice.invoiceStatus,
           totalAmount: invoice.invoiceTotalAmount,
-          paidAmount: invoice.invoicePaidAmount,
-          balanceOwed: invoice.invoiceBalanceOwed
+          paidAmount: derivedPaidAmount,
+          balanceOwed: derivedBalanceOwed
         });
       }
     });

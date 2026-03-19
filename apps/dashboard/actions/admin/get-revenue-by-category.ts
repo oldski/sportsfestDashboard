@@ -49,13 +49,16 @@ export async function getRevenueByCategory(): Promise<RevenueByCategoryResult> {
 
     const paidStatuses = [OrderStatus.DEPOSIT_PAID, OrderStatus.FULLY_PAID];
 
-    // Get sponsorship revenue by month (use baseAmount from metadata to exclude processing fee)
+    // Get sponsorship revenue by month — derive from actual completed payments
+    // to avoid stale balanceOwed from confirm-payment/webhook race conditions
+    const totalPaidSub = sql`COALESCE((SELECT SUM(op.amount) FROM "orderPayment" op WHERE op."orderId" = ${orderTable.id} AND op.status = 'completed'), 0)`;
+
     const sponsorshipRevenue = await db
       .select({
         month: sql<string>`TO_CHAR(${orderTable.updatedAt}, 'YYYY-MM')`.as('month'),
         amount: sql<number>`COALESCE(SUM(
           COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount})
-          - COALESCE(${orderTable.balanceOwed}, 0) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)
+          - (${orderTable.totalAmount} - ${totalPaidSub}) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)
         ), 0)`.mapWith(Number)
       })
       .from(orderTable)

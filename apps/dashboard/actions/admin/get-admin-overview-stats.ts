@@ -97,22 +97,29 @@ export async function getAdminOverviewStats(): Promise<AdminOverviewStats> {
     tentStats = { rows: [{ total_tent_purchases: 0, unique_orgs_with_tents: 0 }] };
   }
 
-  // Get order statistics for revenue (exclude remaining deposit balances)
+  // Get order statistics for revenue — derive from actual completed payments
+  // to avoid stale balanceOwed from confirm-payment/webhook race conditions
   let revenueStats;
   try {
     revenueStats = await db.execute(sql`
       SELECT
-        COALESCE(SUM("totalAmount" - COALESCE("balanceOwed", 0)), 0) as total_revenue,
+        COALESCE(SUM(COALESCE(p.total_paid, 0)), 0) as total_revenue,
         COALESCE(SUM(
           CASE
-            WHEN "createdAt" >= ${firstDayISO}::timestamp
-            THEN ("totalAmount" - COALESCE("balanceOwed", 0))
+            WHEN o."createdAt" >= ${firstDayISO}::timestamp
+            THEN COALESCE(p.total_paid, 0)
             ELSE 0
           END
         ), 0) as revenue_this_month
-      FROM "order"
-      WHERE status IN ('deposit_paid', 'fully_paid')
-        AND "eventYearId" = ${currentEventYearId}
+      FROM "order" o
+      LEFT JOIN (
+        SELECT "orderId", SUM(amount) as total_paid
+        FROM "orderPayment"
+        WHERE status = 'completed'
+        GROUP BY "orderId"
+      ) p ON p."orderId" = o.id
+      WHERE o.status IN ('deposit_paid', 'fully_paid')
+        AND o."eventYearId" = ${currentEventYearId}
     `);
   } catch (error) {
     console.warn('Revenue query failed:', error);

@@ -2,7 +2,7 @@
 
 import { auth } from '@workspace/auth';
 import { db, eq, and, sql, desc } from '@workspace/database/client';
-import { orderTable, organizationTable, eventYearTable, OrderStatus } from '@workspace/database/schema';
+import { orderTable, organizationTable, eventYearTable, orderPaymentTable, OrderStatus } from '@workspace/database/schema';
 import { isSuperAdmin } from '~/lib/admin-utils';
 import { getCurrentEventYear } from '~/data/event-years/get-current-event-year';
 
@@ -52,6 +52,10 @@ export async function getOrdersWithOutstandingBalance(): Promise<OrderWithBalanc
       return [];
     }
 
+    // Derive balanceOwed from actual completed payments instead of stored column
+    // to avoid stale values from confirm-payment/webhook race conditions
+    const totalPaidSubquery = sql<number>`COALESCE((SELECT SUM(op.amount) FROM "orderPayment" op WHERE op."orderId" = ${orderTable.id} AND op.status = 'completed'), 0)`;
+
     const result = await db
       .select({
         id: orderTable.id,
@@ -63,7 +67,7 @@ export async function getOrdersWithOutstandingBalance(): Promise<OrderWithBalanc
         eventYear: eventYearTable.year,
         eventYearName: eventYearTable.name,
         totalAmount: orderTable.totalAmount,
-        balanceOwed: orderTable.balanceOwed,
+        totalPaid: totalPaidSubquery.mapWith(Number),
         status: orderTable.status,
         createdAt: orderTable.createdAt,
         updatedAt: orderTable.updatedAt,
@@ -74,7 +78,7 @@ export async function getOrdersWithOutstandingBalance(): Promise<OrderWithBalanc
       .where(and(
         eq(orderTable.eventYearId, currentEventYear.id as string),
         eq(orderTable.status, OrderStatus.DEPOSIT_PAID),
-        sql`COALESCE(${orderTable.balanceOwed}, 0) > 0`
+        sql`${orderTable.totalAmount} - ${totalPaidSubquery} > 0`
       ))
       .orderBy(desc(orderTable.createdAt));
 
@@ -88,8 +92,8 @@ export async function getOrdersWithOutstandingBalance(): Promise<OrderWithBalanc
       eventYear: row.eventYear,
       eventYearName: row.eventYearName,
       totalAmount: row.totalAmount,
-      balanceOwed: row.balanceOwed || 0,
-      depositPaid: row.totalAmount - (row.balanceOwed || 0),
+      balanceOwed: Math.max(0, row.totalAmount - row.totalPaid),
+      depositPaid: row.totalPaid,
       status: row.status,
       createdAt: formatLocalDate(row.createdAt),
       updatedAt: formatLocalDate(row.updatedAt),

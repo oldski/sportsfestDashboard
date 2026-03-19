@@ -35,8 +35,11 @@ export async function getRevenueProgression(eventYearId?: string): Promise<Reven
     // Only include orders that have actually paid
     const paidStatuses = [OrderStatus.DEPOSIT_PAID, OrderStatus.FULLY_PAID];
 
-    // Get daily revenue (actual collected: totalAmount - balanceOwed)
+    // Get daily revenue — derive from actual completed payments
+    // to avoid stale balanceOwed from confirm-payment/webhook race conditions
     // For sponsorships, use baseAmount from metadata to exclude processing fee
+    const totalPaidSub = sql`COALESCE((SELECT SUM(op.amount) FROM "orderPayment" op WHERE op."orderId" = ${orderTable.id} AND op.status = 'completed'), 0)`;
+
     const dailyRevenue = await db
       .select({
         date: sql<string>`DATE(${orderTable.updatedAt})`.as('date'),
@@ -44,9 +47,9 @@ export async function getRevenueProgression(eventYearId?: string): Promise<Reven
           CASE
             WHEN ${orderTable.isSponsorship} = true THEN
               COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount})
-              - COALESCE(${orderTable.balanceOwed}, 0) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)
+              - (${orderTable.totalAmount} - ${totalPaidSub}) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1)
             ELSE
-              ${orderTable.totalAmount} - COALESCE(${orderTable.balanceOwed}, 0)
+              ${totalPaidSub}
           END
         ), 0)`.mapWith(Number),
       })

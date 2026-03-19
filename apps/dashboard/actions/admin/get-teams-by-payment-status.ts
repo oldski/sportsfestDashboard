@@ -61,14 +61,16 @@ export async function getTeamsByPaymentStatus(
       LOWER(${productTable.name}) LIKE '%company team%'
     ) THEN ${orderItemTable.quantity} ELSE 0 END), 0)`;
 
+    // Derive balanceOwed from actual completed payments instead of stored column
+    const totalPaidSubquery = sql<number>`COALESCE((SELECT SUM(op.amount) FROM "orderPayment" op WHERE op."orderId" = ${orderTable.id} AND op.status = 'completed'), 0)`;
+
     const orders = await db
       .select({
         id: orderTable.id,
         companyName: organizationTable.name,
         orderNumber: orderTable.orderNumber,
         totalAmount: orderTable.totalAmount,
-        depositPaid: orderTable.depositAmount,
-        balanceOwed: orderTable.balanceOwed,
+        totalPaid: totalPaidSubquery.mapWith(Number),
         date: orderTable.createdAt,
         teamCount: teamCountExpr.mapWith(Number),
       })
@@ -88,8 +90,6 @@ export async function getTeamsByPaymentStatus(
         organizationTable.name,
         orderTable.orderNumber,
         orderTable.totalAmount,
-        orderTable.depositAmount,
-        orderTable.balanceOwed,
         orderTable.createdAt
       )
       .having(sql`${teamCountExpr} > 0`)
@@ -109,8 +109,8 @@ export async function getTeamsByPaymentStatus(
         orderNumber: o.orderNumber,
         teamCount: o.teamCount,
         totalAmount: o.totalAmount || 0,
-        depositPaid: o.depositPaid || 0,
-        balanceOwed: o.balanceOwed || 0,
+        depositPaid: o.totalPaid || 0,
+        balanceOwed: Math.max(0, (o.totalAmount || 0) - (o.totalPaid || 0)),
         date: o.date,
       })),
     };

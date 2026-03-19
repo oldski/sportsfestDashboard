@@ -88,17 +88,21 @@ export async function getCompanyLeaderboard(eventYearId?: string): Promise<Compa
     const teamCountMap = new Map(teamCounts.map(t => [t.organizationId, t.count]));
 
     // Get revenue and balance by organization (only paid orders), split by sponsorship
-    // For sponsorship orders, use baseAmount from metadata (excludes processing fee)
+    // Derive balances from actual completed payments instead of stored balanceOwed
+    // to avoid stale values from confirm-payment/webhook race conditions
+    const totalPaidSub = sql`COALESCE((SELECT SUM(op.amount) FROM "orderPayment" op WHERE op."orderId" = ${orderTable.id} AND op.status = 'completed'), 0)`;
+    const derivedBalance = sql`(${orderTable.totalAmount} - ${totalPaidSub})`;
+
     const orderStats = await db
       .select({
         organizationId: orderTable.organizationId,
-        // Total registration revenue (non-sponsorship orders)
+        // Total registration revenue (non-sponsorship orders) — use actual payments
         registrationOrdered: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = false THEN ${orderTable.totalAmount} ELSE 0 END), 0)`.mapWith(Number),
-        registrationBalance: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = false THEN COALESCE(${orderTable.balanceOwed}, 0) ELSE 0 END), 0)`.mapWith(Number),
+        registrationBalance: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = false THEN ${derivedBalance} ELSE 0 END), 0)`.mapWith(Number),
         // Total sponsorship revenue (use baseAmount from metadata to exclude processing fee)
         sponsorshipOrdered: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = true THEN COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric, ${orderTable.totalAmount}) ELSE 0 END), 0)`.mapWith(Number),
         // For sponsorship balance, calculate proportionally based on base amount vs total
-        sponsorshipBalance: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = true THEN COALESCE(${orderTable.balanceOwed}, 0) * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1) ELSE 0 END), 0)`.mapWith(Number),
+        sponsorshipBalance: sql<number>`COALESCE(SUM(CASE WHEN ${orderTable.isSponsorship} = true THEN ${derivedBalance} * COALESCE((${orderTable.metadata}->'sponsorship'->>'baseAmount')::numeric / NULLIF(${orderTable.totalAmount}, 0), 1) ELSE 0 END), 0)`.mapWith(Number),
         // Flag if they have any sponsorship orders
         hasSponsorshipOrders: sql<boolean>`BOOL_OR(${orderTable.isSponsorship} = true)`,
       })
