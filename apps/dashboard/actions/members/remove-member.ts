@@ -23,7 +23,8 @@ export const removeMember = authOrganizationActionClient
   .inputSchema(removeMemberSchema)
   .action(async ({ parsedInput, ctx }) => {
     const isLeaving = ctx.session.user.id === parsedInput.id;
-    if (!isLeaving) {
+    const isSuperAdmin = ctx.session.user.isSportsFestAdmin === true;
+    if (!isLeaving && !isSuperAdmin) {
       const currentUserIsAdmin = await isOrganizationAdmin(
         ctx.session.user.id,
         ctx.organization.id
