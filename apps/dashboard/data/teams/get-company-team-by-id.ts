@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { getAuthOrganizationContext } from '@workspace/auth/context';
-import { db, eq, and, sql, inArray } from '@workspace/database/client';
+import { db, eq, and, ne, sql, inArray } from '@workspace/database/client';
 import {
   companyTeamTable,
   teamRosterTable,
@@ -84,7 +84,10 @@ export async function getCompanyTeamById(teamId: string): Promise<CompanyTeamDet
     })
     .from(teamRosterTable)
     .innerJoin(playerTable, eq(teamRosterTable.playerId, playerTable.id))
-    .where(eq(teamRosterTable.companyTeamId, teamId));
+    .where(and(
+      eq(teamRosterTable.companyTeamId, teamId),
+      ne(playerTable.status, PlayerStatus.INACTIVE)
+    ));
 
   // Get available players count (players not assigned to any team for this event year, excluding inactive)
   const availablePlayersResult = await db

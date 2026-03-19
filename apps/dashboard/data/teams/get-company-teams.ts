@@ -1,14 +1,15 @@
 import 'server-only';
 
 import { getAuthOrganizationContext } from '@workspace/auth/context';
-import { db, eq, and, sql, inArray } from '@workspace/database/client';
+import { db, eq, and, ne, sql, inArray } from '@workspace/database/client';
 import {
   companyTeamTable,
   teamRosterTable,
   playerTable,
   eventYearTable,
   eventRosterTable,
-  EventType
+  EventType,
+  PlayerStatus
 } from '@workspace/database/schema';
 import { syncCompanyTeams } from './sync-company-teams';
 
@@ -143,7 +144,10 @@ export async function getCompanyTeams(): Promise<CompanyTeamsResult> {
     })
     .from(teamRosterTable)
     .innerJoin(playerTable, eq(teamRosterTable.playerId, playerTable.id))
-    .where(inArray(teamRosterTable.companyTeamId, teamIds))
+    .where(and(
+      inArray(teamRosterTable.companyTeamId, teamIds),
+      ne(playerTable.status, PlayerStatus.INACTIVE)
+    ))
     : [];
 
   // Group rosters by team
@@ -173,9 +177,10 @@ export async function getCompanyTeams(): Promise<CompanyTeamsResult> {
       and(
         eq(playerTable.organizationId, ctx.organization.id),
         eq(playerTable.eventYearId, activeEventYear.id),
+        ne(playerTable.status, PlayerStatus.INACTIVE),
         // Player not assigned to any team
         sql`NOT EXISTS (
-          SELECT 1 FROM ${teamRosterTable} tr 
+          SELECT 1 FROM ${teamRosterTable} tr
           WHERE tr."playerId" = ${playerTable.id}
         )`
       )
