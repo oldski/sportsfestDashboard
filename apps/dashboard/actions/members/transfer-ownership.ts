@@ -30,12 +30,15 @@ export const transferOwnership = authOrganizationActionClient
       .limit(1);
     const isSuperAdmin = currentUser?.isSportsFestAdmin === true;
 
-    const currentUserIsOwner = await isOrganizationOwner(
-      ctx.session.user.id,
-      ctx.organization.id
-    );
-    if (!currentUserIsOwner && !isSuperAdmin) {
-      throw new ForbiddenError('Only owners or super admins can transfer ownership.');
+    // Super admins may not be members of the org, so skip the owner check for them
+    if (!isSuperAdmin) {
+      const currentUserIsOwner = await isOrganizationOwner(
+        ctx.session.user.id,
+        ctx.organization.id
+      );
+      if (!currentUserIsOwner) {
+        throw new ForbiddenError('Only owners or super admins can transfer ownership.');
+      }
     }
 
     const targetUserIsAdmin = await isOrganizationAdmin(
