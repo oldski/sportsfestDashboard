@@ -6,13 +6,10 @@ import {
   companyTeamTable,
   playerTable,
   orderTable,
-  orderItemTable,
-  productTable,
   tentPurchaseTrackingTable,
   eventYearTable,
   PaymentStatus,
-  orderPaymentTable,
-  ProductType
+  orderPaymentTable
 } from '@workspace/database/schema';
 import { getOrganizationTeamCount } from './get-organization-team-count';
 
@@ -115,31 +112,12 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
   };
 
   if (eventYearId) {
-    // Calculate purchased tents from completed orders
-    const tentPurchases = await db
-      .select({
-        totalQuantity: sql<number>`coalesce(sum(${orderItemTable.quantity}), 0)`
-      })
-      .from(orderItemTable)
-      .innerJoin(orderTable, eq(orderItemTable.orderId, orderTable.id))
-      .innerJoin(productTable, eq(orderItemTable.productId, productTable.id))
-      .innerJoin(orderPaymentTable, eq(orderTable.id, orderPaymentTable.orderId))
-      .where(
-        and(
-          eq(orderTable.organizationId, ctx.organization.id),
-          eq(orderTable.eventYearId, eventYearId),
-          eq(productTable.type, ProductType.TENT_RENTAL),
-          eq(orderPaymentTable.status, PaymentStatus.COMPLETED)
-        )
-      );
-
-    const purchased = Number(tentPurchases[0]?.totalQuantity || 0);
-
-    // Try to get max allowed from tracking table, fallback to default
-    let maxAllowed = 2;
+    // Get tent stats from the tracking table (single source of truth)
     const tentTracking = await db
       .select({
-        maxAllowed: tentPurchaseTrackingTable.maxAllowed
+        quantityPurchased: tentPurchaseTrackingTable.quantityPurchased,
+        maxAllowed: tentPurchaseTrackingTable.maxAllowed,
+        remainingAllowed: tentPurchaseTrackingTable.remainingAllowed
       })
       .from(tentPurchaseTrackingTable)
       .where(
@@ -150,9 +128,8 @@ export async function getOrganizationDashboardStats(): Promise<OrganizationDashb
       )
       .limit(1);
 
-    if (tentTracking[0]?.maxAllowed) {
-      maxAllowed = tentTracking[0].maxAllowed;
-    }
+    const purchased = Number(tentTracking[0]?.quantityPurchased || 0);
+    const maxAllowed = Number(tentTracking[0]?.maxAllowed || 2);
 
     tentStats = {
       purchased,
