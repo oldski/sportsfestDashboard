@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { db, eq, sql, and } from '@workspace/database/client';
+import { db, eq, sql, and, max } from '@workspace/database/client';
 import {
   organizationTable,
   membershipTable,
@@ -195,11 +195,35 @@ export async function mergeOrganizations(
         .set({ organizationId: targetOrganizationId })
         .where(eq(playerTable.organizationId, sourceOrganizationId));
 
-      // Move teams
-      await tx
-        .update(companyTeamTable)
-        .set({ organizationId: targetOrganizationId })
+      // Move teams - renumber to avoid unique constraint violations
+      // (organizationId, eventYearId, teamNumber) must be unique
+      const sourceTeams = await tx
+        .select()
+        .from(companyTeamTable)
         .where(eq(companyTeamTable.organizationId, sourceOrganizationId));
+
+      for (const sourceTeam of sourceTeams) {
+        // Find the current max teamNumber for this eventYear in the target org
+        const [result] = await tx
+          .select({ maxNumber: max(companyTeamTable.teamNumber) })
+          .from(companyTeamTable)
+          .where(
+            and(
+              eq(companyTeamTable.organizationId, targetOrganizationId),
+              eq(companyTeamTable.eventYearId, sourceTeam.eventYearId)
+            )
+          );
+
+        const nextTeamNumber = (result?.maxNumber ?? 0) + 1;
+
+        await tx
+          .update(companyTeamTable)
+          .set({
+            organizationId: targetOrganizationId,
+            teamNumber: nextTeamNumber,
+          })
+          .where(eq(companyTeamTable.id, sourceTeam.id));
+      }
 
       // Move memberships (skip duplicates - same user in both orgs)
       // First, get existing target memberships
