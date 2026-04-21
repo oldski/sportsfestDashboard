@@ -12,7 +12,6 @@ import {
 } from '@tanstack/react-table';
 import { DownloadIcon } from 'lucide-react';
 
-import { Badge } from '@workspace/ui/components/badge';
 import { Button } from '@workspace/ui/components/button';
 import {
   DataTable,
@@ -99,18 +98,9 @@ const columns = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Water" />
     ),
-    cell: ({ row }) => {
-      const qty = row.getValue('waterQuantity') as number;
-      return (
-        <div className="text-right">
-          {qty > 0 ? (
-            <Badge variant="secondary">{qty}</Badge>
-          ) : (
-            <span className="text-sm text-muted-foreground">0</span>
-          )}
-        </div>
-      );
-    },
+    cell: ({ row }) => (
+      <div className="text-center text-sm">{row.getValue('waterQuantity') as number}</div>
+    ),
     meta: { title: 'Water (qty)' },
   }),
   columnHelper.accessor('iceQuantity', {
@@ -118,18 +108,9 @@ const columns = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Ice" />
     ),
-    cell: ({ row }) => {
-      const qty = row.getValue('iceQuantity') as number;
-      return (
-        <div className="text-right">
-          {qty > 0 ? (
-            <Badge variant="secondary">{qty}</Badge>
-          ) : (
-            <span className="text-sm text-muted-foreground">0</span>
-          )}
-        </div>
-      );
-    },
+    cell: ({ row }) => (
+      <div className="text-center text-sm">{row.getValue('iceQuantity') as number}</div>
+    ),
     meta: { title: 'Ice (qty)' },
   }),
 ];
