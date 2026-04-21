@@ -28,6 +28,7 @@ interface GameDayLayoutProps {
   totalCompanyTeams: React.ReactNode;
   teamsPaidFully: React.ReactNode;
   teamsNotPaid: React.ReactNode;
+  equipmentPurchases: React.ReactNode;
 }
 
 export default async function GameDayLayout({
@@ -35,6 +36,7 @@ export default async function GameDayLayout({
   totalCompanyTeams,
   teamsPaidFully,
   teamsNotPaid,
+  equipmentPurchases,
 }: GameDayLayoutProps & React.PropsWithChildren & NextPageProps): Promise<React.JSX.Element> {
   const eventYears = await getEventYearsSimple();
   const currentYear = eventYears.find((y) => y.isActive);
@@ -58,11 +60,12 @@ export default async function GameDayLayout({
       <PageBody>
         <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
           <Tabs defaultValue="companies" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="companies">Total Companies & Users</TabsTrigger>
               <TabsTrigger value="teams">Company Teams</TabsTrigger>
               <TabsTrigger value="fullyPaid">Teams Fully Paid</TabsTrigger>
               <TabsTrigger value="depositsPaid">Teams Deposit Paid</TabsTrigger>
+              <TabsTrigger value="equipment">Equipment Purchases</TabsTrigger>
             </TabsList>
 
             <TabsContent value="companies" className="mt-4">
@@ -76,6 +79,9 @@ export default async function GameDayLayout({
             </TabsContent>
             <TabsContent value="depositsPaid" className="mt-4">
               {teamsNotPaid}
+            </TabsContent>
+            <TabsContent value="equipment" className="mt-4">
+              {equipmentPurchases}
             </TabsContent>
           </Tabs>
         </div>
