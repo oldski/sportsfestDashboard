@@ -60,12 +60,44 @@ export default async function GameDayLayout({
       <PageBody>
         <div className="mx-auto w-full space-y-6 p-2 sm:space-y-8 sm:p-6">
           <Tabs defaultValue="companies" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="companies">Total Companies & Users</TabsTrigger>
-              <TabsTrigger value="teams">Company Teams</TabsTrigger>
-              <TabsTrigger value="fullyPaid">Teams Fully Paid</TabsTrigger>
-              <TabsTrigger value="depositsPaid">Teams Deposit Paid</TabsTrigger>
-              <TabsTrigger value="equipment">Equipment Purchases</TabsTrigger>
+            <TabsList
+              className="flex h-auto w-full snap-x snap-mandatory gap-1 overflow-x-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:h-9 sm:grid-cols-5 sm:gap-0 sm:p-[3px]"
+            >
+              <TabsTrigger
+                value="companies"
+                className="h-8 flex-none snap-start px-3 text-xs sm:h-auto sm:flex-1 sm:px-2 sm:text-sm"
+              >
+                <span className="sm:hidden">Companies</span>
+                <span className="hidden sm:inline">Total Companies &amp; Users</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="teams"
+                className="h-8 flex-none snap-start px-3 text-xs sm:h-auto sm:flex-1 sm:px-2 sm:text-sm"
+              >
+                <span className="sm:hidden">Teams</span>
+                <span className="hidden sm:inline">Company Teams</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="fullyPaid"
+                className="h-8 flex-none snap-start px-3 text-xs sm:h-auto sm:flex-1 sm:px-2 sm:text-sm"
+              >
+                <span className="sm:hidden">Fully Paid</span>
+                <span className="hidden sm:inline">Teams Fully Paid</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="depositsPaid"
+                className="h-8 flex-none snap-start px-3 text-xs sm:h-auto sm:flex-1 sm:px-2 sm:text-sm"
+              >
+                <span className="sm:hidden">Deposits</span>
+                <span className="hidden sm:inline">Teams Deposit Paid</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="equipment"
+                className="h-8 flex-none snap-start px-3 text-xs sm:h-auto sm:flex-1 sm:px-2 sm:text-sm"
+              >
+                <span className="sm:hidden">Equipment</span>
+                <span className="hidden sm:inline">Equipment Purchases</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="companies" className="mt-4">

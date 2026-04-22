@@ -54,9 +54,14 @@ export function EventYearSelector({
 
   return (
     <Select value={currentFilter} onValueChange={handleValueChange}>
-      <SelectTrigger className="w-[200px]">
-        <CalendarIcon className="mr-2 h-4 w-4" />
-        <SelectValue placeholder="Select period..." />
+      <SelectTrigger
+        aria-label="Select period"
+        className="w-auto px-2 lg:w-[200px] lg:px-3"
+      >
+        <CalendarIcon className="h-4 w-4" />
+        <span className="hidden lg:inline-flex">
+          <SelectValue placeholder="Select period..." />
+        </span>
       </SelectTrigger>
       <SelectContent>
         {activeYear && (
