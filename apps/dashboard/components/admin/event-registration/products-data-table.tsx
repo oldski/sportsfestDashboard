@@ -313,34 +313,61 @@ export function ProductsDataTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-2">
           <Input
             placeholder="Search products..."
             value={globalFilter}
             onChange={(event) => setGlobalFilter(event.target.value)}
-            className="max-w-sm"
+            className="flex-1 lg:max-w-sm"
           />
+          {/* Desktop: fluid-width year filter inline with search */}
+          <div className="hidden lg:block">
+            <Select
+              value={selectedYear !== undefined ? String(selectedYear) : undefined}
+              onValueChange={handleYearChange}
+            >
+              <SelectTrigger className="w-auto min-w-[180px]">
+                <SelectValue placeholder="Event Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((option) => (
+                  <SelectItem key={option.id} value={String(option.year)}>
+                    <span className="whitespace-nowrap">
+                      {option.year} — {option.name}
+                      {option.id === activeEventYearId ? ' (active)' : ''}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Mobile/tablet: column options sit on the right of the search row */}
+          <div className="ml-auto lg:hidden">
+            <DataTableColumnOptionsHeader table={table} />
+          </div>
+        </div>
+        {/* Mobile/tablet: full-width year filter stacked beneath, year-only label */}
+        <div className="lg:hidden">
           <Select
             value={selectedYear !== undefined ? String(selectedYear) : undefined}
             onValueChange={handleYearChange}
           >
-            <SelectTrigger className="w-[280px]">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Event Year" />
             </SelectTrigger>
-            <SelectContent className="min-w-[280px]">
+            <SelectContent>
               {yearOptions.map((option) => (
                 <SelectItem key={option.id} value={String(option.year)}>
-                  <span className="whitespace-nowrap">
-                    {option.year} — {option.name}
-                    {option.id === activeEventYearId ? ' (active)' : ''}
-                  </span>
+                  {option.year}
+                  {option.id === activeEventYearId ? ' (active)' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center space-x-2">
+        {/* Desktop: column options on the right */}
+        <div className="hidden items-center space-x-2 lg:flex">
           <DataTableColumnOptionsHeader table={table} />
         </div>
       </div>
