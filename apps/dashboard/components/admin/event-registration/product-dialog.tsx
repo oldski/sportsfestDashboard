@@ -90,7 +90,7 @@ interface ProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product?: ProductFormData & { id?: string };
-  mode?: 'create' | 'edit';
+  mode?: 'create' | 'edit' | 'view';
   formData: ProductFormSelectData;
 }
 
@@ -102,6 +102,7 @@ export function ProductDialog({
   formData
 }: ProductDialogProps): React.JSX.Element {
   const [isLoading, setIsLoading] = React.useState(false);
+  const isReadOnly = mode === 'view';
 
   const form = useForm({
     resolver: zodResolver(productFormSchema),
@@ -251,13 +252,18 @@ export function ProductDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PackageIcon className="h-5 w-5" />
-            {mode === 'create' ? 'Create Product' : 'Edit Product'}
+            {mode === 'create'
+              ? 'Create Product'
+              : mode === 'view'
+                ? 'View Product'
+                : 'Edit Product'}
           </DialogTitle>
           <DialogDescription>
             {mode === 'create'
               ? 'Add a new product to the event registration catalog'
-              : 'Update the product information and pricing details'
-            }
+              : mode === 'view'
+                ? 'Read-only view of this product'
+                : 'Update the product information and pricing details'}
           </DialogDescription>
         </DialogHeader>
 
@@ -279,7 +285,11 @@ export function ProductDialog({
                     <FormItem>
                       <FormLabel>Product Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="SportsFest Team Registration" {...field} />
+                        <Input
+                          placeholder="SportsFest Team Registration"
+                          disabled={isReadOnly}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -296,6 +306,7 @@ export function ProductDialog({
                         <Textarea
                           placeholder="Detailed description of the product..."
                           className="min-h-20"
+                          disabled={isReadOnly}
                           {...field}
                         />
                       </FormControl>
@@ -329,21 +340,27 @@ export function ProductDialog({
                                   Product image uploaded
                                 </p>
                               </div>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    onClick={handleRemoveImage}
-                                  >
-                                    <TrashIcon className="h-4 w-4" />
-                                    <span className="sr-only">Remove image</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Remove image</TooltipContent>
-                              </Tooltip>
+                              {!isReadOnly && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0"
+                                      onClick={handleRemoveImage}
+                                    >
+                                      <TrashIcon className="h-4 w-4" />
+                                      <span className="sr-only">Remove image</span>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Remove image</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          ) : isReadOnly ? (
+                            <div className="flex h-32 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
+                              No image
                             </div>
                           ) : (
                             <ImageDropzone
@@ -381,7 +398,11 @@ export function ProductDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Event Year</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isReadOnly}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select event year" />
@@ -406,7 +427,11 @@ export function ProductDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isReadOnly}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select category" />
@@ -433,7 +458,11 @@ export function ProductDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Product Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isReadOnly}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select type" />
@@ -458,7 +487,11 @@ export function ProductDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isReadOnly}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select status" />
@@ -502,6 +535,7 @@ export function ProductDialog({
                           fixedDecimalScale
                           allowNegative={false}
                           placeholder="$0.00"
+                          disabled={isReadOnly}
                           value={field.value}
                           onValueChange={(values) => field.onChange(values.floatValue || 0)}
                         />
@@ -526,6 +560,7 @@ export function ProductDialog({
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
+                          disabled={isReadOnly}
                         />
                       </FormControl>
                     </FormItem>
@@ -548,6 +583,7 @@ export function ProductDialog({
                             fixedDecimalScale
                             allowNegative={false}
                             placeholder="$0.00"
+                            disabled={isReadOnly}
                             value={field.value || ''}
                             onValueChange={(values) => field.onChange(values.floatValue || undefined)}
                           />
@@ -573,6 +609,7 @@ export function ProductDialog({
                             type="number"
                             min="1"
                             placeholder="Leave blank for unlimited"
+                            disabled={isReadOnly}
                             {...field}
                             value={field.value || ''}
                             onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
@@ -594,6 +631,7 @@ export function ProductDialog({
                             type="number"
                             min="0"
                             placeholder="Leave blank for unlimited"
+                            disabled={isReadOnly}
                             {...field}
                             value={field.value || ''}
                             onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
@@ -616,6 +654,7 @@ export function ProductDialog({
                           type="number"
                           min="0"
                           placeholder="0"
+                          disabled={isReadOnly}
                           {...field}
                           value={field.value || 0}
                           onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
@@ -634,13 +673,21 @@ export function ProductDialog({
         </FormProvider>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
-            {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-            {mode === 'create' ? 'Create' : 'Update'} Product
-          </Button>
+          {isReadOnly ? (
+            <Button variant="outline" onClick={() => handleOpenChange(false)}>
+              Close
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isLoading}>
+                Cancel
+              </Button>
+              <Button onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
+                {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+                {mode === 'create' ? 'Create' : 'Update'} Product
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

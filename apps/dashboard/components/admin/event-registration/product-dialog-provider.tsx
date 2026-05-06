@@ -4,13 +4,16 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { ProductDialog } from '~/components/admin/event-registration/product-dialog';
 import { DeleteProductDialog } from '~/components/admin/event-registration/delete-product-dialog';
+import { CopyProductDialog } from '~/components/admin/event-registration/copy-product-dialog';
 import type { ProductWithDetails } from '~/actions/admin/get-products';
 import type { ProductFormSelectData } from '~/actions/admin/get-product-form-data';
 
 interface ProductDialogContextType {
   openCreateDialog: () => void;
   openEditDialog: (productId: string) => void;
+  openViewDialog: (productId: string) => void;
   openDeleteDialog: (product: ProductWithDetails) => void;
+  openCopyDialog: (productId: string) => void;
 }
 
 const ProductDialogContext = React.createContext<ProductDialogContextType | null>(null);
@@ -26,15 +29,24 @@ export function useProductDialog() {
 interface ProductDialogProviderProps {
   children: React.ReactNode;
   formData: ProductFormSelectData;
+  activeEventYearId: string | null;
 }
 
-export function ProductDialogProvider({ children, formData }: ProductDialogProviderProps): React.JSX.Element {
+export function ProductDialogProvider({
+  children,
+  formData,
+  activeEventYearId
+}: ProductDialogProviderProps): React.JSX.Element {
   const router = useRouter();
-  
+
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [copyDialogOpen, setCopyDialogOpen] = React.useState(false);
   const [selectedProduct, setSelectedProduct] = React.useState<any>(null);
+  const [viewProduct, setViewProduct] = React.useState<any>(null);
+  const [copySourceProductId, setCopySourceProductId] = React.useState<string | null>(null);
 
   const openCreateDialog = () => {
     setCreateDialogOpen(true);
@@ -53,9 +65,27 @@ export function ProductDialogProvider({ children, formData }: ProductDialogProvi
     }
   };
 
+  const openViewDialog = async (productId: string) => {
+    try {
+      const { getProduct } = await import('~/actions/admin/get-product');
+      const fullProduct = await getProduct(productId);
+      if (fullProduct) {
+        setViewProduct(fullProduct);
+        setViewDialogOpen(true);
+      }
+    } catch (error) {
+      console.error('Error fetching product for view:', error);
+    }
+  };
+
   const openDeleteDialog = (product: ProductWithDetails) => {
     setSelectedProduct(product);
     setDeleteDialogOpen(true);
+  };
+
+  const openCopyDialog = (productId: string) => {
+    setCopySourceProductId(productId);
+    setCopyDialogOpen(true);
   };
 
   const handleDialogClose = () => {
@@ -63,9 +93,9 @@ export function ProductDialogProvider({ children, formData }: ProductDialogProvi
   };
 
   return (
-    <ProductDialogContext.Provider value={{ openCreateDialog, openEditDialog, openDeleteDialog }}>
+    <ProductDialogContext.Provider value={{ openCreateDialog, openEditDialog, openViewDialog, openDeleteDialog, openCopyDialog }}>
       {children}
-      
+
       {/* Dialogs */}
       <ProductDialog
         open={createDialogOpen}
@@ -91,6 +121,19 @@ export function ProductDialogProvider({ children, formData }: ProductDialogProvi
         formData={formData}
       />
 
+      <ProductDialog
+        open={viewDialogOpen}
+        onOpenChange={(open) => {
+          setViewDialogOpen(open);
+          if (!open) {
+            setViewProduct(null);
+          }
+        }}
+        product={viewProduct}
+        mode="view"
+        formData={formData}
+      />
+
       {selectedProduct && (
         <DeleteProductDialog
           open={deleteDialogOpen}
@@ -103,6 +146,20 @@ export function ProductDialogProvider({ children, formData }: ProductDialogProvi
           }}
         />
       )}
+
+      <CopyProductDialog
+        open={copyDialogOpen}
+        onOpenChange={(open) => {
+          setCopyDialogOpen(open);
+          if (!open) {
+            setCopySourceProductId(null);
+          }
+        }}
+        sourceProductId={copySourceProductId}
+        defaultEventYearId={activeEventYearId}
+        eventYears={formData.eventYears}
+        onCopied={handleDialogClose}
+      />
     </ProductDialogContext.Provider>
   );
 }

@@ -16,6 +16,7 @@ import { ProductDialogProvider } from '~/components/admin/event-registration/pro
 import { ProductCategoryDialogProvider } from '~/components/admin/event-registration/product-category-dialog-provider';
 import { CreateProductButton } from '~/components/admin/event-registration/create-product-button';
 import { getProductFormData } from '~/actions/admin/get-product-form-data';
+import { getCurrentEventYear } from '~/data/event-years/get-current-event-year';
 
 export const metadata: Metadata = {
   title: createTitle('Products')
@@ -30,10 +31,14 @@ export default async function ProductsLayout({
   products,
   categories
 }: ProductsLayoutProps & NextPageProps): Promise<React.JSX.Element> {
-  const formData = await getProductFormData();
+  const [formData, activeEventYear] = await Promise.all([
+    getProductFormData(),
+    getCurrentEventYear()
+  ]);
+  const activeEventYearId = (activeEventYear?.id as string | undefined) ?? null;
 
   return (
-    <ProductDialogProvider formData={formData}>
+    <ProductDialogProvider formData={formData} activeEventYearId={activeEventYearId}>
       <ProductCategoryDialogProvider>
         <Page>
           <PageHeader>

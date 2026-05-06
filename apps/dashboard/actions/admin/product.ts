@@ -3,9 +3,35 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { db, eq } from '@workspace/database/client';
-import { productTable, ProductType, ProductStatus } from '@workspace/database/schema';
+import { eventYearTable, productTable, ProductType, ProductStatus } from '@workspace/database/schema';
 import { auth } from '@workspace/auth';
 import { isSuperAdmin } from '~/lib/admin-utils';
+
+async function assertProductBelongsToActiveYear(productId: string): Promise<void> {
+  const [product] = await db
+    .select({ eventYearId: productTable.eventYearId })
+    .from(productTable)
+    .where(eq(productTable.id, productId))
+    .limit(1);
+
+  if (!product) {
+    throw new Error('Product not found');
+  }
+
+  const [activeYear] = await db
+    .select({ id: eventYearTable.id })
+    .from(eventYearTable)
+    .where(eq(eventYearTable.isActive, true))
+    .limit(1);
+
+  if (!activeYear) {
+    throw new Error('No active event year is configured');
+  }
+
+  if (product.eventYearId !== activeYear.id) {
+    throw new Error('Only products in the active event year can be modified');
+  }
+}
 
 const productSchema = z.object({
   categoryId: z.string().uuid('Category is required'),
@@ -85,6 +111,7 @@ export async function updateProduct(id: string, data: ProductFormData) {
   }
 
   try {
+    await assertProductBelongsToActiveYear(id);
     const validatedData = productSchema.parse(data);
 
     const result = await db
@@ -106,7 +133,7 @@ export async function updateProduct(id: string, data: ProductFormData) {
     return { success: true, product: result[0] };
   } catch (error) {
     console.error('Error updating product:', error);
-    throw new Error('Failed to update product. Please try again.');
+    throw error instanceof Error ? error : new Error('Failed to update product. Please try again.');
   }
 }
 
@@ -121,9 +148,11 @@ export async function softDeleteProduct(id: string) {
   }
 
   try {
+    await assertProductBelongsToActiveYear(id);
+
     const [product] = await db
       .update(productTable)
-      .set({ 
+      .set({
         status: ProductStatus.ARCHIVED,
       })
       .where(eq(productTable.id, id))
@@ -137,6 +166,87 @@ export async function softDeleteProduct(id: string) {
     return { success: true };
   } catch (error) {
     console.error('Error soft deleting product:', error);
-    throw new Error('Failed to remove product. Please try again.');
+    throw error instanceof Error ? error : new Error('Failed to remove product. Please try again.');
+  }
+}
+
+const duplicateProductInputSchema = z.object({
+  sourceProductId: z.string().uuid('Source product is required'),
+  targetEventYearId: z.string().uuid('Target event year is required'),
+});
+
+export async function duplicateProduct(input: z.infer<typeof duplicateProductInputSchema>) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!isSuperAdmin(session.user)) {
+    throw new Error('Unauthorized: Only super admins can duplicate products');
+  }
+
+  try {
+    const { sourceProductId, targetEventYearId } = duplicateProductInputSchema.parse(input);
+
+    const [source] = await db
+      .select({
+        categoryId: productTable.categoryId,
+        name: productTable.name,
+        description: productTable.description,
+        image: productTable.image,
+        type: productTable.type,
+        basePrice: productTable.basePrice,
+        requiresDeposit: productTable.requiresDeposit,
+        depositAmount: productTable.depositAmount,
+        maxQuantityPerOrg: productTable.maxQuantityPerOrg,
+        totalInventory: productTable.totalInventory,
+        displayOrder: productTable.displayOrder,
+      })
+      .from(productTable)
+      .where(eq(productTable.id, sourceProductId))
+      .limit(1);
+
+    if (!source) {
+      throw new Error('Source product not found');
+    }
+
+    const [targetYear] = await db
+      .select({ id: eventYearTable.id })
+      .from(eventYearTable)
+      .where(eq(eventYearTable.id, targetEventYearId))
+      .limit(1);
+
+    if (!targetYear) {
+      throw new Error('Target event year not found');
+    }
+
+    const [created] = await db
+      .insert(productTable)
+      .values({
+        categoryId: source.categoryId,
+        eventYearId: targetEventYearId,
+        name: source.name,
+        description: source.description,
+        image: source.image,
+        type: source.type,
+        status: ProductStatus.ACTIVE,
+        basePrice: source.basePrice,
+        requiresDeposit: source.requiresDeposit,
+        depositAmount: source.depositAmount,
+        maxQuantityPerOrg: source.maxQuantityPerOrg,
+        totalInventory: source.totalInventory,
+        displayOrder: source.displayOrder ?? 0,
+      })
+      .returning({
+        id: productTable.id,
+        name: productTable.name,
+        eventYearId: productTable.eventYearId,
+      });
+
+    revalidatePath('/admin/event-registration/products');
+    return { success: true, product: created };
+  } catch (error) {
+    console.error('Error duplicating product:', error);
+    throw error instanceof Error ? error : new Error('Failed to duplicate product. Please try again.');
   }
 }
